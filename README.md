@@ -1,5 +1,5 @@
 <p align="center">
-   <img src="assets/rubyClient.png" alt="ruby-icon" width="10%"/>
+   <img src="src/main/resources/assets/ruby/icon.png" alt="ruby-icon" width="10%"/>
 </p>
 
 <h1 align="center">Ruby</h1>
