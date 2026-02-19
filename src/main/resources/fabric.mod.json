@@ -1,0 +1,28 @@
+{
+	"schemaVersion": 1,
+	"id": "ruby",
+	"version": "${version}",
+	"name": "RubyClient",
+	"description": "",
+	"authors": [
+		"usher5048",
+		"Entity"
+	],
+	"license": "GPL-3.0",
+	"icon": "assets/ruby/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"ruby.RubyClient"
+		]
+	},
+	"mixins": [
+		"ruby.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
