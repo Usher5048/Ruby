@@ -1,5 +1,6 @@
 package ruby.systems.modules;
 
+import net.minecraft.text.Text;
 import ruby.RubyClient;
 
 public abstract class Module {
@@ -43,6 +44,26 @@ public abstract class Module {
     public void showsToasts(boolean showToasts) {
         this.showToasts = showToasts;
     }
+    public void notifyRaw(Text message) {
+        this.notifyRaw(message, false);
+    }
+    public void notifyRaw(Text message, boolean actionBar) {
+        RubyClient.notifyUserRaw(
+                Text.literal(!actionBar ? "§8[§7" + this.name() + "§8]§r " : "").append(message),
+                actionBar
+        );
+    }
+
+    public void notify(String message) {
+        this.notify(message, false);
+    }
+    public void notify(String message, boolean actionBar) {
+        RubyClient.notifyUserRaw(
+                Text.literal(!actionBar ? "§8[§7" + this.name() + "§8]§r " : "").append(message),
+                actionBar
+        );
+    }
+
 
     public void tick() {}
     public void onEnable() {}
