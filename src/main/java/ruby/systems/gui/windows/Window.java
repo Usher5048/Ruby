@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-public abstract class Window extends AbstractParentElement implements Drawable, Selectable {
+public class Window extends AbstractParentElement implements Drawable, Selectable {
     private final List<Window> children = new ArrayList<>();
     private float textScale = 1;
     private int x;
@@ -39,20 +39,34 @@ public abstract class Window extends AbstractParentElement implements Drawable, 
         };
     }
 
-    public abstract void onRender(DrawContext context, int mouseX, int mouseY);
+    public void onRender(DrawContext context, int mouseX, int mouseY) {}
 
-    public abstract boolean onMouseDown(Click click, boolean doubled);
-    public abstract boolean onMouseUp(Click click);
-    public abstract boolean onMouseDragged(Click click, double deltaX, double deltaY);
-    public abstract boolean onMouseScrolled(double mouseX, double mouseY, double horizontal, double vertical);
-    public abstract void onMouseMoved(double mouseX, double mouseY);
+    public boolean onMouseDown(Click click, boolean doubled) {
+        return false;
+    }
+    public boolean onMouseUp(Click click) {
+        return false;
+    }
+    public boolean onMouseDragged(Click click, double deltaX, double deltaY) {
+        return false;
+    }
+    public boolean onMouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        return false;
+    }
+    public void onMouseMoved(double mouseX, double mouseY) {}
 
-    public abstract boolean onKeyPress(KeyInput input);
-    public abstract boolean onKeyRelease(KeyInput input);
-    public abstract boolean onCharTyped(CharInput input);
+    public boolean onKeyPress(KeyInput input) {
+        return false;
+    }
+    public boolean onKeyRelease(KeyInput input) {
+        return false;
+    }
+    public boolean onCharTyped(CharInput input) {
+        return false;
+    }
 
-    public abstract void onFocused();
-    public abstract void onFocusRemoved();
+    public void onFocused() {}
+    public void onFocusRemoved() {}
 
     public void drawText(FontRenderer font, DrawContext context, String text, int x, int y, int color) {
         context.getMatrices().pushMatrix();
