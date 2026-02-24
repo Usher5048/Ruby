@@ -1,11 +1,10 @@
 package ruby.systems.modules;
 
 import ruby.RubyClient;
-import ruby.systems.events.Events;
 
 import java.util.ArrayList;
 
-public class ModuleManager {
+public class Modules {
     private static final ArrayList<Module> activeModules = new ArrayList<>();
     private static final ArrayList<Module> modules = new ArrayList<>();
 
@@ -30,10 +29,10 @@ public class ModuleManager {
     }
 
     public static ArrayList<Module> getModules() {
-        return ModuleManager.modules;
+        return Modules.modules;
     }
     public static ArrayList<Module> getActiveModules() {
-        return ModuleManager.activeModules;
+        return Modules.activeModules;
     }
 
     @SuppressWarnings("unchecked")
@@ -55,7 +54,7 @@ public class ModuleManager {
         if(module == null) return;
         if(module.enabled()) return;
 
-        ModuleManager.activeModules.add(module);
+        Modules.activeModules.add(module);
 
         if(module.showsToasts())
             RubyClient.notifyUser("Enabled " + module);
@@ -68,7 +67,7 @@ public class ModuleManager {
         if(module == null) return;
         if(!module.enabled()) return;
 
-        ModuleManager.activeModules.remove(module);
+        Modules.activeModules.remove(module);
 
         if(module.showsToasts())
             RubyClient.notifyUser("Disabled " + module);
@@ -79,13 +78,13 @@ public class ModuleManager {
 
     public static void toggle(Module module) {
         if(module == null) return;
-        if(!module.enabled()) ModuleManager.enable(module);
-        else ModuleManager.disable(module);
+        if(!module.enabled()) Modules.enable(module);
+        else Modules.disable(module);
     }
 
     public static void setEnabled(Module module, boolean isEnabled) {
         if(module == null) return;
         if(module.enabled != isEnabled)
-            ModuleManager.toggle(module);
+            Modules.toggle(module);
     }
 }
