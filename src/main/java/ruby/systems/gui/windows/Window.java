@@ -7,6 +7,7 @@ import net.minecraft.client.input.KeyInput;
 
 import org.lwjgl.glfw.GLFW;
 import ruby.RubyClient;
+import ruby.systems.gui.text.FontRenderer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,32 +54,32 @@ public abstract class Window extends AbstractParentElement implements Drawable, 
     public abstract void onFocused();
     public abstract void onFocusRemoved();
 
-//    public void drawText(FontRenderer font, DrawContext context, String text, int x, int y, int color) {
-//        context.getMatrices().pushMatrix();
-//        context.getMatrices().translate(x, y);
-//        context.getMatrices().scale(this.textScale, this.textScale);
-//
-//        font.draw(context, text, 0, 0, color);
-//
-//        context.getMatrices().popMatrix();
-//    }
-//
-//    public void drawCenteredText(FontRenderer font, DrawContext context, String text, int x, int y, int color) {
-//        this.drawText(
-//                font, context,
-//                text,
-//                (int) (x - this.getTextWidth(font, text) / 2),
-//                (int) (y - this.getTextHeight(font) / 2),
-//                color
-//        );
-//    }
-//
-//    public double getTextHeight(FontRenderer font) {
-//        return font.fontHeight * this.textScale;
-//    }
-//    public double getTextWidth(FontRenderer font, String text) {
-//        return font.getWidth(text) * this.textScale;
-//    }
+    public void drawText(FontRenderer font, DrawContext context, String text, int x, int y, int color) {
+        context.getMatrices().pushMatrix();
+        context.getMatrices().translate(x, y);
+        context.getMatrices().scale(this.textScale, this.textScale);
+
+        font.draw(context, text, 0, 0, color);
+
+        context.getMatrices().popMatrix();
+    }
+
+    public void drawCenteredText(FontRenderer font, DrawContext context, String text, int x, int y, int color) {
+        this.drawText(
+                font, context,
+                text,
+                (int) (x - this.getTextWidth(font, text) / 2),
+                (int) (y - this.getTextHeight(font) / 2),
+                color
+        );
+    }
+
+    public double getTextHeight(FontRenderer font) {
+        return font.fontHeight * this.textScale;
+    }
+    public double getTextWidth(FontRenderer font, String text) {
+        return font.getWidth(text) * this.textScale;
+    }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float deltaTicks) {

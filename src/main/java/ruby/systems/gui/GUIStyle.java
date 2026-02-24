@@ -1,7 +1,7 @@
 package ruby.systems.gui;
 
-import com.entity.eclipse.Eclipse;
-import com.entity.eclipse.utils.render.font.FontRenderer;
+import ruby.RubyClient;
+import ruby.systems.gui.text.FontRenderer;
 
 public record GUIStyle(
         int headerBGColor, int headerTextColor,
@@ -16,10 +16,10 @@ public record GUIStyle(
             0xFFCCCCCC,
             0xCC222222, 0xFFCCCCCC,
             0xCC333333, 0xFFFFAA00,
-            FontRenderer.create(Eclipse.getResourceStream("fonts/NunitoBold.ttf"),    "Header",    28),
-            FontRenderer.create(Eclipse.getResourceStream("fonts/Nunito.ttf"),        "Subheader", 22),
-            FontRenderer.create(Eclipse.getResourceStream("fonts/Nunito.ttf"),        "Body",      18),
-            FontRenderer.create(Eclipse.getResourceStream("fonts/JetBrainsMono.ttf"), "Monospace", 16)
+            FontRenderer.create(RubyClient.getResourceStream("fonts/NunitoBold.ttf"),    "Header",    28),
+            FontRenderer.create(RubyClient.getResourceStream("fonts/Nunito.ttf"),        "Subheader", 22),
+            FontRenderer.create(RubyClient.getResourceStream("fonts/Nunito.ttf"),        "Body",      18),
+            FontRenderer.create(RubyClient.getResourceStream("fonts/JetBrainsMono.ttf"), "Monospace", 16)
     );
 
     private static GUIStyle current = GUIStyle.DEFAULT;
