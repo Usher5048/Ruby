@@ -2,6 +2,7 @@ package ruby.systems.config;
 
 import ruby.RubyClient;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 
@@ -9,8 +10,7 @@ public class ConfigManager {
     private static final int VERSION = 1;
     private static final File configFile = new File(RubyClient.client.runDirectory.getAbsolutePath() + "/." + RubyClient.MOD_ID + "/config");
 
-    private static byte[] configToBytes(Configuration config) {
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    private static void configToBytes(ByteArrayOutputStream stream, Configuration config) {
         ByteArrayOutputStream valueStream = new ByteArrayOutputStream();
 
         stream.write(config.getAll().size());
@@ -28,15 +28,17 @@ public class ConfigManager {
             stream.write((valueLen     ) & 0xFF);
             stream.writeBytes(valueStream.toByteArray());
         }
+    }
 
-        return stream.toByteArray();
+    private static void bytesToConfig(ByteArrayInputStream stream, Configuration config) {
+
     }
 
     public static void saveState() {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         stream.write(ConfigManager.VERSION);
 
-
+        ConfigManager.configToBytes(stream, RubyClient.config);
     }
 
     public static void loadState() {
