@@ -8,6 +8,7 @@ public record GUIStyle(
         int subheaderTextColor,
         int bodyBGColor, int bodyTextColor,
         int enabledBGColor, int enabledColor,
+        int disabledBGColor, int enabledBgColor,
         FontRenderer headerFont, FontRenderer subHeaderFont,
         FontRenderer bodyFont, FontRenderer monospaceFont
 ) {
@@ -16,6 +17,7 @@ public record GUIStyle(
             0xFFCCCCCC,
             0xCC222222, 0xFFCCCCCC,
             0xCC333333, 0xFFFFAA00,
+            0xff181818, 0xff131313,
             FontRenderer.create(RubyClient.getResourceStream("fonts/NunitoBold.ttf"),    "Header",    28),
             FontRenderer.create(RubyClient.getResourceStream("fonts/Nunito.ttf"),        "Subheader", 22),
             FontRenderer.create(RubyClient.getResourceStream("fonts/Nunito.ttf"),        "Body",      18),
