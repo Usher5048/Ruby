@@ -5,7 +5,7 @@ import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -20,7 +20,7 @@ public class Step extends Module {
     private double prevStepHeight = 0.6;
 
     public Step() {
-        super("Step", "Allows you to walk up full blocks instantly.", ModuleCategory.MOVEMENT);
+        super("Step", "Allows you to walk up full blocks instantly.", ModuleType.MOVEMENT);
 
         height = config.create(new DoubleValue.Builder("Height")
                 .description("Step height in blocks.")

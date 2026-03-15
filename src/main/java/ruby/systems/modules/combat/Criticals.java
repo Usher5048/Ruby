@@ -7,7 +7,7 @@ import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.util.hit.EntityHitResult;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -23,7 +23,7 @@ public class Criticals extends Module {
     private final EnumValue<Mode> mode;
 
     public Criticals() {
-        super("Criticals", "Always land critical hits.", ModuleCategory.COMBAT);
+        super("Criticals", "Always land critical hits.", ModuleType.COMBAT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The mode used to perform criticals.")

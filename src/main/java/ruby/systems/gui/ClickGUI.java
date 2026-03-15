@@ -1,15 +1,17 @@
 package ruby.systems.gui;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 import org.lwjgl.glfw.GLFW;
+import ruby.RubyClient;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.gui.windows.ModuleTypeWindow;
 import ruby.systems.gui.windows.Window;
 import ruby.systems.gui.windows.WindowedScreen;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 import ruby.systems.modules.Modules;
 
 import java.util.ArrayList;
@@ -19,9 +21,9 @@ import java.util.Map;
 
 public class ClickGUI extends WindowedScreen {
 
-    private static final ModuleCategory[] CATEGORIES = {
-            ModuleCategory.COMBAT, ModuleCategory.MOVEMENT, ModuleCategory.PLAYER,
-            ModuleCategory.RENDER, ModuleCategory.WORLD, ModuleCategory.MISC
+    private static final ModuleType[] CATEGORIES = {
+            ModuleType.COMBAT, ModuleType.MOVEMENT, ModuleType.PLAYER,
+            ModuleType.RENDER, ModuleType.WORLD, ModuleType.MISC
     };
 
     /* ---- animation state ---- */
@@ -50,7 +52,7 @@ public class ClickGUI extends WindowedScreen {
 
         int spacing = 200;
         int totalCategories = 0;
-        for (ModuleCategory cat : CATEGORIES) {
+        for (ModuleType cat : CATEGORIES) {
             if (!Modules.getByCategory(cat).isEmpty()) totalCategories++;
         }
 
@@ -58,7 +60,7 @@ public class ClickGUI extends WindowedScreen {
         int startX = Math.max(20, (this.width - totalWidth) / 2);
 
         int col = 0;
-        for (ModuleCategory cat : CATEGORIES) {
+        for (ModuleType cat : CATEGORIES) {
             var modules = Modules.getByCategory(cat);
             if (modules.isEmpty()) continue;
 
@@ -78,7 +80,10 @@ public class ClickGUI extends WindowedScreen {
     /* ---- render with animation ---- */
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+    public void onRender(DrawContext context, int mouseX, int mouseY) {
+        int width = RubyClient.client.getWindow().getWidth();
+        int height = RubyClient.client.getWindow().getHeight();
+
         // Drive open/close animation (fast lerp)
         float target = this.closing ? 0f : 1f;
         this.openProgress += (target - this.openProgress) * 0.35f;
@@ -92,25 +97,25 @@ public class ClickGUI extends WindowedScreen {
 
         // Animated background overlay
         int bgAlpha = (int) (0x88 * this.openProgress);
-        context.fill(0, 0, this.width, this.height, bgAlpha << 24);
+        context.fill(0, 0, width, height, bgAlpha << 24);
 
         // Scale-based animation: panels grow in / shrink out from their own center
-        double sf = this.client.getWindow().getScaleFactor();
-        float scale = this.openProgress;
+//        double sf = this.client.getWindow().getScaleFactor();
+//        float scale = this.openProgress;
 
-        for (Window window : this.windows()) {
-            context.getMatrices().pushMatrix();
-
-            // Scale around each panel's center
-            float cx = window.getX() / (float) sf + (window.getWidth() / (float) sf) / 2f;
-            float cy = window.getY() / (float) sf + (window.getHeight() / (float) sf) / 2f;
-            context.getMatrices().translate(cx, cy);
-            context.getMatrices().scale(scale, scale);
-            context.getMatrices().translate(-cx, -cy);
-
-            window.render(context, mouseX, mouseY, tickDelta);
-            context.getMatrices().popMatrix();
-        }
+//        for (Window window : this.windows()) {
+//            context.getMatrices().pushMatrix();
+//
+//            // Scale around each panel's center
+//            float cx = window.getX() / (float) sf + (window.getWidth() / (float) sf) / 2f;
+//            float cy = window.getY() / (float) sf + (window.getHeight() / (float) sf) / 2f;
+//            context.getMatrices().translate(cx, cy);
+//            context.getMatrices().scale(scale, scale);
+//            context.getMatrices().translate(-cx, -cy);
+//
+//            window.render(context, mouseX, mouseY);
+//            context.getMatrices().popMatrix();
+//        }
 
         // Draw search bar at top right
         drawSearchBar(context);
@@ -119,19 +124,35 @@ public class ClickGUI extends WindowedScreen {
         if (this.cursorBlink > 2f) this.cursorBlink = 0f;
     }
 
+    @Override
+    public boolean onMouseDown(Click click, boolean doubled) {
+        if(click.button() != GLFW.GLFW_MOUSE_BUTTON_MIDDLE) return false;
+
+        int xOffset = 20;
+        for(ModuleType type : ModuleType.values()) {
+            for(Window child : this.windows()) {
+                if(!(child instanceof ModuleTypeWindow mWin)) continue;
+                if(mWin.getTitle() != type.toString()) continue;
+
+                child.setPosition(xOffset, 20);
+                xOffset += child.getWidth() + 20;
+                break;
+            }
+        }
+
+        return true;
+    }
+
     private void drawSearchBar(DrawContext context) {
+        int width = RubyClient.client.getWindow().getWidth();
         GUIStyle style = GUIStyle.get();
-        double sf = this.client.getWindow().getScaleFactor();
 
         int barW = 220;
         int barH = 24;
-        int barX = (int) (this.width * sf) - barW - 16;
+        int barX = width - barW - 16;
         int barY = 16;
 
         float alpha = Math.min(1f, this.openProgress * 2f);
-
-        context.getMatrices().pushMatrix();
-        context.getMatrices().scale(1f / (float) sf, 1f / (float) sf);
 
         int bgAlpha = (int) (0xCC * alpha);
         ModuleTypeWindow.fillSmoothRoundedRect(context, barX, barY, barX + barW, barY + barH, 6,
@@ -147,17 +168,15 @@ public class ClickGUI extends WindowedScreen {
         // Text or placeholder
         String display = this.searchText.isEmpty() ? "Search..." : this.searchText;
         int col = this.searchText.isEmpty() ? 0xFF555555 : 0xFFCCCCCC;
-        int textY = barY + (barH - (int) (style.monospaceFont().fontHeight)) / 2;
+        int textY = barY + (barH - style.monospaceFont().fontHeight) / 2;
         style.monospaceFont().draw(context, display, barX + 10, textY, col);
 
         // Cursor
         if (!this.searchText.isEmpty() && this.cursorBlink < 1f) {
-            int cx = barX + 10 + (int) style.monospaceFont().getWidth(this.searchText);
-            int ch = (int) style.monospaceFont().fontHeight;
+            int cx = barX + 10 + style.monospaceFont().getWidth(this.searchText);
+            int ch = style.monospaceFont().fontHeight;
             context.fill(cx, textY, cx + 1, textY + ch, 0xFFCCCCCC);
         }
-
-        context.getMatrices().popMatrix();
     }
 
     /* ---- search ---- */
@@ -195,15 +214,9 @@ public class ClickGUI extends WindowedScreen {
     /* ---- input handling ---- */
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean onKeyPress(KeyInput input) {
         // Shift closes the GUI
-        if (input.key() == GLFW.GLFW_KEY_RIGHT_SHIFT || input.key() == GLFW.GLFW_KEY_LEFT_SHIFT) {
-            this.close();
-            return true;
-        }
-
-        // ESC closes the GUI
-        if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (input.key() == GLFW.GLFW_KEY_RIGHT_SHIFT) {
             this.close();
             return true;
         }
@@ -215,21 +228,19 @@ public class ClickGUI extends WindowedScreen {
             return true;
         }
 
-        return super.keyPressed(input);
+        return false;
     }
 
     @Override
-    public boolean charTyped(CharInput input) {
-        // Let focused child handle chars first (e.g., keybind setting, list search)
-        if (super.charTyped(input)) return true;
-
+    public boolean onCharTyped(CharInput input) {
         // Append to search
         char c = (char) input.codepoint();
-        if (c >= 32 && c < 127) {
+        if(c >= 32 && c < 127) {
             this.searchText += c;
             this.updateSearch();
             return true;
         }
+
         return false;
     }
 

@@ -10,7 +10,7 @@ import net.minecraft.screen.slot.SlotActionType;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -34,7 +34,7 @@ public class AutoArmor extends Module {
     private int timer = 0;
 
     public AutoArmor() {
-        super("Auto Armor", "Automatically equips the best armor.", ModuleCategory.COMBAT);
+        super("Auto Armor", "Automatically equips the best armor.", ModuleType.COMBAT);
 
         delay = config.create(new IntegerValue.Builder("Delay")
                 .description("Delay in ticks between equipping armor pieces.")

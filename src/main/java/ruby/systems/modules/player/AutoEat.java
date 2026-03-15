@@ -9,7 +9,7 @@ import net.minecraft.util.Hand;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -27,7 +27,7 @@ public class AutoEat extends Module {
     private int prevSlot = -1;
 
     public AutoEat() {
-        super("Auto Eat", "Automatically eats food when you are hungry.", ModuleCategory.PLAYER);
+        super("Auto Eat", "Automatically eats food when you are hungry.", ModuleType.PLAYER);
 
         hungerThreshold = config.create(new IntegerValue.Builder("Hunger")
                 .description("Hunger level to start eating at.")

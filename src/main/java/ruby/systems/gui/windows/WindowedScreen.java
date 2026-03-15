@@ -43,18 +43,46 @@ public class WindowedScreen extends Screen {
         return window;
     }
 
+    public boolean onMouseDown(Click click, boolean doubled) {
+        return false;
+    }
+    public boolean onMouseUp(Click click) {
+        return false;
+    }
+    public boolean onMouseDragged(Click click, double deltaX, double deltaY) {
+        return false;
+    }
+    public boolean onMouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        return false;
+    }
+    public void onMouseMoved(double mouseX, double mouseY) {}
+
+    public boolean onKeyPress(KeyInput input) {
+        return false;
+    }
+    public boolean onKeyRelease(KeyInput input) {
+        return false;
+    }
+    public boolean onCharTyped(CharInput input) {
+        return false;
+    }
+
     @Override
     public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+        // only good change made by ai
         // Always dispatch to focused (last) window — prevents drag loss on fast mouse
-        if (!this.windows.isEmpty()) {
-            this.windows.getLast().mouseDragged(click, deltaX, deltaY);
+        if(!this.windows.isEmpty()) {
+            if(this.windows.getLast().mouseDragged(click, deltaX, deltaY))
+                return true;
         }
-        return true;
+
+        return this.onMouseDragged(click, deltaX, deltaY);
     }
 
     @Override
     public boolean mouseReleased(Click click) {
-        return this.runFocused(win -> win.mouseReleased(click));
+        if(this.runFocused(win -> win.mouseReleased(click))) return true;
+        return this.onMouseUp(click);
     }
 
     @Override
@@ -70,11 +98,13 @@ public class WindowedScreen extends Screen {
             if(sMouseX >= window.getX() + window.getWidth()) continue;
             if(sMouseY >= window.getY() + window.getHeight()) continue;
 
-            this.focusWindow(window).mouseClicked(click, doubled);
+            if(this.focusWindow(window).mouseClicked(click, doubled))
+                return true;
+
             break;
         }
 
-        return true;
+        return this.onMouseDown(click, doubled);
     }
 
     @Override
@@ -90,29 +120,35 @@ public class WindowedScreen extends Screen {
             if(sMouseX >= window.getX() + window.getWidth()) continue;
             if(sMouseY >= window.getY() + window.getHeight()) continue;
 
-            window.mouseScrolled(
+            if(window.mouseScrolled(
                     mouseX, mouseY,
                     horizontalAmount,
                     verticalAmount
-            );
+            )) return true;
 
             break;
         }
 
-        return true;
+        return this.onMouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override
     public boolean keyPressed(KeyInput input) {
         if(this.runFocused(win -> win.keyPressed(input))) return true;
+        if(this.onKeyPress(input)) return true;
         return super.keyPressed(input);
     }
 
-    @Override public boolean keyReleased(KeyInput input) {
-        return this.runFocused(win -> win.keyReleased(input));
+    @Override
+    public boolean keyReleased(KeyInput input) {
+        if(this.runFocused(win -> win.keyReleased(input))) return true;
+        return this.onKeyRelease(input);
     }
-    @Override public boolean charTyped(CharInput input) {
-        return this.runFocused(win -> win.charTyped(input));
+
+    @Override
+    public boolean charTyped(CharInput input) {
+        if(this.runFocused(win -> win.charTyped(input))) return true;
+        return this.onCharTyped(input);
     }
 
     @Override
@@ -131,6 +167,8 @@ public class WindowedScreen extends Screen {
             window.mouseMoved(mouseX, mouseY);
             break;
         }
+
+        this.onMouseMoved(mouseX, mouseY);
     }
 
     public void onRender(DrawContext context, int mouseX, int mouseY) {}

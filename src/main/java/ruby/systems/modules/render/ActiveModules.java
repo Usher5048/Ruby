@@ -2,12 +2,12 @@ package ruby.systems.modules.render;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.config.IntegerValue;
+import ruby.systems.events.render.Render2DEvent;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 import ruby.systems.modules.Modules;
 
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ public class ActiveModules extends Module {
     private final IntegerValue rainbowSpeed;
 
     public ActiveModules() {
-        super("Active Modules", "Displays active modules on the HUD.", ModuleCategory.RENDER);
+        super("Active Modules", "Displays active modules on the HUD.", ModuleType.RENDER);
 
         sortMode = config.create(new EnumValue.Builder<SortMode>("Sort")
                 .description("How to sort the module list.")
@@ -50,7 +50,7 @@ public class ActiveModules extends Module {
     }
 
     @Override
-    public void onRender2D(DrawContext context) {
+    public void render2D(Render2DEvent event) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.options.hudHidden) return;
 
@@ -81,11 +81,11 @@ public class ActiveModules extends Module {
             int color = getColor(m, i);
 
             if (background.value()) {
-                context.fill(x - 2, y, screenWidth - 1, y + lineHeight, 0x60000000);
-                context.fill(screenWidth - 1, y, screenWidth, y + lineHeight, color);
+                event.getContext().fill(x - 2, y, screenWidth - 1, y + lineHeight, 0x60000000);
+                event.getContext().fill(screenWidth - 1, y, screenWidth, y + lineHeight, color);
             }
 
-            context.drawTextWithShadow(font, name, x, y + 1, color);
+            event.getContext().drawTextWithShadow(font, name, x, y + 1, color);
             y += lineHeight;
         }
     }
@@ -98,7 +98,7 @@ public class ActiveModules extends Module {
         };
     }
 
-    private int getCategoryColor(ModuleCategory category) {
+    private int getCategoryColor(ModuleType category) {
         return switch (category) {
             case COMBAT -> 0xFFE55561;
             case MOVEMENT -> 0xFF55C4E5;

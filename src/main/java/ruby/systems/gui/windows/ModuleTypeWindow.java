@@ -3,7 +3,7 @@ package ruby.systems.gui.windows;
 import net.minecraft.client.gui.DrawContext;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 import java.util.List;
 
@@ -16,9 +16,8 @@ public class ModuleTypeWindow extends CollapsibleWindow {
         this(x, y, null, modules);
     }
 
-    public ModuleTypeWindow(int x, int y, ModuleCategory category, List<Module> modules) {
+    public ModuleTypeWindow(int x, int y, ModuleType category, List<Module> modules) {
         super(x, y, 240, 42);
-//        this.reorderChildren = false;
         this.modules = modules;
         this.title = category == null ? "Keybinds" : category.toString();
 
@@ -35,6 +34,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
 
     @Override
     public void onRender(DrawContext context, int mouseX, int mouseY) {
+
         // Pre-update children animation so getHeight() is accurate for border drawing
         for (Window child : this.windows()) {
             if (child instanceof ModuleWindow mw) {
@@ -42,12 +42,20 @@ public class ModuleTypeWindow extends CollapsibleWindow {
                 mw.animationUpdatedThisFrame = true;
             }
         }
-        // Relayout children dynamically (handles expansion/collapse)
+
+        // fix order
         int yOffset = this.getHeaderHeight();
-        for (Window child : this.windows()) {
-            child.setPosition(0, yOffset);
-            yOffset += child.getHeight();
+        for(Module module : this.modules) {
+            for(Window child : this.windows()) {
+                if(!(child instanceof ModuleWindow mWin)) continue;
+                if(mWin.module() != module) continue;
+
+                child.setPosition(0, yOffset);
+                yOffset += child.getHeight();
+                break;
+            }
         }
+
         super.onRender(context, mouseX, mouseY);
     }
 

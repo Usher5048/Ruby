@@ -1,10 +1,11 @@
 package ruby.systems.modules;
 
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import org.apache.commons.lang3.StringUtils;
 import ruby.RubyClient;
 import ruby.systems.config.Configuration;
+import ruby.systems.events.render.Render2DEvent;
+import ruby.systems.events.render.Render3DEvent;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -12,7 +13,7 @@ import java.util.stream.Collectors;
 public abstract class Module {
     private final String name;
     private final String description;
-    private final ModuleCategory type;
+    private final ModuleType type;
 
     protected String origin;
     protected boolean enabled = false;
@@ -21,7 +22,7 @@ public abstract class Module {
     public final Configuration config;
     public Keybind keybind;
 
-    public Module(String name, String description, ModuleCategory type) {
+    public Module(String name, String description, ModuleType type) {
         this.name = name;
         this.description = description;
         this.type = type;
@@ -37,7 +38,7 @@ public abstract class Module {
     public String description() {
         return this.description;
     }
-    public ModuleCategory category() {
+    public ModuleType category() {
         return this.type;
     }
 
@@ -75,8 +76,8 @@ public abstract class Module {
     public void tick() {}
     public void onEnable() {}
     public void onDisable() {}
-    public void onRender3D() {}
-    public void onRender2D(DrawContext context) {}
+    public void render2D(Render2DEvent event) {}
+    public void render3D(Render3DEvent event) {}
 
     @Override
     public String toString() {

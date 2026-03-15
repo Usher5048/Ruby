@@ -6,7 +6,7 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -23,7 +23,7 @@ public class Fullbright extends Module {
     private final EnumValue<Mode> mode;
 
     public Fullbright() {
-        super("Fullbright", "Makes everything fully bright.", ModuleCategory.RENDER);
+        super("Fullbright", "Makes everything fully bright.", ModuleType.RENDER);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("Method to apply fullbright.")

@@ -5,7 +5,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import ruby.mixin.MinecraftClientAccessor;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -20,7 +20,7 @@ public class FastPlace extends Module {
     private final IntegerValue cooldown;
 
     public FastPlace() {
-        super("Fast Place", "Allows you to place items faster.", ModuleCategory.PLAYER);
+        super("Fast Place", "Allows you to place items faster.", ModuleType.PLAYER);
 
         cooldown = config.create(new IntegerValue.Builder("Cooldown")
                 .description("Item use cooldown in ticks (0 = fastest).")

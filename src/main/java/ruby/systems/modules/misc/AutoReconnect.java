@@ -2,7 +2,7 @@ package ruby.systems.modules.misc;
 
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -20,7 +20,7 @@ public class AutoReconnect extends Module {
     public static AutoReconnect INSTANCE;
 
     public AutoReconnect() {
-        super("Auto Reconnect", "Automatically reconnects when disconnected.", ModuleCategory.MISC);
+        super("Auto Reconnect", "Automatically reconnects when disconnected.", ModuleType.MISC);
         INSTANCE = this;
 
         delay = config.create(new DoubleValue.Builder("Delay")

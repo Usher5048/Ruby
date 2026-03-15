@@ -1,8 +1,10 @@
 package ruby;
 
 import net.fabricmc.api.ModInitializer;
-
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
@@ -10,11 +12,13 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.config.Configuration;
 import ruby.systems.events.Events;
+import ruby.systems.events.render.Render2DEvent;
+import ruby.systems.events.render.Render3DEvent;
 import ruby.systems.events.tick.TickEvents;
 import ruby.systems.gui.ClickGUI;
 import ruby.systems.gui.LoadingOverlay;
@@ -79,14 +83,32 @@ public class RubyClient implements ModInitializer {
 		else overlay.log("Failed to load client configs, using default!", 0xFF3333);
 
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::saveState));
-		overlay.log("Added shutdown hook to runtime");
+		overlay.log("Attached shutdown hook to runtime");
 
 		Events.TICK.register(TickEvents.BEGIN, event -> {
 			if(RubyClient.openGUIKey.wasPressed())
 				RubyClient.client.setScreen(new ClickGUI());
 		});
 
-		overlay.log("Added tick listener");
+		overlay.log("Attached tick listener to gui");
+
+		HudElementRegistry.attachElementBefore(
+				VanillaHudElements.MISC_OVERLAYS,
+				Identifier.of(RubyClient.MOD_ID, "hud_render"),
+				(context, tickCounter) -> Events.RENDER2D.fire(new Render2DEvent(context, tickCounter))
+		);
+
+		overlay.log("Registered 2D rendering event");
+
+		WorldRenderEvents.END_MAIN.register(context -> Events.RENDER3D.fire(new Render3DEvent(
+				0,
+				context.gameRenderer().getBasicProjectionMatrix(RubyClient.client.options.getFov().getValue()),
+				context.matrices().peek().getPositionMatrix(),
+				context.matrices(),
+				context.consumers()
+		)));
+
+		overlay.log("Registered 3D rendering event");
 
 //		try { Thread.sleep(5000); } catch(Exception ignored) {}
 	}

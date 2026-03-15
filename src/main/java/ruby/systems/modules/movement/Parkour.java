@@ -5,7 +5,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.Box;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -20,7 +20,7 @@ public class Parkour extends Module {
     private final DoubleValue edgeDistance;
 
     public Parkour() {
-        super("Parkour", "Automatically jumps at the edges of blocks.", ModuleCategory.MOVEMENT);
+        super("Parkour", "Automatically jumps at the edges of blocks.", ModuleType.MOVEMENT);
 
         edgeDistance = config.create(new DoubleValue.Builder("Edge Distance")
                 .description("How far from the edge should you jump.")

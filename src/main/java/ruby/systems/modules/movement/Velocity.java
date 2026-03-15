@@ -5,7 +5,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -20,7 +20,7 @@ public class Velocity extends Module {
     private final DoubleValue vertical;
 
     public Velocity() {
-        super("Velocity", "Reduces the amount of knockback you take.", ModuleCategory.MOVEMENT);
+        super("Velocity", "Reduces the amount of knockback you take.", ModuleType.MOVEMENT);
 
         horizontal = config.create(new DoubleValue.Builder("Horizontal")
                 .description("Horizontal knockback multiplier.")

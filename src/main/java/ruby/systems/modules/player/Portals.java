@@ -1,7 +1,7 @@
 package ruby.systems.modules.player;
 
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -14,6 +14,6 @@ import ruby.systems.modules.ModuleCategory;
 public class Portals extends Module {
 
     public Portals() {
-        super("Portals", "Allows you to use GUIs while in nether portals.", ModuleCategory.PLAYER);
+        super("Portals", "Allows you to use GUIs while in nether portals.", ModuleType.PLAYER);
     }
 }

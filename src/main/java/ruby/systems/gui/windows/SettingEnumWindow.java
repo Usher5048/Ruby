@@ -6,15 +6,14 @@ import org.lwjgl.glfw.GLFW;
 import ruby.systems.config.EnumValue;
 import ruby.systems.gui.GUIStyle;
 
-public class SettingEnumWindow extends Window {
-
-    private final EnumValue<?> value;
+public class SettingEnumWindow extends SettingWindow {
 
     public SettingEnumWindow(int x, int y, int width, EnumValue<?> value) {
-        super(x, y, width, 26);
-        this.value = value;
+        super(x, y, width, 26, value);
         this.handleChildren = false;
     }
+
+
 
     @Override
     public void onRender(DrawContext context, int mouseX, int mouseY) {
@@ -44,7 +43,7 @@ public class SettingEnumWindow extends Window {
     @Override
     public boolean onMouseDown(Click click, boolean doubled) {
         if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
-        this.value.cycle();
+        ((EnumValue<?>) this.value).cycle();
         return true;
     }
 }

@@ -7,7 +7,7 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.SlotActionType;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -19,7 +19,7 @@ import ruby.systems.modules.ModuleCategory;
  */
 public class ChestSwap extends Module {
     public ChestSwap() {
-        super("Chest Swap", "Swaps between elytra and chestplate.", ModuleCategory.PLAYER);
+        super("Chest Swap", "Swaps between elytra and chestplate.", ModuleType.PLAYER);
     }
 
     @Override

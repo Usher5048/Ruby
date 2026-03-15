@@ -3,7 +3,7 @@ package ruby.systems.modules.movement;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -14,7 +14,7 @@ import ruby.systems.modules.ModuleCategory;
 public class Sneak extends Module {
 
     public Sneak() {
-        super("Sneak", "Automatically sneaks for you.", ModuleCategory.MOVEMENT);
+        super("Sneak", "Automatically sneaks for you.", ModuleType.MOVEMENT);
     }
 
     @Override

@@ -12,20 +12,20 @@ import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import ruby.RubyClient;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EntityTypeListValue;
 import ruby.systems.config.EnumValue;
+import ruby.systems.events.Events;
+import ruby.systems.events.entity.EntityEvents;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 public class Hitboxes extends Module {
     public enum AimPoint { Closest, Center, Head }
 
     public static Hitboxes INSTANCE;
-    private static final Logger LOGGER = LoggerFactory.getLogger("Hitboxes");
 
     // ── Config ────────────────────────────────────────────────────────────────
     private final EntityTypeListValue entities;
@@ -79,7 +79,7 @@ public class Hitboxes extends Module {
     // ── Constructor ───────────────────────────────────────────────────────────
 
     public Hitboxes() {
-        super("Hitboxes", "Expands target hitboxes for selected entity types.", ModuleCategory.COMBAT);
+        super("Hitboxes", "Expands target hitboxes for selected entity types.", ModuleType.COMBAT);
         INSTANCE = this;
 
         entities = config.create(new EntityTypeListValue.Builder("Entities")
@@ -107,6 +107,10 @@ public class Hitboxes extends Module {
         maxRotateDeg = config.create(new DoubleValue.Builder("Max Rotate Delta")
                 .defaultValue(35.0).min(1.0).max(180.0).step(1.0)
                 .visible(silentAim::value).build());
+
+        Events.ENTITY.register(EntityEvents.ATTACK, e ->
+                this.latchAttackRotation(RubyClient.client.player, e.entity())
+        );
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -200,8 +204,6 @@ public class Hitboxes extends Module {
         attackSpoofYaw   = baseYaw + dYaw;
         attackSpoofPitch = MathHelper.clamp(basePitch + dPitch, -90f, 90f);
         attackedThisTick = true;
-
-        LOGGER.info("[SA] LATCH_ATTACK yaw={} pitch={}", f(attackSpoofYaw), f(attackSpoofPitch));
     }
 
     /**
@@ -226,7 +228,6 @@ public class Hitboxes extends Module {
             spoofPitch       = attackSpoofPitch;
             prevClientYaw    = vanillaYaw;
             prevClientPitch  = vanillaPitch;
-            LOGGER.info("[SA] PROMOTE_LATCH spoof={}/{}", f(spoofYaw), f(spoofPitch));
         }
 
         if (!spoofing) {
@@ -237,12 +238,10 @@ public class Hitboxes extends Module {
             // Full packet — player is changing position this tick.
             // We MUST send the real yaw here or Grim's simulation will flag us.
             // Hold the spoof; it will be applied next tick when player is still.
-            LOGGER.info("[SA] HOLD_MOVING sending real={}/{}", f(vanillaYaw), f(vanillaPitch));
             return new float[]{ vanillaYaw, vanillaPitch };
         }
 
         // LookAndOnGround — no position delta. Safe to spoof freely.
-        LOGGER.info("[SA] SPOOF_LOOK yaw={} pitch={}", f(spoofYaw), f(spoofPitch));
         return new float[]{ spoofYaw, spoofPitch };
     }
 
@@ -260,7 +259,6 @@ public class Hitboxes extends Module {
             float dPitch = Math.abs(clientPitch - prevClientPitch);
             if (dYaw > MOUSE_RELEASE_DEG || dPitch > MOUSE_RELEASE_DEG) {
                 spoofing = false;
-                LOGGER.info("[SA] MOUSE_RELEASE dYaw={} dPitch={}", f(dYaw), f(dPitch));
             }
         }
 

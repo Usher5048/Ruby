@@ -51,6 +51,10 @@ public class ModuleWindow extends CollapsibleWindow {
 
     private static final int SETTING_GAP = 2;
 
+    public Module module() {
+        return this.module;
+    }
+
     private int getExpandedHeight() {
         int h = this.getHeaderHeight() + 8;
         for (Window child : this.windows()) {
@@ -94,6 +98,20 @@ public class ModuleWindow extends CollapsibleWindow {
 
     @Override
     public void onRender(DrawContext context, int mouseX, int mouseY) {
+        int settingY = this.getHeaderHeight() + 8;
+        for (String key : this.module.config.getAll()) {
+            Value<?> value = this.module.config.get(key);
+            for(Window child : this.windows()) {
+                if(!(child instanceof SettingWindow sWin)) continue;
+                if(sWin.value() != value) continue;
+
+                child.setPosition(0, settingY);
+                settingY += child.getHeight();
+
+                break;
+            }
+        }
+
         // Animation & layout already handled by updateAnimation() called from parent.
         // Only re-run if it somehow wasn't called yet (direct rendering).
         if (!this.animationUpdatedThisFrame) {
@@ -191,12 +209,20 @@ public class ModuleWindow extends CollapsibleWindow {
 
     @Override
     public boolean onKeyPress(KeyInput input) {
-        if (!this.waitingForBind) return false;
-        if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
-            this.module.keybind = Keybind.unbound();
-        } else {
-            this.module.keybind = Keybind.key(input.key(), false);
+        if(!this.waitingForBind) return false;
+
+        if(input.key() == GLFW.GLFW_KEY_ESCAPE) {
+            this.waitingForBind = false;
+            return true;
         }
+
+        if(input.key() != GLFW.GLFW_KEY_BACKSPACE) {
+            this.module.keybind = Keybind.key(input.key(), false);
+            this.waitingForBind = false;
+            return true;
+        }
+
+        this.module.keybind = Keybind.unbound();
         this.waitingForBind = false;
         return true;
     }

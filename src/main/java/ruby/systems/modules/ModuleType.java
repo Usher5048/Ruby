@@ -1,6 +1,6 @@
 package ruby.systems.modules;
 
-public enum ModuleCategory {
+public enum ModuleType {
     COMBAT("Combat"),
     MOVEMENT("Movement"),
     PLAYER("Player"),
@@ -10,7 +10,7 @@ public enum ModuleCategory {
     MISC("Miscellaneous");
 
     private final String name;
-    ModuleCategory(String name) {
+    ModuleType(String name) {
         this.name = name;
     }
 

@@ -3,14 +3,14 @@ package ruby.systems.modules.player;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import ruby.systems.config.BooleanValue;
+import ruby.systems.events.render.Render2DEvent;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -32,7 +32,7 @@ public class AutoTool extends Module {
     public static int visualSlot = -1;
 
     public AutoTool() {
-        super("Auto Tool", "Automatically switches to the best tool for mining.", ModuleCategory.PLAYER);
+        super("Auto Tool", "Automatically switches to the best tool for mining.", ModuleType.PLAYER);
 
         antiBreak = config.create(new BooleanValue.Builder("Anti Break")
                 .description("Stops using tools that are about to break.")
@@ -98,7 +98,7 @@ public class AutoTool extends Module {
     }
 
     @Override
-    public void onRender2D(DrawContext context) {
+    public void render2D(Render2DEvent event) {
         if (!swapped) return;
 
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -120,12 +120,12 @@ public class AutoTool extends Module {
         int bgX = centerX - totalWidth / 2 - 4;
         int bgY = screenHeight - 60;
 
-        context.fill(bgX, bgY, bgX + totalWidth + 8, bgY + 20, 0x80000000);
+        event.getContext().fill(bgX, bgY, bgX + totalWidth + 8, bgY + 20, 0x80000000);
 
         int iconX = centerX - totalWidth / 2;
-        context.drawItem(toolStack, iconX, bgY + 2);
+        event.getContext().drawItem(toolStack, iconX, bgY + 2);
 
-        context.drawTextWithShadow(font, toolName, iconX + 20, bgY + 6, 0xFFCC3344);
+        event.getContext().drawTextWithShadow(font, toolName, iconX + 20, bgY + 6, 0xFFCC3344);
     }
 
     @Override

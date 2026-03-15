@@ -6,7 +6,7 @@ import net.minecraft.util.math.Vec3d;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -26,7 +26,7 @@ public class LongJump extends Module {
     private boolean wasOnGround = false;
 
     public LongJump() {
-        super("Long Jump", "Makes you jump further.", ModuleCategory.MOVEMENT);
+        super("Long Jump", "Makes you jump further.", ModuleType.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The method of boosting jumps.")

@@ -6,7 +6,7 @@ import net.minecraft.util.math.Box;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -21,7 +21,7 @@ public class SafeWalk extends Module {
     private final BooleanValue sneak;
 
     public SafeWalk() {
-        super("Safe Walk", "Prevents you from walking off blocks.", ModuleCategory.MOVEMENT);
+        super("Safe Walk", "Prevents you from walking off blocks.", ModuleType.MOVEMENT);
 
         config.create(new IntegerValue.Builder("Fall Distance")
                 .description("Minimum fall distance before the module activates.")

@@ -7,7 +7,7 @@ import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -28,7 +28,7 @@ public class Fly extends Module {
     private int antiKickTimer = 0;
 
     public Fly() {
-        super("Fly", "Lets you fly.", ModuleCategory.MOVEMENT);
+        super("Fly", "Lets you fly.", ModuleType.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The flight mode.")

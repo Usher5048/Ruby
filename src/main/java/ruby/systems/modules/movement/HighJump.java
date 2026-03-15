@@ -4,7 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 import ruby.systems.modules.Modules;
 
 /**
@@ -23,7 +23,7 @@ public class HighJump extends Module {
     private boolean wasOnGround = false;
 
     public HighJump() {
-        super("High Jump", "Makes you jump higher than normal.", ModuleCategory.MOVEMENT);
+        super("High Jump", "Makes you jump higher than normal.", ModuleType.MOVEMENT);
 
         multiplier = config.create(new DoubleValue.Builder("Jump Multiplier")
                 .description("Jump height multiplier.")

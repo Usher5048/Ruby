@@ -2,7 +2,7 @@ package ruby.systems.modules.world;
 
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -22,7 +22,7 @@ public class Timer extends Module {
     public static Timer INSTANCE;
 
     public Timer() {
-        super("Timer", "Changes the speed of the game.", ModuleCategory.WORLD);
+        super("Timer", "Changes the speed of the game.", ModuleType.WORLD);
         INSTANCE = this;
 
         multiplier = config.create(new DoubleValue.Builder("Multiplier")

@@ -5,7 +5,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -25,7 +25,7 @@ public class NoFall extends Module {
     private final EnumValue<Mode> mode;
 
     public NoFall() {
-        super("No Fall", "Prevents you from taking fall damage.", ModuleCategory.MOVEMENT);
+        super("No Fall", "Prevents you from taking fall damage.", ModuleType.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The method used to prevent fall damage.")

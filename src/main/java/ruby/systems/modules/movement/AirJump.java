@@ -4,7 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -22,7 +22,7 @@ public class AirJump extends Module {
     private boolean sneakWasPressed = false;
 
     public AirJump() {
-        super("Air Jump", "Lets you jump in the air.", ModuleCategory.MOVEMENT);
+        super("Air Jump", "Lets you jump in the air.", ModuleType.MOVEMENT);
 
         maintainLevel = config.create(new BooleanValue.Builder("Maintain Level")
                 .description("Maintains your current Y level when holding the jump key.")

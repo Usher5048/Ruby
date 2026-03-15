@@ -12,7 +12,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -26,7 +26,7 @@ public class Scaffold extends Module {
     private final BooleanValue onlyOnMove;
 
     public Scaffold() {
-        super("Scaffold", "Automatically places blocks below you.", ModuleCategory.WORLD);
+        super("Scaffold", "Automatically places blocks below you.", ModuleType.WORLD);
 
         onlyOnMove = config.create(new BooleanValue.Builder("Only On Move")
                 .description("Only place blocks when you are moving.")

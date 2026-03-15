@@ -8,7 +8,7 @@ import ruby.systems.config.IntegerValue;
 import ruby.systems.config.Value;
 import ruby.systems.gui.GUIStyle;
 
-public class SettingSliderWindow extends Window {
+public class SettingSliderWindow extends SettingWindow {
 
     private final Value<?> value;
     private final double min;
@@ -18,7 +18,7 @@ public class SettingSliderWindow extends Window {
     private boolean dragging;
 
     public SettingSliderWindow(int x, int y, int width, DoubleValue value) {
-        super(x, y, width, 44);
+        super(x, y, width, 44, value);
         this.value = value;
         this.min = value.min();
         this.max = value.max();
@@ -28,7 +28,7 @@ public class SettingSliderWindow extends Window {
     }
 
     public SettingSliderWindow(int x, int y, int width, IntegerValue value) {
-        super(x, y, width, 44);
+        super(x, y, width, 44, value);
         this.value = value;
         this.min = value.min();
         this.max = value.max();

@@ -6,14 +6,12 @@ import org.lwjgl.glfw.GLFW;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.gui.GUIStyle;
 
-public class SettingToggleWindow extends Window {
+public class SettingToggleWindow extends SettingWindow {
 
-    private final BooleanValue value;
     private float knobProgress;
 
     public SettingToggleWindow(int x, int y, int width, BooleanValue value) {
-        super(x, y, width, 26);
-        this.value = value;
+        super(x, y, width, 26, value);
         this.knobProgress = value.value() ? 1f : 0f;
         this.handleChildren = false;
     }
@@ -25,7 +23,7 @@ public class SettingToggleWindow extends Window {
         int w = this.getWidth();
 
         // Animate knob
-        float target = this.value.value() ? 1f : 0f;
+        float target = (boolean) this.value.value() ? 1f : 0f;
         this.knobProgress += (target - this.knobProgress) * 0.2f;
         if (Math.abs(this.knobProgress - target) < 0.01f) this.knobProgress = target;
 
@@ -63,7 +61,7 @@ public class SettingToggleWindow extends Window {
     @Override
     public boolean onMouseDown(Click click, boolean doubled) {
         if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
-        this.value.value(!this.value.value());
+        ((BooleanValue) this.value).value(!(boolean) this.value.value());
         return true;
     }
 }

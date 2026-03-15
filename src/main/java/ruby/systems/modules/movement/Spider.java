@@ -5,7 +5,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -19,7 +19,7 @@ public class Spider extends Module {
     private final DoubleValue climbSpeed;
 
     public Spider() {
-        super("Spider", "Allows you to climb walls like a spider.", ModuleCategory.MOVEMENT);
+        super("Spider", "Allows you to climb walls like a spider.", ModuleType.MOVEMENT);
 
         climbSpeed = config.create(new DoubleValue.Builder("Climb Speed")
                 .description("The speed you go up blocks.")

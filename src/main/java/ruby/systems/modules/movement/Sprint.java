@@ -5,7 +5,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -21,7 +21,7 @@ public class Sprint extends Module {
     private final EnumValue<Mode> mode;
 
     public Sprint() {
-        super("Sprint", "Automatically sprints for you.", ModuleCategory.MOVEMENT);
+        super("Sprint", "Automatically sprints for you.", ModuleType.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("Sprinting mode.")

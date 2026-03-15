@@ -4,7 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 import ruby.systems.modules.Modules;
 
 /**
@@ -25,7 +25,7 @@ public class AntiVoid extends Module {
     private boolean hasRun = false;
 
     public AntiVoid() {
-        super("Anti Void", "Attempts to prevent you from falling into the void.", ModuleCategory.MOVEMENT);
+        super("Anti Void", "Attempts to prevent you from falling into the void.", ModuleType.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The method to prevent falling into the void.")

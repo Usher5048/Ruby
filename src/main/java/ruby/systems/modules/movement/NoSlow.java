@@ -4,7 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -22,7 +22,7 @@ public class NoSlow extends Module {
     private final BooleanValue honeyBlock;
 
     public NoSlow() {
-        super("No Slow", "Allows you to move normally when using items that slow you.", ModuleCategory.MOVEMENT);
+        super("No Slow", "Allows you to move normally when using items that slow you.", ModuleType.MOVEMENT);
 
         items = config.create(new BooleanValue.Builder("Items")
                 .description("Prevents item use from slowing you.")

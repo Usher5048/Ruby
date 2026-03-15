@@ -8,7 +8,7 @@ import net.minecraft.fluid.Fluids;
 import net.minecraft.util.math.BlockPos;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -25,7 +25,7 @@ public class Jesus extends Module {
     private final BooleanValue dipOnSneak;
 
     public Jesus() {
-        super("Jesus", "Walk on liquids like Jesus.", ModuleCategory.MOVEMENT);
+        super("Jesus", "Walk on liquids like Jesus.", ModuleType.MOVEMENT);
 
         water = config.create(new BooleanValue.Builder("Water")
                 .description("Walk on water.")

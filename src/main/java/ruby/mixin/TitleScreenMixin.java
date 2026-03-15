@@ -12,7 +12,7 @@ import ruby.systems.gui.LoadingOverlay;
 
 @Mixin(TitleScreen.class)
 public class TitleScreenMixin extends Screen {
-    private boolean showedLoading = false;
+    private static boolean showedLoading = false;
 
     protected TitleScreenMixin(Text title) {
         super(title);
@@ -20,9 +20,9 @@ public class TitleScreenMixin extends Screen {
 
     @Inject(at = @At("HEAD"), method = "render", cancellable = true)
     private void showOverlay(CallbackInfo info) {
-        if(this.showedLoading) return;
+        if(TitleScreenMixin.showedLoading) return;
 
         RubyClient.client.setOverlay(new LoadingOverlay(this, RubyClient::loadClient));
-        this.showedLoading = true;
+        TitleScreenMixin.showedLoading = true;
     }
 }

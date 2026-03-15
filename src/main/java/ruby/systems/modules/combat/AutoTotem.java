@@ -8,7 +8,7 @@ import net.minecraft.screen.slot.SlotActionType;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -23,7 +23,7 @@ public class AutoTotem extends Module {
     private final DoubleValue healthThreshold;
 
     public AutoTotem() {
-        super("Auto Totem", "Automatically moves totems to your offhand.", ModuleCategory.COMBAT);
+        super("Auto Totem", "Automatically moves totems to your offhand.", ModuleType.COMBAT);
 
         smart = config.create(new BooleanValue.Builder("Smart")
                 .description("Only equips totem when health is below threshold.")

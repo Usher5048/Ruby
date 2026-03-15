@@ -5,7 +5,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -25,7 +25,7 @@ public class AutoJump extends Module {
     private final DoubleValue velocityHeight;
 
     public AutoJump() {
-        super("Auto Jump", "Automatically jumps.", ModuleCategory.MOVEMENT);
+        super("Auto Jump", "Automatically jumps.", ModuleType.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The method of jumping.")

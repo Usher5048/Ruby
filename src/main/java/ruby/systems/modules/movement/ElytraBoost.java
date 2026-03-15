@@ -5,7 +5,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -18,7 +18,7 @@ public class ElytraBoost extends Module {
     private final DoubleValue speed;
 
     public ElytraBoost() {
-        super("Elytra Boost", "Boosts your elytra flight speed.", ModuleCategory.MOVEMENT);
+        super("Elytra Boost", "Boosts your elytra flight speed.", ModuleType.MOVEMENT);
 
         speed = config.create(new DoubleValue.Builder("Speed")
                 .description("How fast to boost elytra flight.")

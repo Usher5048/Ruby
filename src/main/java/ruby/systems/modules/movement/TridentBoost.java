@@ -5,7 +5,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -20,7 +20,7 @@ public class TridentBoost extends Module {
     private boolean wasRiptiding = false;
 
     public TridentBoost() {
-        super("Trident Boost", "Boosts your trident riptide speed.", ModuleCategory.MOVEMENT);
+        super("Trident Boost", "Boosts your trident riptide speed.", ModuleType.MOVEMENT);
 
         multiplier = config.create(new DoubleValue.Builder("Multiplier")
                 .description("Speed multiplier for riptide.")

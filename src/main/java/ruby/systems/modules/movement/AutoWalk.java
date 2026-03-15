@@ -4,7 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -18,7 +18,7 @@ public class AutoWalk extends Module {
     private final BooleanValue autoSprint;
 
     public AutoWalk() {
-        super("Auto Walk", "Automatically walks forward.", ModuleCategory.MOVEMENT);
+        super("Auto Walk", "Automatically walks forward.", ModuleType.MOVEMENT);
 
         autoSprint = config.create(new BooleanValue.Builder("Sprint")
                 .description("Automatically sprint while walking.")

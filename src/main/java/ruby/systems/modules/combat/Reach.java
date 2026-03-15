@@ -5,7 +5,7 @@ import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Extends the player's entity-targeting reach and block-interaction reach
@@ -29,7 +29,7 @@ public class Reach extends Module {
     private double prevBlockRange  = 4.5;
 
     public Reach() {
-        super("Reach", "Increases your attack and block interaction reach.", ModuleCategory.COMBAT);
+        super("Reach", "Increases your attack and block interaction reach.", ModuleType.COMBAT);
 
         entityReach = config.create(new DoubleValue.Builder("Entity Reach")
                 .description("Client-side entity targeting reach. Attacks are clamped to 2.9.")

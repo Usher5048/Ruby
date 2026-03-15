@@ -2,6 +2,8 @@ package ruby.systems.modules;
 
 import ruby.RubyClient;
 import ruby.systems.events.Events;
+import ruby.systems.events.render.Render2DEvent;
+import ruby.systems.events.render.Render3DEvent;
 import ruby.systems.events.tick.TickEvents;
 import ruby.systems.modules.combat.*;
 import ruby.systems.modules.exploit.*;
@@ -20,6 +22,8 @@ public class Modules {
 
     static {
         Events.TICK.register(TickEvents.BEGIN, Modules::tick);
+        Events.RENDER2D.register(Modules::render2D);
+        Events.RENDER3D.register(Modules::render3D);
 
         // Combat
         Modules.modules.add(new AutoArmor());
@@ -81,7 +85,7 @@ public class Modules {
         return Modules.modules;
     }
 
-    public static List<Module> getByCategory(ModuleCategory category) {
+    public static List<Module> getByCategory(ModuleType category) {
         List<Module> result = new ArrayList<>();
         for(Module module : modules)
             if(module.category() == category) result.add(module);
@@ -156,6 +160,16 @@ public class Modules {
 
         for(Module module : Modules.activeModules)
             module.tick();
+    }
+
+    public static void render2D(Render2DEvent event) {
+        for(Module module : Modules.activeModules)
+            module.render2D(event);
+    }
+
+    public static void render3D(Render3DEvent event) {
+        for(Module module : Modules.activeModules)
+            module.render3D(event);
     }
 }
 

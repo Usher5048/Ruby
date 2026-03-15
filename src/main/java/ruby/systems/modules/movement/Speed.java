@@ -8,7 +8,7 @@ import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -35,7 +35,7 @@ public class Speed extends Module {
     private double distance, speed;
 
     public Speed() {
-        super("Speed", "Modifies your movement speed.", ModuleCategory.MOVEMENT);
+        super("Speed", "Modifies your movement speed.", ModuleType.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<SpeedMode>("Mode")
                 .description("The method of applying speed.")

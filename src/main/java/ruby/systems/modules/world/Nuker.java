@@ -12,7 +12,7 @@ import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -37,7 +37,7 @@ public class Nuker extends Module {
     private final BlockListValue blockList;
 
     public Nuker() {
-        super("Nuker", "Breaks blocks around you.", ModuleCategory.WORLD);
+        super("Nuker", "Breaks blocks around you.", ModuleType.WORLD);
 
         range = config.create(new DoubleValue.Builder("Range")
                 .description("The radius of the area to break.")

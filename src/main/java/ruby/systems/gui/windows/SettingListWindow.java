@@ -25,9 +25,7 @@ import java.util.Locale;
  *   - Empty search → shows only currently selected items.
  *   - Non-empty search → shows matching registry items (selected sorted first).
  */
-public class SettingListWindow extends Window {
-
-    private final ListValue<?> listValue;
+public class SettingListWindow extends SettingWindow {
     private boolean expanded = false;
     private float expandProgress = 0f;
     private String filterText = "";
@@ -47,8 +45,7 @@ public class SettingListWindow extends Window {
     private record Entry(String name, Object value) {}
 
     public SettingListWindow(int x, int y, int width, ListValue<?> value) {
-        super(x, y, width, HEADER_H);
-        this.listValue = value;
+        super(x, y, width, HEADER_H, value);
         this.handleChildren = false;
         this.hasRegistry = !(value instanceof StringListValue);
     }
@@ -59,13 +56,13 @@ public class SettingListWindow extends Window {
         if (allEntries != null) return;
         allEntries = new ArrayList<>();
 
-        if (listValue instanceof BlockListValue) {
+        if (this.value instanceof BlockListValue) {
             for (Block b : Registries.BLOCK)
                 allEntries.add(new Entry(b.getName().getString(), b));
-        } else if (listValue instanceof ItemListValue) {
+        } else if (this.value instanceof ItemListValue) {
             for (Item i : Registries.ITEM)
                 allEntries.add(new Entry(i.getName().getString(), i));
-        } else if (listValue instanceof EntityTypeListValue) {
+        } else if (this.value instanceof EntityTypeListValue) {
             for (EntityType<?> t : Registries.ENTITY_TYPE)
                 allEntries.add(new Entry(t.getName().getString(), t));
         }
@@ -103,12 +100,12 @@ public class SettingListWindow extends Window {
     }
 
     private boolean isSelected(Entry entry) {
-        return listValue.value().contains(entry.value);
+        return ((ListValue<?>) this.value).value().contains(entry.value);
     }
 
     @SuppressWarnings("unchecked")
     private void toggleValue(Entry entry) {
-        List<Object> list = (List<Object>) listValue.value();
+        List<Object> list = (List<Object>) this.value.value();
         if (list.contains(entry.value)) {
             list.remove(entry.value);
         } else {
@@ -171,10 +168,10 @@ public class SettingListWindow extends Window {
 
         // Label
         int ty = (HEADER_H - (int) this.getTextHeight(style.bodyFont())) / 2;
-        this.drawText(style.bodyFont(), ctx, listValue.name(), 34, ty, 0xFF8B8B8B);
+        this.drawText(style.bodyFont(), ctx, this.value.name(), 34, ty, 0xFF8B8B8B);
 
         // Count badge
-        int count = listValue.value().size();
+        int count = ((ListValue<?>) this.value).value().size();
         String badge = count + (count == 1 ? " item" : " items");
         int bw = (int) this.getTextWidth(style.monospaceFont(), badge) + 12;
         int bh = (int) this.getTextHeight(style.monospaceFont()) + 4;

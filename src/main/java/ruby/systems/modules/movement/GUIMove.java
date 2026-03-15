@@ -5,7 +5,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.KeyBinding;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleCategory;
+import ruby.systems.modules.ModuleType;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -22,7 +22,7 @@ public class GUIMove extends Module {
     private final BooleanValue sprint;
 
     public GUIMove() {
-        super("GUI Move", "Allows you to move while in GUIs.", ModuleCategory.MOVEMENT);
+        super("GUI Move", "Allows you to move while in GUIs.", ModuleType.MOVEMENT);
 
         jump = config.create(new BooleanValue.Builder("Jump")
                 .description("Allows you to jump while in GUIs.")

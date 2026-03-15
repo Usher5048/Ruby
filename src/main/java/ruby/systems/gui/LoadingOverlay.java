@@ -84,6 +84,10 @@ public class LoadingOverlay extends WindowedOverlay {
         }
 
         if(this.loaded) {
+            long now = System.currentTimeMillis();
+            for(long logSlideTimer : this.logSlideTimers)
+                if(now - logSlideTimer <= 500) return;
+
             for(int i = 0; i < this.logRemoveTimers.size(); i++) {
                 if(this.logRemoveTimers.get(i) > 0) this.logRemoveTimers.set(i, 0);
             }
