@@ -11,9 +11,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Allows the player to walk on water and lava (simplified tick-based version).
  * When the player is in a liquid, sets Y velocity to push them up to the surface.
  * Once at the surface, maintains position. Sneak to go underwater.

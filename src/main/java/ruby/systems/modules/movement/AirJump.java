@@ -7,9 +7,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's AirJump: Lets you jump in the air by pressing the jump key.
  * maintainLevel: auto-jumps at current Y level while holding jump.
  */
@@ -22,7 +22,7 @@ public class AirJump extends Module {
     private boolean sneakWasPressed = false;
 
     public AirJump() {
-        super("AirJump", "Lets you jump in the air.", ModuleCategory.MOVEMENT);
+        super("Air Jump", "Lets you jump in the air.", ModuleCategory.MOVEMENT);
 
         maintainLevel = config.create(new BooleanValue.Builder("Maintain Level")
                 .description("Maintains your current Y level when holding the jump key.")

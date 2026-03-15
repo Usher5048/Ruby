@@ -8,9 +8,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Allows you to climb walls like a spider by setting Y velocity upward
  * when the player has a horizontal collision (touching a wall).
  */

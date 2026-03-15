@@ -24,7 +24,7 @@ public class EventBuses {
             return this.handlers.size();
         }
 
-        public boolean fireEvent(T argument) {
+        public boolean fire(T argument) {
             this.handlers.addAll(this.toAdd);
             for(int idx : this.toRemove.reversed())
                 this.handlers.remove(idx);
@@ -54,7 +54,7 @@ public class EventBuses {
             return this.handlers.getOrDefault(type, new ArrayList<>()).size();
         }
 
-        public boolean fireEvent(E type, T argument) {
+        public boolean fire(E type, T argument) {
             this.handlers.putIfAbsent(type, new ArrayList<>());
             ArrayList<Handler<T>> list = new ArrayList<>(this.handlers.get(type));
 

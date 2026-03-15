@@ -4,7 +4,6 @@ import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 
 import java.awt.*;
-import java.io.IOException;
 import java.io.InputStream;
 
 public class FontRenderer {
@@ -17,9 +16,8 @@ public class FontRenderer {
     }
 
     public static FontRenderer create(InputStream stream, String identifier, int size) {
-        char[] chrs = new char[127 - 32];
-        for(int i = 0; i < chrs.length; i++) chrs[i] = (char) (i + 32);
-        chrs[chrs.length - 2] = 0x00C6; // 'Æ'
+        char[] chrs = new char[0x1000];
+        for(int i = 0; i < chrs.length; i++) chrs[i] = (char) i;
 
         GlyphSheet sheet = null;
         try {
@@ -28,7 +26,7 @@ public class FontRenderer {
                     Font.createFont(Font.TRUETYPE_FONT, stream)
                             .deriveFont(Font.PLAIN, size)
             );
-        } catch(IOException | FontFormatException ignored) {}
+        } catch(Exception ignored) {}
         if(sheet == null) return null;
 
         sheet.generateSheet(chrs);

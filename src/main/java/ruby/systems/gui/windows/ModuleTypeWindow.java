@@ -18,7 +18,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
 
     public ModuleTypeWindow(int x, int y, ModuleCategory category, List<Module> modules) {
         super(x, y, 240, 42);
-        this.reorderChildren = false;
+//        this.reorderChildren = false;
         this.modules = modules;
         this.title = category == null ? "Keybinds" : category.toString();
 

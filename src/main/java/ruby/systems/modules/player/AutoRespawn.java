@@ -7,9 +7,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Automatically respawns when the player dies.
  * Waits a configurable delay (in ticks) before pressing the respawn button.
  */
@@ -20,7 +20,7 @@ public class AutoRespawn extends Module {
     private int deathTimer = 0;
 
     public AutoRespawn() {
-        super("AutoRespawn", "Automatically respawns when you die.", ModuleCategory.PLAYER);
+        super("Auto Respawn", "Automatically respawns when you die.", ModuleCategory.PLAYER);
 
         delay = config.create(new IntegerValue.Builder("Delay")
                 .description("Delay in ticks before respawning.")

@@ -1,7 +1,6 @@
 package ruby.systems.modules.movement;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import ruby.systems.config.DoubleValue;
@@ -9,9 +8,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's Step: Modifies the player's STEP_HEIGHT attribute to allow stepping
  * up taller blocks. Tracks the active height to restore on disable.
  */

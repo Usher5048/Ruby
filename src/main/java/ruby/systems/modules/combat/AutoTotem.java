@@ -11,9 +11,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Core logic: find Totem of Undying in inventory, move to offhand.
  * Meteor's modes: Smart (only when health <threshold), Strict (always).
  * Uses clickSlot inventory operations for server-side validity.
@@ -22,10 +22,8 @@ public class AutoTotem extends Module {
     private final BooleanValue smart;
     private final DoubleValue healthThreshold;
 
-    private boolean locked = false;
-
     public AutoTotem() {
-        super("AutoTotem", "Automatically moves totems to your offhand.", ModuleCategory.COMBAT);
+        super("Auto Totem", "Automatically moves totems to your offhand.", ModuleCategory.COMBAT);
 
         smart = config.create(new BooleanValue.Builder("Smart")
                 .description("Only equips totem when health is below threshold.")
@@ -35,7 +33,7 @@ public class AutoTotem extends Module {
         healthThreshold = config.create(new DoubleValue.Builder("Health")
                 .description("Health threshold to equip totem in smart mode.")
                 .defaultValue(10.0).min(1).max(36).step(0.5)
-                .visible(() -> smart.value())
+                .visible(smart::value)
                 .build());
     }
 
@@ -48,6 +46,7 @@ public class AutoTotem extends Module {
 
         // Check if offhand already has totem
         ItemStack offhand = player.getOffHandStack();
+        boolean locked = false;
         if (offhand.isOf(Items.TOTEM_OF_UNDYING)) {
             locked = false;
             return;

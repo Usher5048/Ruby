@@ -8,9 +8,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Allows you to move, jump, sneak, and sprint while in GUI screens.
  * Works by pressing movement keys based on their keybind state each tick
  * when a screen is open.
@@ -22,7 +22,7 @@ public class GUIMove extends Module {
     private final BooleanValue sprint;
 
     public GUIMove() {
-        super("GUIMove", "Allows you to move while in GUIs.", ModuleCategory.MOVEMENT);
+        super("GUI Move", "Allows you to move while in GUIs.", ModuleCategory.MOVEMENT);
 
         jump = config.create(new BooleanValue.Builder("Jump")
                 .description("Allows you to jump while in GUIs.")

@@ -5,7 +5,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -16,16 +15,15 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Automatically places blocks below the player as they walk.
  * Only works when holding a block in the main hand.
  */
 public class Scaffold extends Module {
 
     private final BooleanValue onlyOnMove;
-    private final BooleanValue tower;
 
     public Scaffold() {
         super("Scaffold", "Automatically places blocks below you.", ModuleCategory.WORLD);
@@ -35,7 +33,7 @@ public class Scaffold extends Module {
                 .defaultValue(true)
                 .build());
 
-        tower = config.create(new BooleanValue.Builder("Tower")
+        config.create(new BooleanValue.Builder("Tower")
                 .description("Place blocks below when jumping upward.")
                 .defaultValue(true)
                 .build());

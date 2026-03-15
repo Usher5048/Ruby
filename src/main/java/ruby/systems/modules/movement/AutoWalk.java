@@ -7,9 +7,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Automatically walks forward without holding the key.
  * Optionally also sprints.
  */
@@ -18,7 +18,7 @@ public class AutoWalk extends Module {
     private final BooleanValue autoSprint;
 
     public AutoWalk() {
-        super("AutoWalk", "Automatically walks forward.", ModuleCategory.MOVEMENT);
+        super("Auto Walk", "Automatically walks forward.", ModuleCategory.MOVEMENT);
 
         autoSprint = config.create(new BooleanValue.Builder("Sprint")
                 .description("Automatically sprint while walking.")

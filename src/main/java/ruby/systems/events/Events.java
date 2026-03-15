@@ -1,14 +1,15 @@
 package ruby.systems.events;
 
-import ruby.systems.events.client.AttackEntityEvent;
-import ruby.systems.events.client.ClientPlayerPreTickEvent;
-import ruby.systems.events.client.SendMovementPacketsEvent;
+import ruby.systems.events.entity.EntityEvent;
+import ruby.systems.events.entity.EntityEvents;
+import ruby.systems.events.packet.PacketEvent;
+import ruby.systems.events.packet.PacketEvents;
+import ruby.systems.events.tick.TickEvents;
 
 public final class Events {
-    public static final EventBuses.Single<ClientPlayerPreTickEvent> CLIENT_PLAYER_PRE_TICK = new EventBuses.Single<>();
-    public static final EventBuses.Single<SendMovementPacketsEvent.Pre> SEND_MOVEMENT_PACKETS_PRE = new EventBuses.Single<>();
-    public static final EventBuses.Single<AttackEntityEvent> ATTACK_ENTITY = new EventBuses.Single<>();
+    public static class GenericEvent extends Event {}
 
-    private Events() {
-    }
+    public static final EventBuses.Many<PacketEvents,  PacketEvent> PACKET = new EventBuses.Many<>();
+    public static final EventBuses.Many<EntityEvents,  EntityEvent> ENTITY = new EventBuses.Many<>();
+    public static final EventBuses.Many<  TickEvents, GenericEvent> TICK   = new EventBuses.Many<>();
 }

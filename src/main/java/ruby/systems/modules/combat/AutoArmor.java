@@ -13,9 +13,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Core logic from Meteor's AutoArmor:
  * - Scans inventory for armor pieces
  * - Scores each piece (based on durability/material tier as proxy for protection)
@@ -34,7 +34,7 @@ public class AutoArmor extends Module {
     private int timer = 0;
 
     public AutoArmor() {
-        super("AutoArmor", "Automatically equips the best armor.", ModuleCategory.COMBAT);
+        super("Auto Armor", "Automatically equips the best armor.", ModuleCategory.COMBAT);
 
         delay = config.create(new IntegerValue.Builder("Delay")
                 .description("Delay in ticks between equipping armor pieces.")

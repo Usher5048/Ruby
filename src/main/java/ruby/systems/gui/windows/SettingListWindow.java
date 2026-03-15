@@ -19,7 +19,7 @@ import java.util.Locale;
 /**
  * Inline expandable list setting widget for selecting blocks, items, or entity types
  * from their respective Minecraft registries.
- *
+ * <p>
  * Collapsed: shows label + count badge ("N items").
  * Expanded: shows a search bar and a scrollable checkbox list.
  *   - Empty search → shows only currently selected items.
@@ -214,7 +214,7 @@ public class SettingListWindow extends Window {
         int startY = HEADER_H + SEARCH_H;
 
         if (filteredEntries == null || filteredEntries.isEmpty()) {
-            String msg = filterText.isEmpty() ? "No items \u2014 type to search" : "No results";
+            String msg = filterText.isEmpty() ? "No items — type to search" : "No results";
             int ty = startY + (20 - (int) this.getTextHeight(style.monospaceFont())) / 2;
             this.drawText(style.monospaceFont(), ctx, msg, 36, ty, 0xFF555555);
             return;
@@ -251,10 +251,10 @@ public class SettingListWindow extends Window {
             int maxW = w - 14 - 52;
             if (this.getTextWidth(style.monospaceFont(), name) > maxW) {
                 while (name.length() > 1
-                        && this.getTextWidth(style.monospaceFont(), name + "\u2026") > maxW) {
+                        && this.getTextWidth(style.monospaceFont(), name + "…") > maxW) {
                     name = name.substring(0, name.length() - 1);
                 }
-                name += "\u2026";
+                name += "…";
             }
 
             int ny = ry + (ROW_H - (int) this.getTextHeight(style.monospaceFont())) / 2;
@@ -280,7 +280,7 @@ public class SettingListWindow extends Window {
 
     @Override
     public boolean onMouseDown(Click click, boolean doubled) {
-        int mx = (int) click.x(), my = (int) click.y();
+        int my = (int) click.y();
 
         // Header click → toggle expand
         if (my < HEADER_H && click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
@@ -373,7 +373,8 @@ public class SettingListWindow extends Window {
     }
 
     @Override
-    public void onFocusRemoved() {
+    public boolean onFocusRemoved() {
         searchFocused = false;
+        return true;
     }
 }

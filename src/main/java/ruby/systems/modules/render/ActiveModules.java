@@ -25,7 +25,7 @@ public class ActiveModules extends Module {
     private final IntegerValue rainbowSpeed;
 
     public ActiveModules() {
-        super("ActiveModules", "Displays active modules on the HUD.", ModuleCategory.RENDER);
+        super("Active Modules", "Displays active modules on the HUD.", ModuleCategory.RENDER);
 
         sortMode = config.create(new EnumValue.Builder<SortMode>("Sort")
                 .description("How to sort the module list.")

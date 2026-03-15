@@ -8,14 +8,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ruby.systems.events.Events;
-import ruby.systems.events.client.AttackEntityEvent;
+import ruby.systems.events.entity.EntityEvent;
+import ruby.systems.events.entity.EntityEvents;
 
 @Mixin(ClientPlayerInteractionManager.class)
-public abstract class AttackEntityMixin {
+public abstract class ClientPlayerInteractionManagerMixin {
     @Inject(method = "attackEntity", at = @At("HEAD"), cancellable = true)
-    private void ruby$onBeforeAttack(PlayerEntity player, Entity target, CallbackInfo ci) {
-        if (Events.ATTACK_ENTITY.fireEvent(AttackEntityEvent.get(player, target))) {
-            ci.cancel();
-        }
+    private void ruby$onBeforeAttack(PlayerEntity player, Entity target, CallbackInfo info) {
+        if(Events.ENTITY.fire(EntityEvents.ATTACK, new EntityEvent(target)))
+            info.cancel();
     }
 }

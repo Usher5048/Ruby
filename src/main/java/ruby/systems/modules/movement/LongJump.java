@@ -9,9 +9,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Makes the player jump further by boosting horizontal velocity on jump.
  * - Vanilla: Multiplies horizontal velocity on takeoff
  * - Boost: Adds a configurable velocity boost in the look direction on jump
@@ -26,7 +26,7 @@ public class LongJump extends Module {
     private boolean wasOnGround = false;
 
     public LongJump() {
-        super("LongJump", "Makes you jump further.", ModuleCategory.MOVEMENT);
+        super("Long Jump", "Makes you jump further.", ModuleCategory.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The method of boosting jumps.")

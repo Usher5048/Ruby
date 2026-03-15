@@ -12,11 +12,11 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's AutoEat: monitors hunger and automatically eats food from hotbar.
- * Threshold modes: when hunger drops below value, finds best food and eats it.
+ * Threshold modes: when hunger drops below value, finds the best food and eats it.
  * Supports hunger-based priority from FoodComponent.nutrition().
  */
 public class AutoEat extends Module {
@@ -27,7 +27,7 @@ public class AutoEat extends Module {
     private int prevSlot = -1;
 
     public AutoEat() {
-        super("AutoEat", "Automatically eats food when you are hungry.", ModuleCategory.PLAYER);
+        super("Auto Eat", "Automatically eats food when you are hungry.", ModuleCategory.PLAYER);
 
         hungerThreshold = config.create(new IntegerValue.Builder("Hunger")
                 .description("Hunger level to start eating at.")

@@ -8,9 +8,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Boosts elytra flight speed by adding velocity in the player's look direction.
  */
 public class ElytraBoost extends Module {
@@ -18,7 +18,7 @@ public class ElytraBoost extends Module {
     private final DoubleValue speed;
 
     public ElytraBoost() {
-        super("ElytraBoost", "Boosts your elytra flight speed.", ModuleCategory.MOVEMENT);
+        super("Elytra Boost", "Boosts your elytra flight speed.", ModuleCategory.MOVEMENT);
 
         speed = config.create(new DoubleValue.Builder("Speed")
                 .description("How fast to boost elytra flight.")

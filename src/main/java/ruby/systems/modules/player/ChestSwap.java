@@ -10,16 +10,16 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's ChestSwap: Swaps between elytra and chestplate in the chest armor slot.
  * Uses DataComponentTypes.GLIDER to identify elytra in 1.21+.
  * On enable: performs the swap, then disables itself.
  */
 public class ChestSwap extends Module {
     public ChestSwap() {
-        super("ChestSwap", "Swaps between elytra and chestplate.", ModuleCategory.PLAYER);
+        super("Chest Swap", "Swaps between elytra and chestplate.", ModuleCategory.PLAYER);
     }
 
     @Override

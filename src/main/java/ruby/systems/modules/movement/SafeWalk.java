@@ -9,22 +9,21 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Prevents walking off blocks by sneaking at edges.
  * Uses collision detection to determine if the player is near a ledge,
  * then forces sneak input to prevent falling.
  */
 public class SafeWalk extends Module {
 
-    private final IntegerValue fallDistance;
     private final BooleanValue sneak;
 
     public SafeWalk() {
-        super("SafeWalk", "Prevents you from walking off blocks.", ModuleCategory.MOVEMENT);
+        super("Safe Walk", "Prevents you from walking off blocks.", ModuleCategory.MOVEMENT);
 
-        fallDistance = config.create(new IntegerValue.Builder("Fall Distance")
+        config.create(new IntegerValue.Builder("Fall Distance")
                 .description("Minimum fall distance before the module activates.")
                 .defaultValue(1).min(1).max(20)
                 .build());

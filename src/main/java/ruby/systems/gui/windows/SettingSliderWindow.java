@@ -129,7 +129,8 @@ public class SettingSliderWindow extends Window {
     }
 
     @Override
-    public void onFocusRemoved() {
+    public boolean onFocusRemoved() {
         this.dragging = false;
+        return true;
     }
 }

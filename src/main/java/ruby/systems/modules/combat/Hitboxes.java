@@ -1,7 +1,6 @@
 package ruby.systems.modules.combat;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -93,21 +92,21 @@ public class Hitboxes extends Module {
                 .build());
         onlyOnWeapon = config.create(new BooleanValue.Builder("Only On Weapon")
                 .defaultValue(false).build());
-        sword   = config.create(new BooleanValue.Builder("Sword")   .defaultValue(true).visible(() -> onlyOnWeapon.value()).build());
-        axe     = config.create(new BooleanValue.Builder("Axe")     .defaultValue(true).visible(() -> onlyOnWeapon.value()).build());
-        pickaxe = config.create(new BooleanValue.Builder("Pickaxe") .defaultValue(true).visible(() -> onlyOnWeapon.value()).build());
-        shovel  = config.create(new BooleanValue.Builder("Shovel")  .defaultValue(true).visible(() -> onlyOnWeapon.value()).build());
-        hoe     = config.create(new BooleanValue.Builder("Hoe")     .defaultValue(true).visible(() -> onlyOnWeapon.value()).build());
-        mace    = config.create(new BooleanValue.Builder("Mace")    .defaultValue(true).visible(() -> onlyOnWeapon.value()).build());
-        spear   = config.create(new BooleanValue.Builder("Spear")   .defaultValue(true).visible(() -> onlyOnWeapon.value()).build());
-        trident = config.create(new BooleanValue.Builder("Trident") .defaultValue(true).visible(() -> onlyOnWeapon.value()).build());
+        sword   = config.create(new BooleanValue.Builder("Sword")   .defaultValue(true).visible(onlyOnWeapon::value).build());
+        axe     = config.create(new BooleanValue.Builder("Axe")     .defaultValue(true).visible(onlyOnWeapon::value).build());
+        pickaxe = config.create(new BooleanValue.Builder("Pickaxe") .defaultValue(true).visible(onlyOnWeapon::value).build());
+        shovel  = config.create(new BooleanValue.Builder("Shovel")  .defaultValue(true).visible(onlyOnWeapon::value).build());
+        hoe     = config.create(new BooleanValue.Builder("Hoe")     .defaultValue(true).visible(onlyOnWeapon::value).build());
+        mace    = config.create(new BooleanValue.Builder("Mace")    .defaultValue(true).visible(onlyOnWeapon::value).build());
+        spear   = config.create(new BooleanValue.Builder("Spear")   .defaultValue(true).visible(onlyOnWeapon::value).build());
+        trident = config.create(new BooleanValue.Builder("Trident") .defaultValue(true).visible(onlyOnWeapon::value).build());
         silentAim = config.create(new BooleanValue.Builder("Silent Aim")
                 .defaultValue(false).build());
         aimPoint = config.create(new EnumValue.Builder<AimPoint>("Aim Point")
-                .defaultValue(AimPoint.Closest).visible(() -> silentAim.value()).build());
+                .defaultValue(AimPoint.Closest).visible(silentAim::value).build());
         maxRotateDeg = config.create(new DoubleValue.Builder("Max Rotate Delta")
                 .defaultValue(35.0).min(1.0).max(180.0).step(1.0)
-                .visible(() -> silentAim.value()).build());
+                .visible(silentAim::value).build());
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -144,19 +143,9 @@ public class Hitboxes extends Module {
     }
 
     /**
-     * Called every tick (HEAD of ClientPlayerEntity.tick) for mouse-release
-     * detection. Must run BEFORE sendMovementPackets so the spoof state is
-     * settled when the mixin fabricates the packet.
-     */
-    public static void onClientTick() {
-        if (INSTANCE == null) return;
-        INSTANCE.tickUpdate();
-    }
-
-    /**
      * Called by ClientPlayerEntityMixin from inside the fabricated
      * sendMovementPackets replacement.
-     *
+     * <p>
      * Given the vanilla-computed yaw and pitch that WOULD go out, returns the
      * yaw/pitch that SHOULD go out (either spoofed or unchanged).
      *
@@ -192,8 +181,7 @@ public class Hitboxes extends Module {
         if (hoe.value()     && stack.isIn(ItemTags.HOES))              return true;
         if (mace.value()    && stack.getItem() instanceof MaceItem)    return true;
         if (spear.value()   && stack.isIn(ItemTags.SPEARS))            return true;
-        if (trident.value() && stack.getItem() instanceof TridentItem) return true;
-        return false;
+        return trident.value() && stack.getItem() instanceof TridentItem;
     }
 
     private void latchAttackRotation(PlayerEntity player, Entity target) {
@@ -258,7 +246,8 @@ public class Hitboxes extends Module {
         return new float[]{ spoofYaw, spoofPitch };
     }
 
-    private void tickUpdate() {
+    @Override
+    public void tick() {
         if (!enabled() || !silentAim.value()) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;

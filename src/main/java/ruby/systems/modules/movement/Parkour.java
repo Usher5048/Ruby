@@ -8,9 +8,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Automatically jumps when you reach the edge of a block.
  * Uses bounding box collision detection: shrinks the player's box slightly
  * and checks if there would be no ground below. If so, jumps.

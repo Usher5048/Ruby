@@ -8,9 +8,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Automatically jumps when on the ground.
  * - Jump: Normal jump
  * - LowHop: Sets Y velocity directly for a lower hop
@@ -25,7 +25,7 @@ public class AutoJump extends Module {
     private final DoubleValue velocityHeight;
 
     public AutoJump() {
-        super("AutoJump", "Automatically jumps.", ModuleCategory.MOVEMENT);
+        super("Auto Jump", "Automatically jumps.", ModuleCategory.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The method of jumping.")

@@ -1,6 +1,7 @@
 package ruby.systems.config;
 
 import ruby.RubyClient;
+import ruby.systems.modules.Keybind;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.Modules;
 
@@ -8,6 +9,12 @@ import java.io.*;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
+
+//TODO:
+// Rip this out and remake it to support compression,
+// keybinds, backwards compatibility, store the file
+// in the general config area, and save in a binary
+// format using the serialize functions on the types
 
 public class ConfigManager {
     private static final int VERSION = 2;
@@ -94,7 +101,7 @@ public class ConfigManager {
             for (Module module : modules) {
                 writeString(stream, module.name());
                 stream.write(module.enabled() ? 1 : 0);
-                writeInt(stream, module.keyCode());
+                writeInt(stream, module.keybind.getCode());
                 configToBytes(stream, module.config);
             }
 
@@ -114,36 +121,33 @@ public class ConfigManager {
         }
     }
 
-    public static void loadState() {
-        if (!configFile.exists()) return;
+    public static boolean loadState() {
+        if(!configFile.exists()) return false;
         try {
             byte[] data = Files.readAllBytes(configFile.toPath());
             ByteArrayInputStream stream = new ByteArrayInputStream(data);
             int version = stream.read();
-            if (version != VERSION) {
-                RubyClient.log("Config version mismatch (" + version + " vs " + VERSION + "), skipping load");
-                return;
-            }
+            if(version != VERSION) return false;
 
             // Global config
             bytesToConfig(stream, RubyClient.config);
 
             // Modules
             int moduleCount = readShort(stream);
-            for (int i = 0; i < moduleCount; i++) {
+            for(int i = 0; i < moduleCount; i++) {
                 String name = readString(stream);
                 boolean enabled = stream.read() == 1;
                 int keyCode = readInt(stream);
 
                 Module module = Modules.getByName(name);
-                if (module != null) {
-                    module.keyCode(keyCode);
+                if(module != null) {
+                    module.keybind = Keybind.key(keyCode, false);
                     bytesToConfig(stream, module.config);
                     Modules.setEnabled(module, enabled);
                 } else {
                     // Skip config for unknown module
                     int cfgCount = stream.read();
-                    for (int j = 0; j < cfgCount; j++) {
+                    for(int j = 0; j < cfgCount; j++) {
                         readString(stream);
                         int vLen = readShort(stream);
                         stream.skipNBytes(vLen);
@@ -153,16 +157,16 @@ public class ConfigManager {
 
             // Panel positions
             int posCount = readShort(stream);
-            for (int i = 0; i < posCount; i++) {
+            for(int i = 0; i < posCount; i++) {
                 String key = readString(stream);
                 int px = readInt(stream);
                 int py = readInt(stream);
                 panelPositions.put(key, new int[]{ px, py });
             }
-
-            RubyClient.log("Loaded config (" + data.length + " bytes)");
-        } catch (Exception e) {
-            RubyClient.LOGGER.error("Failed to load config", e);
+        } catch(Exception e) {
+            return false;
         }
+
+        return true;
     }
 }

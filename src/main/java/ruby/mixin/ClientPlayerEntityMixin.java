@@ -9,9 +9,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import ruby.systems.events.Events;
-import ruby.systems.events.client.ClientPlayerPreTickEvent;
-import ruby.systems.events.client.SendMovementPacketsEvent;
 import ruby.systems.modules.combat.Hitboxes;
 
 @Mixin(ClientPlayerEntity.class)
@@ -30,17 +27,9 @@ public abstract class ClientPlayerEntityMixin {
 
     @Shadow protected abstract boolean isCamera();
 
-    @Inject(method = "tick", at = @At("HEAD"))
-    private void ruby$preTick(CallbackInfo ci) {
-        Hitboxes.onClientTick();
-        Events.CLIENT_PLAYER_PRE_TICK.fireEvent(ClientPlayerPreTickEvent.get());
-    }
-
     @Inject(method = "sendMovementPackets", at = @At("HEAD"), cancellable = true)
     private void ruby$sendMovementPackets(CallbackInfo ci) {
-        Events.SEND_MOVEMENT_PACKETS_PRE.fireEvent(SendMovementPacketsEvent.Pre.get());
-
-        if (!isCamera()) {
+        if(!isCamera()) {
             ci.cancel();
             return;
         }

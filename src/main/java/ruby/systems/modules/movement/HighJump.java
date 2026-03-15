@@ -8,9 +8,9 @@ import ruby.systems.modules.ModuleCategory;
 import ruby.systems.modules.Modules;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's HighJump uses JumpVelocityMultiplierEvent to multiply jump height.
  * Since Ruby doesn't have that event, we detect jump timing and scale only the
  * jump impulse (delta Y) instead of multiplying total Y velocity. This avoids
@@ -23,7 +23,7 @@ public class HighJump extends Module {
     private boolean wasOnGround = false;
 
     public HighJump() {
-        super("HighJump", "Makes you jump higher than normal.", ModuleCategory.MOVEMENT);
+        super("High Jump", "Makes you jump higher than normal.", ModuleCategory.MOVEMENT);
 
         multiplier = config.create(new DoubleValue.Builder("Jump Multiplier")
                 .description("Jump height multiplier.")

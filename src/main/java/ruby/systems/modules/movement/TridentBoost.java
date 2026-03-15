@@ -8,9 +8,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Boosts Trident riptide speed by multiplying velocity when riptiding.
  */
 public class TridentBoost extends Module {
@@ -20,7 +20,7 @@ public class TridentBoost extends Module {
     private boolean wasRiptiding = false;
 
     public TridentBoost() {
-        super("TridentBoost", "Boosts your trident riptide speed.", ModuleCategory.MOVEMENT);
+        super("Trident Boost", "Boosts your trident riptide speed.", ModuleCategory.MOVEMENT);
 
         multiplier = config.create(new DoubleValue.Builder("Multiplier")
                 .description("Speed multiplier for riptide.")

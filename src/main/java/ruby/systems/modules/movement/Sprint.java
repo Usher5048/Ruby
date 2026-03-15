@@ -8,9 +8,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's Sprint: Two modes - Strict (vanilla sprint conditions) and Rage (always sprint).
  * keepSprint prevents sprint from being reset on hit (Meteor uses a mixin for this;
  * the tick-based approach sets sprinting every tick to counteract resets).
@@ -19,7 +19,6 @@ public class Sprint extends Module {
     public enum Mode { Strict, Rage }
 
     private final EnumValue<Mode> mode;
-    private final BooleanValue keepSprint;
 
     public Sprint() {
         super("Sprint", "Automatically sprints for you.", ModuleCategory.MOVEMENT);
@@ -29,7 +28,7 @@ public class Sprint extends Module {
                 .defaultValue(Mode.Strict)
                 .build());
 
-        keepSprint = config.create(new BooleanValue.Builder("Keep Sprint")
+        config.create(new BooleanValue.Builder("Keep Sprint")
                 .description("Keeps sprinting even after being hit.")
                 .defaultValue(true)
                 .build());

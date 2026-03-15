@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-public abstract class WindowedScreen extends Screen {
+public class WindowedScreen extends Screen {
     private final List<Window> windows = new ArrayList<>();
 
     public WindowedScreen(String title) {
@@ -104,17 +104,14 @@ public abstract class WindowedScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyInput input) {
-        if (this.runFocused(win -> win.keyPressed(input))) return true;
+        if(this.runFocused(win -> win.keyPressed(input))) return true;
         return super.keyPressed(input);
     }
 
-    @Override
-    public boolean keyReleased(KeyInput input) {
+    @Override public boolean keyReleased(KeyInput input) {
         return this.runFocused(win -> win.keyReleased(input));
     }
-
-    @Override
-    public boolean charTyped(CharInput input) {
+    @Override public boolean charTyped(CharInput input) {
         return this.runFocused(win -> win.charTyped(input));
     }
 
@@ -136,9 +133,27 @@ public abstract class WindowedScreen extends Screen {
         }
     }
 
+    public void onRender(DrawContext context, int mouseX, int mouseY) {}
+
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale(
+                1f / (float) RubyClient.client.getWindow().getScaleFactor(),
+                1f / (float) RubyClient.client.getWindow().getScaleFactor()
+        );
+
+        this.onRender(context, mouseX, mouseY);
+
+        context.getMatrices().popMatrix();
+
         for(Window window : this.windows())
             window.render(context, mouseX, mouseY, tickDelta);
+    }
+
+    @Override
+    protected void clearChildren() {
+        this.windows.clear();
+        super.clearChildren();
     }
 }

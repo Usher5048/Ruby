@@ -11,19 +11,16 @@ import ruby.systems.modules.ModuleCategory;
  * Extends the player's entity-targeting reach and block-interaction reach
  * by modifying the vanilla ENTITY_INTERACTION_RANGE and BLOCK_INTERACTION_RANGE
  * attributes directly on the client player.
- *
+ * <p>
  * <b>Entity reach</b> only makes targets selectable / highlightable from
  * further away on the client.  This only changes client-side selection and interaction attributes.
- *
+ * <p>
  * <b>Block reach</b> is uncapped — servers rarely flag block interaction
  * range in the same way.
- *
+ * <p>
  * Vanilla defaults: entity = 3.0, block = 4.5 (survival).
  */
 public class Reach extends Module {
-
-    /** Maximum entity reach distance the server will accept for attacks. */
-    public static final double SAFE_ENTITY_REACH = 2.9;
 
     private final DoubleValue entityReach;
     private final DoubleValue blockReach;

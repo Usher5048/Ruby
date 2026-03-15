@@ -13,9 +13,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's AutoTool: On StartBreakingBlockEvent, finds the best tool for the targeted block.
  * Uses ItemStack.getMiningSpeedMultiplier(BlockState) to score tools.
  * Adapted to tick-based: checks crosshair target each tick while attack button is held.
@@ -32,7 +32,7 @@ public class AutoTool extends Module {
     public static int visualSlot = -1;
 
     public AutoTool() {
-        super("AutoTool", "Automatically switches to the best tool for mining.", ModuleCategory.PLAYER);
+        super("Auto Tool", "Automatically switches to the best tool for mining.", ModuleCategory.PLAYER);
 
         antiBreak = config.create(new BooleanValue.Builder("Anti Break")
                 .description("Stops using tools that are about to break.")

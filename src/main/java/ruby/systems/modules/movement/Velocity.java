@@ -8,9 +8,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's Velocity: modifies knockback from EntityVelocityUpdateS2CPacket via mixin.
  * Tick-based adaptation: detects the first tick of being hurt (hurtTime == maxHurtTime)
  * and multiplies the player's velocity by the configured horizontal/vertical factors.

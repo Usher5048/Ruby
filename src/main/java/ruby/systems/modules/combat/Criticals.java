@@ -10,9 +10,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's Packet mode: sends fake position packets with Y offsets before attack.
  * Meteor's Jump mode: calls player.jump() before attack.
  * Adapted here to tick-based: sends crit packets when looking at an entity with full cooldown.
@@ -57,14 +57,10 @@ public class Criticals extends Module {
                 mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(x, y + 0.0625, z, false, false));
                 mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(x, y, z, false, false));
             }
-            case Jump -> {
-                // Full jump for guaranteed crit
-                player.jump();
-            }
-            case MiniJump -> {
-                // Meteor's mini jump: small velocity upward
-                player.setVelocity(player.getVelocity().x, 0.1, player.getVelocity().z);
-            }
+            case Jump -> // Full jump for guaranteed crit
+                    player.jump();
+            case MiniJump -> // Meteor's mini jump: small velocity upward
+                    player.setVelocity(player.getVelocity().x, 0.1, player.getVelocity().z);
         }
     }
 }

@@ -8,9 +8,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Increases climbing speed on ladders and vines by replacing
  * the player's Y velocity while climbing.
  */
@@ -19,7 +19,7 @@ public class FastClimb extends Module {
     private final DoubleValue climbSpeed;
 
     public FastClimb() {
-        super("FastClimb", "Allows you to climb ladders and vines faster.", ModuleCategory.MOVEMENT);
+        super("Fast Climb", "Allows you to climb ladders and vines faster.", ModuleCategory.MOVEMENT);
 
         climbSpeed = config.create(new DoubleValue.Builder("Climb Speed")
                 .description("Your climb speed.")

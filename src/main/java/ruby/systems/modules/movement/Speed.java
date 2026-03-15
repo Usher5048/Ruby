@@ -11,9 +11,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's Speed module with Vanilla and Strafe modes.
  * - Vanilla: Overrides horizontal velocity based on configurable blocks/sec.
  * - Strafe: NCP-style stage-based speed with jump boost.

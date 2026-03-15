@@ -4,7 +4,6 @@ import net.minecraft.client.gui.*;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
-
 import org.lwjgl.glfw.GLFW;
 import ruby.RubyClient;
 import ruby.systems.gui.text.FontRenderer;
@@ -15,14 +14,10 @@ import java.util.function.Function;
 
 public class Window extends AbstractParentElement implements Drawable, Selectable {
     private final List<Window> children = new ArrayList<>();
-    private Window focusedChild = null;
-    private float textScale = 1;
     private int x;
     private int y;
 
     protected boolean handleChildren;
-    protected boolean reorderChildren = true;
-    protected boolean clipChildren = false;
     protected int[] draggableBounds;
     protected int width;
     protected int height;
@@ -68,17 +63,15 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         return false;
     }
 
-    public void onFocused() {}
-    public void onFocusRemoved() {}
+    public boolean onFocused() {
+        return true;
+    }
+    public boolean onFocusRemoved() {
+        return true;
+    }
 
     public void drawText(FontRenderer font, DrawContext context, String text, int x, int y, int color) {
-        context.getMatrices().pushMatrix();
-        context.getMatrices().translate(x, y);
-        context.getMatrices().scale(this.textScale, this.textScale);
-
-        font.draw(context, text, 0, 0, color);
-
-        context.getMatrices().popMatrix();
+        font.draw(context, text, x, y, color);
     }
 
     public void drawCenteredText(FontRenderer font, DrawContext context, String text, int x, int y, int color) {
@@ -91,31 +84,122 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         );
     }
 
+    public void drawBorder(DrawContext context, int x1, int y1, int x2, int y2, int color, int thickness) {
+        context.fill(x1, y1, x2, y1 + thickness, color);
+        context.fill(x1, y2, x2, y2 - thickness, color);
+        context.fill(x1, y1, x1 + thickness, y2, color);
+        context.fill(x2, y1, x2 - thickness, y2, color);
+    }
+
+    public void drawRoundedRect(
+            DrawContext context,
+            int x1, int y1,
+            int x2, int y2,
+            int fillColor, int strokeColor,
+            int strokeThickness, int radius,
+            boolean fill, boolean stroke
+    ) {
+        if(!fill && !stroke) return;
+
+        int x1r = x1 + radius;
+        int x2r = x2 - radius;
+        int y1r = y1 + radius;
+        int y2r = y2 - radius;
+
+        int x1s = x1 + strokeThickness;
+        int x2s = x2 - strokeThickness;
+        int y1s = y1 + strokeThickness;
+        int y2s = y2 - strokeThickness;
+
+        if(fill) {
+            context.fill(x1 , y1r, x2 , y2r, fillColor);
+            context.fill(x1r, y1 , x2r, y1r, fillColor);
+            context.fill(x1r, y2r, x2r, y2, fillColor);
+        }
+
+        if(stroke) {
+            context.fill(x1r, y1 , x2r, y1s, strokeColor);
+            context.fill(x1r, y2s, x2r, y2 , strokeColor);
+            context.fill(x1,  y1r, x1s, y2r, strokeColor);
+            context.fill(x2s, y1r, x2 , y2r, strokeColor);
+        }
+
+        int r2 = radius * radius;
+        int ir = Math.max(0, radius - strokeThickness);
+        int ir2 = ir * ir;
+
+        for(int i = 0; i < radius; i++) {
+            int i1 = i + 1;
+            int i2 = i * i;
+
+            int leftX = i1 - radius;
+            int leftX2 = leftX * leftX;
+
+            double lby = Math.sqrt(r2 - leftX2);
+            double lty = radius - lby;
+            double rby = Math.sqrt(r2 - i2);
+            double rty = radius - rby;
+
+            int tl = (int) Math.floor(y1  + lty);
+            int tr = (int) Math.floor(y1  + rty);
+            int bl = (int) Math.ceil (y2r + lby);
+            int br = (int) Math.ceil (y2r + rby);
+
+            if(fill) {
+                context.fill(x1  + i,  tl, x1  + i1, y1r, fillColor);
+                context.fill(x2r + i,  tr, x2r + i1, y1r, fillColor);
+                context.fill(x1  + i, y2r, x1  + i1,  bl, fillColor);
+                context.fill(x2r + i, y2r, x2r + i1,  br, fillColor);
+            }
+
+            if(stroke) {
+                double lbyi = Math.abs(leftX) <= ir ? Math.sqrt(ir2 - leftX2) : 0;
+                double ltyi = radius - lbyi;
+                double rbyi = i <= ir ? Math.sqrt(ir2 - i2) : 0;
+                double rtyi = radius - rbyi;
+
+                int tli = (int) Math.floor(y1  + ltyi);
+                int tri = (int) Math.floor(y1  + rtyi);
+                int bli = (int) Math.ceil (y2r + lbyi);
+                int bri = (int) Math.ceil (y2r + rbyi);
+
+                if(tli > tl) context.fill(x1  + i,  tl, x1  + i1, tli, strokeColor);
+                if(tri > tr) context.fill(x2r + i,  tr, x2r + i1, tri, strokeColor);
+                if(bl > bli) context.fill(x1  + i, bli, x1  + i1,  bl, strokeColor);
+                if(br > bri) context.fill(x2r + i, bri, x2r + i1,  br, strokeColor);
+            }
+        }
+    }
+
     public double getTextHeight(FontRenderer font) {
-        return font.fontHeight * this.textScale;
+        return font.fontHeight;
     }
     public double getTextWidth(FontRenderer font, String text) {
-        return font.getWidth(text) * this.textScale;
+        return font.getWidth(text);
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
-        double sf = scaleFactor();
-
         context.getMatrices().pushMatrix();
-        context.getMatrices().scale(1f / (float) sf, 1f / (float) sf);
-        context.getMatrices().translate(this.x, this.y);
+        context.getMatrices().scale(
+                1f / (float) RubyClient.client.getWindow().getScaleFactor(),
+                1f / (float) RubyClient.client.getWindow().getScaleFactor()
+        );
 
-        // Convert mouse from scaled-relative to pixel-local
-        int localMouseX = (int) Math.round(mouseX * sf) - this.x;
-        int localMouseY = (int) Math.round(mouseY * sf) - this.y;
-        this.onRender(context, localMouseX, localMouseY);
+        int sMouseX = mouseX * RubyClient.client.getWindow().getScaleFactor();
+        int sMouseY = mouseY * RubyClient.client.getWindow().getScaleFactor();
+
+        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
+
+        context.getMatrices().translate(this.x, this.y);
+        this.onRender(context, sMouseX - this.x, sMouseY - this.y);
         context.getMatrices().popMatrix();
 
         context.getMatrices().pushMatrix();
         context.getMatrices().translate(
-                this.x / (float) sf,
-                this.y / (float) sf
+                this.x / (float) RubyClient.client.getWindow().getScaleFactor(),
+                this.y / (float) RubyClient.client.getWindow().getScaleFactor()
         );
 
         if(!this.handleChildren) {
@@ -123,22 +207,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
             return;
         }
 
-        // Pass scaled coords relative to this window's position
-        double sX = this.x / sf;
-        double sY = this.y / sf;
-
-        if (this.clipChildren) {
-            context.enableScissor(
-                    0,
-                    0,
-                    (int) Math.ceil(this.getWidth() / sf),
-                    (int) Math.ceil(this.getHeight() / sf)
-            );
-        }
-
-        for(Element element : this.children().toArray(new Element[0])) {
-            Window window = (Window) element;
-
+        for(Window window : this.windows()) {
             window.render(
                     context,
                     (int) (mouseX - sX),
@@ -147,33 +216,34 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
             );
         }
 
-        if (this.clipChildren) {
-            context.disableScissor();
-        }
-
         context.getMatrices().popMatrix();
-    }
-
-    private static double scaleFactor() {
-        return RubyClient.client.getWindow().getScaleFactor();
     }
 
     @Override
     public boolean mouseDragged(Click click, double deltaX, double deltaY) {
-        double sf = scaleFactor();
-        double sMouseX = Math.round(click.x() * sf);
-        double sMouseY = Math.round(click.y() * sf);
+        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getScaleFactor());
+        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getScaleFactor());
+        double sDeltaX = Math.round(deltaX * RubyClient.client.getWindow().getScaleFactor());
+        double sDeltaY = Math.round(deltaY * RubyClient.client.getWindow().getScaleFactor());
 
-        double sX = this.x / sf;
-        double sY = this.y / sf;
+        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
 
-        // Always dispatch drag to focused child (no bounds check, handles fast mouse)
-        if (this.handleChildren && this.focusedChild != null) {
-            if (this.focusedChild.mouseDragged(new Click(
+        for(int i = this.children.size() - 1; i >= 0; i--) {
+            if(!this.handleChildren) continue;
+            Window window = this.children.get(i);
+
+            if(sMouseX - this.x < window.getX()) continue;
+            if(sMouseY - this.y < window.getY()) continue;
+            if(sMouseX - this.x >= window.getX() + window.getWidth()) continue;
+            if(sMouseY - this.y >= window.getY() + window.getHeight()) continue;
+
+            if(this.focusWindow(window).mouseDragged(new Click(
                     click.x() - sX,
                     click.y() - sY,
                     click.buttonInfo()
             ), deltaX, deltaY)) return true;
+            break;
         }
 
         if(this.onMouseDragged(new Click(
@@ -183,8 +253,8 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         ), deltaX, deltaY)) return true;
 
         if(this.isDragging() && click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            this.x += (int) Math.round(deltaX * scaleFactor());
-            this.y += (int) Math.round(deltaY * scaleFactor());
+            this.x += sDeltaX;
+            this.y += sDeltaY;
         }
 
         return false;
@@ -192,12 +262,11 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
-        double sf = scaleFactor();
-        double sMouseX = Math.round(click.x() * sf);
-        double sMouseY = Math.round(click.y() * sf);
+        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getScaleFactor());
+        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getScaleFactor());
 
-        double sX = this.x / sf;
-        double sY = this.y / sf;
+        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
 
         for(int i = this.children.size() - 1; i >= 0; i--) {
             if(!this.handleChildren) continue;
@@ -224,10 +293,10 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
 
         if(
                 click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT &&
-                sMouseX > this.x + this.draggableBounds[0] &&
-                sMouseX < this.x + this.draggableBounds[2] &&
-                sMouseY > this.y + this.draggableBounds[1] &&
-                sMouseY < this.y + this.draggableBounds[3]
+                        sMouseX > this.x + this.draggableBounds[0] &&
+                        sMouseX < this.x + this.draggableBounds[2] &&
+                        sMouseY > this.y + this.draggableBounds[1] &&
+                        sMouseY < this.y + this.draggableBounds[3]
         ) this.setDragging(true);
 
         return false;
@@ -235,20 +304,27 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
 
     @Override
     public boolean mouseReleased(Click click) {
-        double sf = scaleFactor();
-        double sMouseX = Math.round(click.x() * sf);
-        double sMouseY = Math.round(click.y() * sf);
+        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getScaleFactor());
+        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getScaleFactor());
 
-        double sX = this.x / sf;
-        double sY = this.y / sf;
+        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
 
-        // Always dispatch release to focused child (handles release outside bounds)
-        if (this.handleChildren && this.focusedChild != null) {
-            if (this.focusedChild.mouseReleased(new Click(
+        for(int i = this.children.size() - 1; i >= 0; i--) {
+            if(!this.handleChildren) continue;
+            Window window = this.children.get(i);
+
+            if(sMouseX - this.x < window.getX()) continue;
+            if(sMouseY - this.y < window.getY()) continue;
+            if(sMouseX - this.x >= window.getX() + window.getWidth()) continue;
+            if(sMouseY - this.y >= window.getY() + window.getHeight()) continue;
+
+            if(window.mouseReleased(new Click(
                     click.x() - sX,
                     click.y() - sY,
                     click.buttonInfo()
             ))) return true;
+            break;
         }
 
         if(this.onMouseUp(new Click(
@@ -275,12 +351,11 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        double sf = scaleFactor();
-        double sMouseX = Math.round(mouseX * sf);
-        double sMouseY = Math.round(mouseY * sf);
+        double sMouseX = Math.round(mouseX * RubyClient.client.getWindow().getScaleFactor());
+        double sMouseY = Math.round(mouseY * RubyClient.client.getWindow().getScaleFactor());
 
-        double sX = this.x / sf;
-        double sY = this.y / sf;
+        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
 
         for(int i = this.children.size() - 1; i >= 0; i--) {
             if(!this.handleChildren) continue;
@@ -310,12 +385,11 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        double sf = scaleFactor();
-        double sMouseX = Math.round(mouseX * sf);
-        double sMouseY = Math.round(mouseY * sf);
+        double sMouseX = Math.round(mouseX * RubyClient.client.getWindow().getScaleFactor());
+        double sMouseY = Math.round(mouseY * RubyClient.client.getWindow().getScaleFactor());
 
-        double sX = this.x / sf;
-        double sY = this.y / sf;
+        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
 
         for(int i = this.children.size() - 1; i >= 0; i--) {
             if(!this.handleChildren) continue;
@@ -356,13 +430,6 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         this.height = height;
     }
 
-    public void setTextScale(float textScale) {
-        this.textScale = textScale;
-    }
-    public float getTextScale() {
-        return this.textScale;
-    }
-
     public int getX() {
         return this.x;
     }
@@ -382,28 +449,31 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
 
     private boolean runFocused(Function<Window, Boolean> action) {
-        if (this.focusedChild != null && this.children.contains(this.focusedChild))
-            return action.apply(this.focusedChild);
         if(this.children.isEmpty()) return false;
         return action.apply(this.children.getLast());
     }
 
-    private void propagateFocusRemoved() {
-        this.onFocusRemoved();
-        for(Window window : this.children)
-            window.propagateFocusRemoved();
+    private boolean propagateFocusRemoved() {
+        if(!this.onFocusRemoved()) return false;
+        for(Window window : this.children) {
+            if(!window.propagateFocusRemoved())
+                return false;
+        }
+
+        return true;
     }
 
     private Window focusWindow(Window window) {
-        if (this.focusedChild != null && this.focusedChild != window) {
-            this.focusedChild.propagateFocusRemoved();
+        if(!window.onFocused()) return window;
+
+        if(!this.children.isEmpty()) {
+            if(!this.children.getLast().propagateFocusRemoved())
+                return window;
         }
-        if (this.reorderChildren) {
-            if (!this.children.remove(window)) return null;
-            this.children.add(window);
-        }
-        this.focusedChild = window;
-        window.onFocused();
+
+        if(!this.children.remove(window)) return null;
+        this.children.add(window);
+
         return window;
     }
 

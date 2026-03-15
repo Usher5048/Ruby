@@ -8,15 +8,15 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's NoFall modes:
  * - Packet: Sets onGround=true in player move packets to prevent fall damage.
  *   Meteor does this via a mixin on PlayerMoveC2SPacket. Here we send an explicit
  *   OnGroundOnly packet when falling.
  * - AirPlace: Places a block below the player before landing.
- *
+ * <p>
  * Tick-based adaptation: sends onGround=true packet when falling > 2 blocks.
  */
 public class NoFall extends Module {
@@ -25,7 +25,7 @@ public class NoFall extends Module {
     private final EnumValue<Mode> mode;
 
     public NoFall() {
-        super("NoFall", "Prevents you from taking fall damage.", ModuleCategory.MOVEMENT);
+        super("No Fall", "Prevents you from taking fall damage.", ModuleCategory.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The method used to prevent fall damage.")

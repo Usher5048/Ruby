@@ -6,6 +6,7 @@ import net.minecraft.client.input.KeyInput;
 import org.lwjgl.glfw.GLFW;
 import ruby.systems.config.*;
 import ruby.systems.gui.GUIStyle;
+import ruby.systems.modules.Keybind;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.Modules;
 
@@ -21,8 +22,8 @@ public class ModuleWindow extends CollapsibleWindow {
     public ModuleWindow(int x, int y, Module module) {
         super(x, y, 240, 28);
         this.module = module;
-        this.reorderChildren = false;
-        this.clipChildren = true;
+//        this.reorderChildren = false;
+//        this.clipChildren = true;
         this.handleChildren = false;
 
         // Create setting child windows from module config
@@ -138,7 +139,7 @@ public class ModuleWindow extends CollapsibleWindow {
         this.drawText(style.bodyFont(), context, this.module.name(), 28, textY, 0xFFFFFFFF);
 
         // Keybind badge
-        String keyName = this.waitingForBind ? "..." : this.module.getKeyName();
+        String keyName = this.waitingForBind ? "..." : this.module.keybind.toString();
         int keyW = (int) this.getTextWidth(style.monospaceFont(), keyName);
         int keyH = (int) this.getTextHeight(style.monospaceFont());
         int badgeW = keyW + 12;
@@ -165,7 +166,7 @@ public class ModuleWindow extends CollapsibleWindow {
         if (click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             // Check if click is on the keybind badge area (right side)
             GUIStyle style = GUIStyle.get();
-            String keyName = this.waitingForBind ? "..." : this.module.getKeyName();
+            String keyName = this.waitingForBind ? "..." : this.module.keybind.toString();
             int keyW = (int) this.getTextWidth(style.monospaceFont(), keyName);
             int badgeW = keyW + 12;
             int badgeX = this.getWidth() - 14 - badgeW;
@@ -192,16 +193,17 @@ public class ModuleWindow extends CollapsibleWindow {
     public boolean onKeyPress(KeyInput input) {
         if (!this.waitingForBind) return false;
         if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
-            this.module.keyCode(-1);
+            this.module.keybind = Keybind.unbound();
         } else {
-            this.module.keyCode(input.key());
+            this.module.keybind = Keybind.key(input.key(), false);
         }
         this.waitingForBind = false;
         return true;
     }
 
     @Override
-    public void onFocusRemoved() {
+    public boolean onFocusRemoved() {
         this.waitingForBind = false;
+        return true;
     }
 }

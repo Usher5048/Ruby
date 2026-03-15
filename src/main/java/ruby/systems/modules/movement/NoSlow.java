@@ -7,9 +7,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Prevents various blocks and actions from slowing the player down.
  * Simplified tick-based version that counteracts slowdowns by
  * maintaining sprint state and removing slowdown effects.
@@ -22,7 +22,7 @@ public class NoSlow extends Module {
     private final BooleanValue honeyBlock;
 
     public NoSlow() {
-        super("NoSlow", "Allows you to move normally when using items that slow you.", ModuleCategory.MOVEMENT);
+        super("No Slow", "Allows you to move normally when using items that slow you.", ModuleCategory.MOVEMENT);
 
         items = config.create(new BooleanValue.Builder("Items")
                 .description("Prevents item use from slowing you.")

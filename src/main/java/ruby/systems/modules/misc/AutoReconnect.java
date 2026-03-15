@@ -5,13 +5,13 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's AutoReconnect: Automatically reconnects to the last server after being disconnected.
  * Requires a mixin to net.minecraft.client.gui.screen.DisconnectedScreen to add
  * a reconnect button and auto-reconnect timer.
- *
+ * <p>
  * TODO: Add mixin to DisconnectedScreen to implement auto-reconnect functionality.
  */
 public class AutoReconnect extends Module {
@@ -20,7 +20,7 @@ public class AutoReconnect extends Module {
     public static AutoReconnect INSTANCE;
 
     public AutoReconnect() {
-        super("AutoReconnect", "Automatically reconnects when disconnected.", ModuleCategory.MISC);
+        super("Auto Reconnect", "Automatically reconnects when disconnected.", ModuleCategory.MISC);
         INSTANCE = this;
 
         delay = config.create(new DoubleValue.Builder("Delay")

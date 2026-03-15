@@ -8,9 +8,9 @@ import ruby.systems.modules.ModuleCategory;
 import ruby.systems.modules.Modules;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Prevents the player from falling into the void.
  * - Jump: Makes the player jump when near the void
  * - Flight: Enables the Fly module when near the void
@@ -25,7 +25,7 @@ public class AntiVoid extends Module {
     private boolean hasRun = false;
 
     public AntiVoid() {
-        super("AntiVoid", "Attempts to prevent you from falling into the void.", ModuleCategory.MOVEMENT);
+        super("Anti Void", "Attempts to prevent you from falling into the void.", ModuleCategory.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The method to prevent falling into the void.")

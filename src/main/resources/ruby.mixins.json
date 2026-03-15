@@ -4,13 +4,16 @@
   "compatibilityLevel": "JAVA_21",
   "plugin": "ruby.MixinPlugin",
   "client": [
+    "ClientCommonNetworkHandlerMixin",
     "ClientPlayerEntityMixin",
-    "AttackEntityMixin",
-    "InGameHudMixin",
+    "ClientPlayerInteractionManagerMixin",
+    "EntityMixin",
     "HeldItemRendererMixin",
+    "InGameHudMixin",
     "MinecraftClientAccessor",
-    "EntityHitboxMixin",
-    "ClientConnectionMixin"
+    "MinecraftClientMixin",
+    "TitleScreenMixin",
+    "WindowMixin"
   ],
   "injectors": {
     "defaultRequire": 1

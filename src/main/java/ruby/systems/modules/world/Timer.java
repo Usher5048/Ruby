@@ -5,15 +5,15 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleCategory;
 
 /**
- * Ported from Meteor Client (https://github.com/MeteorDevelopment/meteor-client)
+ * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
  * Licensed under GPL-3.0
- *
+ * <p>
  * Meteor's Timer: Modifies the game's tick speed by multiplying the timer value.
  * Requires a mixin to RenderTickCounter to apply the multiplier.
- *
+ * <p>
  * The multiplier value is exposed as a static method for mixin access.
  * Without the mixin, this module only stores the setting.
- *
+ * <p>
  * TODO: Add mixin to net.minecraft.client.render.RenderTickCounter to apply multiplier.
  */
 public class Timer extends Module {
