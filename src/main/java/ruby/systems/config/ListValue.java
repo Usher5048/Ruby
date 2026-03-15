@@ -28,9 +28,9 @@ public abstract class ListValue<T> extends Value<List<T>> {
     public boolean fromString(String str) {
         this.value.clear();
 
-        for(String s : str.split(", ")) {
+        for (String s : str.split(", ")) {
             T val = this.fromStringElement(s);
-            if(val == null) return false;
+            if (val == null) return false;
 
             this.value.add(val);
         }
@@ -50,29 +50,36 @@ public abstract class ListValue<T> extends Value<List<T>> {
         });
 
         int elmSize = 0;
-        for(T val : this.value)
-            elmSize += this.serializeElement(stream, val);
+        for (T val : this.value) elmSize += this.serializeElement(stream, val);
 
-        return 2 + size + elmSize;
+        return 2 + elmSize;
     }
 
     @Override
     public void deserialize(ByteArrayInputStream stream) {
-        int size = stream.read() << 24 |
-                stream.read() << 16 |
-                stream.read() << 8 |
-                stream.read();
+        int hi = stream.read();
+        int lo = stream.read();
+
+        if (hi < 0 || lo < 0) {
+            this.value.clear();
+            return;
+        }
+
+        int size = (hi << 8) | lo;
 
         this.value.clear();
-        for(int i = 0; i < size; i++)
-            this.value.add(this.deserializeElement(stream));
+        for (int i = 0; i < size; i++) {
+            T element = this.deserializeElement(stream);
+            if (element != null) this.value.add(element);
+        }
     }
 
     protected static abstract class Builder<T, B extends Builder<T, B>> extends Value.Builder<List<T>, B> {
         public Builder(String name) {
             super(name);
         }
-        public B defaultValue(T ...a) {
+
+        public B defaultValue(T... a) {
             this.defaultValue = new ArrayList<>(List.of(a));
             return this.self();
         }

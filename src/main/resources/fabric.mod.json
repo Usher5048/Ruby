@@ -2,7 +2,7 @@
 	"schemaVersion": 1,
 	"id": "ruby",
 	"version": "${version}",
-	"name": "RubyClient",
+	"name": "Ruby",
 	"description": "",
 	"authors": [
 		"usher5048",
@@ -10,10 +10,13 @@
 	],
 	"license": "GPL-3.0",
 	"icon": "assets/ruby/icon.png",
-	"environment": "*",
+	"environment": "client",
 	"entrypoints": {
 		"main": [
 			"ruby.RubyClient"
+		],
+		"client": [
+			"ruby.RubyClientClient"
 		]
 	},
 	"mixins": [

@@ -5,14 +5,13 @@ import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.util.Identifier;
 import ruby.RubyClient;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.util.HashMap;
+import java.util.Locale;
 
 public class GlyphSheet {
     public record Glyph(
@@ -31,8 +30,24 @@ public class GlyphSheet {
     private int fontHeight;
 
     public GlyphSheet(String identifier, Font font) {
-        this.identifier = identifier;
+        this.identifier = sanitizeIdentifier(identifier);
         this.font = font;
+    }
+
+    private static String sanitizeIdentifier(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            return "font";
+        }
+
+        String normalized = identifier.toLowerCase(Locale.ROOT);
+        StringBuilder out = new StringBuilder(normalized.length());
+        for (int i = 0; i < normalized.length(); i++) {
+            char c = normalized.charAt(i);
+            boolean valid = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '/' || c == '.' || c == '_' || c == '-';
+            out.append(valid ? c : '_');
+        }
+
+        return out.toString();
     }
 
     protected void generateSheet(char[] chrs) {
@@ -110,10 +125,6 @@ public class GlyphSheet {
                 image.setColor(x, y, color);
             }
         }
-
-        try {
-            ImageIO.write(this.imageBuffer, "png", new File("test_texture_" + this.identifier + ".png"));
-        } catch(Exception ignored) {}
 
         RubyClient.client.getTextureManager().registerTexture(Identifier.of(
                 RubyClient.MOD_ID,

@@ -18,10 +18,10 @@ public record GUIStyle(
             0xCC222222, 0xFFCCCCCC,
             0xCC333333, 0xFFFFAA00,
             0xff181818, 0xff131313,
-            FontRenderer.create(RubyClient.getResourceStream("fonts/NunitoBold.ttf"),    "Header",    28),
-            FontRenderer.create(RubyClient.getResourceStream("fonts/Nunito.ttf"),        "Subheader", 22),
-            FontRenderer.create(RubyClient.getResourceStream("fonts/Nunito.ttf"),        "Body",      18),
-            FontRenderer.create(RubyClient.getResourceStream("fonts/JetBrainsMono.ttf"), "Monospace", 16)
+                FontRenderer.create(RubyClient.getResourceStream("fonts/NunitoBold.ttf"),    "header",    28),
+                FontRenderer.create(RubyClient.getResourceStream("fonts/Nunito.ttf"),        "subheader", 22),
+                FontRenderer.create(RubyClient.getResourceStream("fonts/Nunito.ttf"),        "body",      18),
+                FontRenderer.create(RubyClient.getResourceStream("fonts/JetBrainsMono.ttf"), "monospace", 16)
     );
 
     private static GUIStyle current = GUIStyle.DEFAULT;

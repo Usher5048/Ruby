@@ -1,12 +1,21 @@
 {
-	"required": true,
-	"package": "rubyclient.ruby.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"mixins": [],
-	"injectors": {
-		"defaultRequire": 1
-	},
-	"overwrites": {
-		"requireAnnotations": true
-	}
+  "required": true,
+  "package": "ruby.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "ruby.MixinPlugin",
+  "client": [
+    "ClientPlayerEntityMixin",
+    "AttackEntityMixin",
+    "InGameHudMixin",
+    "HeldItemRendererMixin",
+    "MinecraftClientAccessor",
+    "EntityHitboxMixin",
+    "ClientConnectionMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
 }

@@ -45,21 +45,10 @@ public abstract class WindowedScreen extends Screen {
 
     @Override
     public boolean mouseDragged(Click click, double deltaX, double deltaY) {
-        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getScaleFactor());
-        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getScaleFactor());
-
-        for(int i = this.windows.size() - 1; i >= 0; i--) {
-            Window window = this.windows.get(i);
-
-            if(sMouseX < window.getX()) continue;
-            if(sMouseY < window.getY()) continue;
-            if(sMouseX >= window.getX() + window.getWidth()) continue;
-            if(sMouseY >= window.getY() + window.getHeight()) continue;
-
-            this.focusWindow(window).mouseDragged(click, deltaX, deltaY);
-            break;
+        // Always dispatch to focused (last) window — prevents drag loss on fast mouse
+        if (!this.windows.isEmpty()) {
+            this.windows.getLast().mouseDragged(click, deltaX, deltaY);
         }
-
         return true;
     }
 
@@ -115,7 +104,8 @@ public abstract class WindowedScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyInput input) {
-        return this.runFocused(win -> win.keyPressed(input));
+        if (this.runFocused(win -> win.keyPressed(input))) return true;
+        return super.keyPressed(input);
     }
 
     @Override

@@ -15,7 +15,7 @@ import java.io.InputStream;
 
 public class RubyClient implements ModInitializer {
 	public static final String MOD_ID = "ruby";
-	public static final String MOD_NAME = "RubyClient";
+	public static final String MOD_NAME = "Ruby";
 	public static final String MC_VERSION = SharedConstants.getGameVersion().name();
 	public static final String VERSION = "v" + FabricLoader
 			.getInstance()

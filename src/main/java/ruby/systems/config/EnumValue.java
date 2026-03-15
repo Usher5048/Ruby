@@ -16,6 +16,16 @@ public class EnumValue<T extends Enum<?>> extends Value<T> {
     }
 
 
+    public T[] values() {
+        return this.enumValues;
+    }
+
+    public void cycle() {
+        int idx = this.value.ordinal() + 1;
+        if (idx >= this.enumValues.length) idx = 0;
+        this.value = this.enumValues[idx];
+    }
+
     @Override
     public String toString() {
         return this.value.toString();
