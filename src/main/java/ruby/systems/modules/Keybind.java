@@ -6,10 +6,12 @@ import ruby.RubyClient;
 
 public class Keybind {
     private final int code;
-    private final boolean tor;
     private final boolean isKey;
+
     private boolean wasPressed0;
     private boolean wasPressed1;
+
+    private boolean tor;
 
     private Keybind(int code, boolean isKey, boolean tor) {
         this.code = code;
@@ -26,8 +28,12 @@ public class Keybind {
     public static Keybind mouse(int button, boolean tor) {
         return new Keybind(button, false, tor);
     }
+
     public boolean togglesOnRelease() {
         return this.tor;
+    }
+    public void togglesOnRelease(boolean tor) {
+        this.tor = tor;
     }
 
     public static boolean canBindTo(int code, boolean isKey) {
@@ -97,10 +103,11 @@ public class Keybind {
     public String toString() {
         if(this.isUnbound()) return "None";
 
-        String keyname = GLFW.glfwGetKeyName(this.code, GLFW.glfwGetKeyScancode(this.code));
+        if(this.isKey) {
+            String keyname = GLFW.glfwGetKeyName(this.code, GLFW.glfwGetKeyScancode(this.code));
+            return keyname != null ? keyname : "key." + this.code;
+        }
 
-        return this.isKey ?
-                (keyname != null ? keyname : "key." + this.code) :
-                "Mouse Button " + (this.code + 1);
+        return "Mouse Button " + (this.code + 1);
     }
 }

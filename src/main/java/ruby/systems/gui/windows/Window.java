@@ -63,6 +63,8 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         return false;
     }
 
+    public void onTick() {}
+
     public boolean onFocused() {
         return true;
     }
@@ -260,6 +262,15 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         return false;
     }
 
+    public void tick() {
+        for(int i = this.children.size() - 1; i >= 0; i--) {
+            if(!this.handleChildren) continue;
+            this.children.get(i).tick();
+        }
+
+        this.onTick();
+    }
+
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
         double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getScaleFactor());
@@ -339,14 +350,14 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
 
     @Override
     public boolean keyPressed(KeyInput input) {
-        return this.runFocused(win -> win.keyPressed(input)) ||
-                this.onKeyPress(input);
+        if(this.runFocused(win -> win.keyPressed(input))) return true;
+        return this.onKeyPress(input);
     }
 
     @Override
     public boolean keyReleased(KeyInput input) {
-        return this.runFocused(win -> win.keyReleased(input)) ||
-                this.onKeyRelease(input);
+        if(this.runFocused(win -> win.keyReleased(input))) return true;
+        return this.onKeyRelease(input);
     }
 
     @Override
@@ -416,8 +427,8 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
 
     @Override
     public boolean charTyped(CharInput input) {
-        return this.runFocused(win -> win.charTyped(input)) ||
-                this.onCharTyped(input);
+        if(this.runFocused(win -> win.charTyped(input))) return true;
+        return this.onCharTyped(input);
     }
 
     public void setPosition(int x, int y) {
@@ -464,6 +475,9 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
 
     private Window focusWindow(Window window) {
+        if(!this.children.isEmpty() && this.children.getLast() == window)
+            return window;
+
         if(!window.onFocused()) return window;
 
         if(!this.children.isEmpty()) {

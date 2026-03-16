@@ -43,4 +43,14 @@ public class WindowedOverlay extends Overlay {
         for(Window window : this.windows())
             window.render(context, mouseX, mouseY, tickDelta);
     }
+
+    public void onTick() {}
+
+    @Override
+    public void tick() {
+        for(int i = this.windows.size() - 1; i >= 0; i--)
+            this.windows.get(i).tick();
+
+        this.onTick();
+    }
 }

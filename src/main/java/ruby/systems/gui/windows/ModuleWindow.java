@@ -2,6 +2,7 @@ package ruby.systems.gui.windows;
 
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 import org.lwjgl.glfw.GLFW;
 import ruby.systems.config.*;
@@ -10,9 +11,14 @@ import ruby.systems.modules.Keybind;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.Modules;
 
+import java.util.LinkedHashSet;
+
 public class ModuleWindow extends CollapsibleWindow {
 
     private final Module module;
+    private final BooleanValue moduleTOR;
+    private final BooleanValue moduleToasts;
+
     private boolean waitingForBind;
     private boolean settingsOpen = false;
     private float expandProgress = 0f;
@@ -21,10 +27,16 @@ public class ModuleWindow extends CollapsibleWindow {
 
     public ModuleWindow(int x, int y, Module module) {
         super(x, y, 240, 28);
-        this.module = module;
-//        this.reorderChildren = false;
-//        this.clipChildren = true;
         this.handleChildren = false;
+
+        this.module = module;
+        this.moduleTOR = (BooleanValue) new BooleanValue.Builder("Hold bind")
+                .defaultValue(this.module.keybind.togglesOnRelease())
+                .build();
+
+        this.moduleToasts = (BooleanValue) new BooleanValue.Builder("Show toasts")
+                .defaultValue(this.module.showsToasts())
+                .build();
 
         // Create setting child windows from module config
         int settingY = this.getHeaderHeight() + 8;
@@ -47,6 +59,11 @@ public class ModuleWindow extends CollapsibleWindow {
                 settingY += 26;
             }
         }
+
+        this.addWindow(new SettingToggleWindow(0, settingY, 240, this.moduleTOR));
+        settingY += 26;
+
+        this.addWindow(new SettingToggleWindow(0, settingY, 240, this.moduleToasts));
     }
 
     private static final int SETTING_GAP = 2;
@@ -60,7 +77,16 @@ public class ModuleWindow extends CollapsibleWindow {
         for (Window child : this.windows()) {
             h += child.getHeight() + SETTING_GAP;
         }
-        return h + 8;
+        return h + 26 + 8;
+    }
+
+    @Override
+    public void onTick() {
+        if(this.module.showsToasts() != this.moduleToasts.value())
+            this.module.showsToasts(this.moduleToasts.value());
+
+        if(this.module.keybind.togglesOnRelease() != this.moduleTOR.value())
+            this.module.keybind.togglesOnRelease(this.moduleTOR.value());
     }
 
     @Override
@@ -85,11 +111,11 @@ public class ModuleWindow extends CollapsibleWindow {
         float target = this.settingsOpen ? 1f : 0f;
         this.expandProgress += (target - this.expandProgress) * 0.2f;
         if (Math.abs(this.expandProgress - target) < 0.005f) this.expandProgress = target;
-        this.handleChildren = this.expandProgress > 0.01f;
+        this.handleChildren = this.expandProgress > 0.99f;
 
-        if (this.expandProgress > 0.01f) {
+        if(this.expandProgress > 0.01f) {
             int settingY = this.getHeaderHeight() + 8;
-            for (Window child : this.windows()) {
+            for(Window child : this.windows()) {
                 child.setPosition(0, settingY);
                 settingY += child.getHeight() + SETTING_GAP;
             }
@@ -99,8 +125,20 @@ public class ModuleWindow extends CollapsibleWindow {
     @Override
     public void onRender(DrawContext context, int mouseX, int mouseY) {
         int settingY = this.getHeaderHeight() + 8;
-        for (String key : this.module.config.getAll()) {
+
+        LinkedHashSet<String> keys = new LinkedHashSet<>(this.module.config.getAll());
+        keys.add(this.moduleTOR.name()); keys.add(this.moduleToasts.name());
+
+        for(String key : keys) {
             Value<?> value = this.module.config.get(key);
+            if(value == null) {
+                if(this.moduleToasts.name().equals(key)) value = this.moduleToasts;
+                if(this.moduleTOR.name().equals(key)) {
+                    value = this.moduleTOR;
+                    settingY += 26;
+                }
+            }
+
             for(Window child : this.windows()) {
                 if(!(child instanceof SettingWindow sWin)) continue;
                 if(sWin.value() != value) continue;
@@ -179,6 +217,14 @@ public class ModuleWindow extends CollapsibleWindow {
 
     @Override
     public boolean onMouseDown(Click click, boolean doubled) {
+        if(this.waitingForBind) {
+            this.waitingForBind = false;
+            if(Keybind.canBindTo(click.button(), false)) {
+                this.module.keybind = Keybind.mouse(click.button(), this.module.keybind.togglesOnRelease());
+                return true;
+            }
+        }
+
         if (click.y() >= this.getHeaderHeight()) return false;
 
         if (click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
@@ -206,25 +252,26 @@ public class ModuleWindow extends CollapsibleWindow {
         return false;
     }
 
+    @Override
+    public boolean onCharTyped(CharInput input) {
+        return this.waitingForBind;
+    }
+
+    @Override
+    public boolean onKeyRelease(KeyInput input) {
+        if(!this.waitingForBind) return false;
+
+        this.waitingForBind = false;
+        if(!Keybind.canBindTo(input.key(), true)) this.module.keybind = Keybind.unbound();
+        else this.module.keybind = Keybind.key(input.key(), this.module.keybind.togglesOnRelease());
+
+        return true;
+    }
 
     @Override
     public boolean onKeyPress(KeyInput input) {
         if(!this.waitingForBind) return false;
-
-        if(input.key() == GLFW.GLFW_KEY_ESCAPE) {
-            this.waitingForBind = false;
-            return true;
-        }
-
-        if(input.key() != GLFW.GLFW_KEY_BACKSPACE) {
-            this.module.keybind = Keybind.key(input.key(), false);
-            this.waitingForBind = false;
-            return true;
-        }
-
-        this.module.keybind = Keybind.unbound();
-        this.waitingForBind = false;
-        return true;
+        return input.key() == GLFW.GLFW_KEY_ESCAPE;
     }
 
     @Override

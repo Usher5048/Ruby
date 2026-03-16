@@ -18,7 +18,7 @@ import java.util.Map;
 
 public class ConfigManager {
     private static final int VERSION = 2;
-    private static final File configFile = new File(RubyClient.client.runDirectory.getAbsolutePath() + "/." + RubyClient.MOD_ID + "/config");
+    private static final File configFile = new File(RubyClient.client.runDirectory.getAbsolutePath() + "/config/" + RubyClient.MOD_ID);
 
     /** Panel positions saved by the ClickGUI — persisted to disk. */
     private static final Map<String, int[]> panelPositions = new HashMap<>();

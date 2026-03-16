@@ -33,7 +33,7 @@ public class ClickGUI extends WindowedScreen {
     /* ---- search state ---- */
     private String searchText = "";
     private ModuleTypeWindow searchPanel = null;
-    private float cursorBlink = 0f;
+    private int cursorBlink = 0;
 
     public ClickGUI() {
         super("Click GUI");
@@ -44,7 +44,6 @@ public class ClickGUI extends WindowedScreen {
     @Override
     protected void init() {
         super.init();
-        this.windows().clear();
         this.closing = false;
         // openProgress stays at whatever it was (0 on first open → will animate in)
 
@@ -91,7 +90,7 @@ public class ClickGUI extends WindowedScreen {
 
         // Finish closing when animation completes
         if (this.closing && this.openProgress <= 0.01f) {
-            this.client.setScreen(null);
+            RubyClient.client.setScreen(null);
             return;
         }
 
@@ -99,29 +98,45 @@ public class ClickGUI extends WindowedScreen {
         int bgAlpha = (int) (0x88 * this.openProgress);
         context.fill(0, 0, width, height, bgAlpha << 24);
 
-        // Scale-based animation: panels grow in / shrink out from their own center
-//        double sf = this.client.getWindow().getScaleFactor();
-//        float scale = this.openProgress;
-
-//        for (Window window : this.windows()) {
-//            context.getMatrices().pushMatrix();
-//
-//            // Scale around each panel's center
-//            float cx = window.getX() / (float) sf + (window.getWidth() / (float) sf) / 2f;
-//            float cy = window.getY() / (float) sf + (window.getHeight() / (float) sf) / 2f;
-//            context.getMatrices().translate(cx, cy);
-//            context.getMatrices().scale(scale, scale);
-//            context.getMatrices().translate(-cx, -cy);
-//
-//            window.render(context, mouseX, mouseY);
-//            context.getMatrices().popMatrix();
-//        }
-
         // Draw search bar at top right
         drawSearchBar(context);
+    }
 
-        this.cursorBlink += 0.07f;
-        if (this.cursorBlink > 2f) this.cursorBlink = 0f;
+    @Override
+    public void onTick() {
+        // moved cursor blink here for consistency independent of framerate
+        if(this.closing && this.openProgress <= 0.01f) return;
+
+        this.cursorBlink++;
+        if(this.cursorBlink > 20) this.cursorBlink = 0;
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+        float sf = RubyClient.client.getWindow().getScaleFactor();
+
+        // first part of super.render
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale(1f / sf, 1f / sf);
+        this.onRender(context, mouseX, mouseY);
+        context.getMatrices().popMatrix();
+
+        // Scale-based animation: panels grow in / shrink out from their own center
+        float scale = this.openProgress;
+        for(Window window : this.windows()) {
+            context.getMatrices().pushMatrix();
+
+            // Scale around each panel's center
+            float cx = window.getX() / sf + (window.getWidth() / sf) / 2f;
+            float cy = window.getY() / sf + (window.getHeight() / sf) / 2f;
+
+            context.getMatrices().translate(cx, cy);
+            context.getMatrices().scale(scale, scale);
+            context.getMatrices().translate(-cx, -cy);
+
+            window.render(context, mouseX, mouseY, tickDelta);
+            context.getMatrices().popMatrix();
+        }
     }
 
     @Override
@@ -132,7 +147,7 @@ public class ClickGUI extends WindowedScreen {
         for(ModuleType type : ModuleType.values()) {
             for(Window child : this.windows()) {
                 if(!(child instanceof ModuleTypeWindow mWin)) continue;
-                if(mWin.getTitle() != type.toString()) continue;
+                if(mWin.getTitle().equals(type.toString())) continue;
 
                 child.setPosition(xOffset, 20);
                 xOffset += child.getWidth() + 20;
@@ -149,8 +164,8 @@ public class ClickGUI extends WindowedScreen {
 
         int barW = 220;
         int barH = 24;
-        int barX = width - barW - 16;
-        int barY = 16;
+        int barX = width - barW - 20;
+        int barY = 20;
 
         float alpha = Math.min(1f, this.openProgress * 2f);
 
@@ -172,7 +187,7 @@ public class ClickGUI extends WindowedScreen {
         style.monospaceFont().draw(context, display, barX + 10, textY, col);
 
         // Cursor
-        if (!this.searchText.isEmpty() && this.cursorBlink < 1f) {
+        if (!this.searchText.isEmpty() && this.cursorBlink < 10) {
             int cx = barX + 10 + style.monospaceFont().getWidth(this.searchText);
             int ch = style.monospaceFont().fontHeight;
             context.fill(cx, textY, cx + 1, textY + ch, 0xFFCCCCCC);
@@ -201,10 +216,10 @@ public class ClickGUI extends WindowedScreen {
         if (matches.isEmpty()) return;
 
         // Create search panel at a reasonable position
+        float sf = RubyClient.client.getWindow().getScaleFactor();
         Map<String, int[]> positions = ConfigManager.getPanelPositions();
-        int[] saved = positions.get("Search");
-        double sf = this.client.getWindow().getScaleFactor();
-        int px = saved != null ? saved[0] : (int)(this.width * sf) - 260;
+        int[] saved = positions.get("Search_");
+        int px = saved != null ? saved[0] : (int) (this.width * sf) - 260;
         int py = saved != null ? saved[1] : 60;
 
         this.searchPanel = new SearchPanel(px, py, matches);

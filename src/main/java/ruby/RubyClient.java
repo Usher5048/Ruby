@@ -22,6 +22,7 @@ import ruby.systems.events.render.Render3DEvent;
 import ruby.systems.events.tick.TickEvents;
 import ruby.systems.gui.ClickGUI;
 import ruby.systems.gui.LoadingOverlay;
+import ruby.systems.modules.Modules;
 
 import java.io.InputStream;
 
@@ -79,6 +80,8 @@ public class RubyClient implements ModInitializer {
 	}
 
 	public static void loadClient(LoadingOverlay overlay) {
+		overlay.log("Loaded " + Modules.getModules().size() + " modules");
+
 		if(ConfigManager.loadState()) overlay.log("Loaded client configs");
 		else overlay.log("Failed to load client configs, using default!", 0xFF3333);
 
