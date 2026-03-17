@@ -18,7 +18,7 @@ import ruby.systems.modules.ModuleType;
  * - Velocity: Manually controls Y velocity based on input keys
  * Anti-kick: Periodically sends small downward movement to avoid server kick.
  */
-public class Fly extends Module {
+public class Flight extends Module {
     public enum Mode { Abilities, Velocity }
 
     private final EnumValue<Mode> mode;
@@ -27,8 +27,8 @@ public class Fly extends Module {
 
     private int antiKickTimer = 0;
 
-    public Fly() {
-        super("Fly", "Lets you fly.", ModuleType.MOVEMENT);
+    public Flight() {
+        super("Flight", "Lets you fly.", ModuleType.MOVEMENT);
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("The flight mode.")

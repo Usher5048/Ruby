@@ -46,7 +46,7 @@ public class Modules {
         Modules.modules.add(new Dolphin());
         Modules.modules.add(new ElytraBoost());
         Modules.modules.add(new FastClimb());
-        Modules.modules.add(new Fly());
+        Modules.modules.add(new Flight());
         Modules.modules.add(new GUIMove());
         Modules.modules.add(new HighJump());
         Modules.modules.add(new Jesus());
@@ -85,10 +85,10 @@ public class Modules {
         return Modules.modules;
     }
 
-    public static List<Module> getByCategory(ModuleType category) {
+    public static List<Module> getByType(ModuleType type) {
         List<Module> result = new ArrayList<>();
-        for(Module module : modules)
-            if(module.category() == category) result.add(module);
+        for(Module module : Modules.modules)
+            if(module.category() == type) result.add(module);
 
         return result;
     }
@@ -99,14 +99,14 @@ public class Modules {
 
     @SuppressWarnings("unchecked")
     public static <T extends Module> T getByClass(Class<T> _class) {
-        for(Module module : modules)
+        for(Module module : Modules.modules)
             if(module.getClass() == _class) return (T) module;
 
         return null;
     }
 
     public static Module getByName(String name) {
-        for(Module module : modules)
+        for(Module module : Modules.modules)
             if(module.name().equalsIgnoreCase(name)) return module;
 
         return null;

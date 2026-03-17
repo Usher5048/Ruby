@@ -36,8 +36,8 @@ public class AntiVoid extends Module {
     @Override
     public void onEnable() {
         if (mode.value() == Mode.Flight) {
-            Fly flyModule = Modules.getByClass(Fly.class);
-            wasFlightEnabled = flyModule != null && flyModule.enabled();
+            Flight flightModule = Modules.getByClass(Flight.class);
+            wasFlightEnabled = flightModule != null && flightModule.enabled();
         }
         hasRun = false;
     }
@@ -45,9 +45,9 @@ public class AntiVoid extends Module {
     @Override
     public void onDisable() {
         if (!wasFlightEnabled && mode.value() == Mode.Flight) {
-            Fly flyModule = Modules.getByClass(Fly.class);
-            if (flyModule != null && flyModule.enabled()) {
-                Modules.disable(flyModule);
+            Flight flightModule = Modules.getByClass(Flight.class);
+            if (flightModule != null && flightModule.enabled()) {
+                Modules.disable(flightModule);
             }
         }
     }
@@ -63,8 +63,8 @@ public class AntiVoid extends Module {
         // Only activate when near the void
         if (player.getY() > minY || player.getY() < minY - 15) {
             if (hasRun && mode.value() == Mode.Flight) {
-                Fly flyModule = Modules.getByClass(Fly.class);
-                if (flyModule != null) Modules.disable(flyModule);
+                Flight flightModule = Modules.getByClass(Flight.class);
+                if (flightModule != null) Modules.disable(flightModule);
                 hasRun = false;
             }
             return;
@@ -72,8 +72,8 @@ public class AntiVoid extends Module {
 
         switch (mode.value()) {
             case Flight -> {
-                Fly flyModule = Modules.getByClass(Fly.class);
-                if (flyModule != null) Modules.enable(flyModule);
+                Flight flightModule = Modules.getByClass(Flight.class);
+                if (flightModule != null) Modules.enable(flightModule);
                 hasRun = true;
             }
             case Jump -> player.jump();

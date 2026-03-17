@@ -220,7 +220,7 @@ public class ModuleWindow extends CollapsibleWindow {
         if(this.waitingForBind) {
             this.waitingForBind = false;
             if(Keybind.canBindTo(click.button(), false)) {
-                this.module.keybind = Keybind.mouse(click.button(), this.module.keybind.togglesOnRelease());
+                this.module.keybind.mouse(click.button());
                 return true;
             }
         }
@@ -262,8 +262,8 @@ public class ModuleWindow extends CollapsibleWindow {
         if(!this.waitingForBind) return false;
 
         this.waitingForBind = false;
-        if(!Keybind.canBindTo(input.key(), true)) this.module.keybind = Keybind.unbound();
-        else this.module.keybind = Keybind.key(input.key(), this.module.keybind.togglesOnRelease());
+        if(!Keybind.canBindTo(input.key(), true)) this.module.keybind.unbind();
+        else this.module.keybind.key(input.key());
 
         return true;
     }

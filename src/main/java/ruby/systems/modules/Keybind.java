@@ -5,28 +5,27 @@ import org.lwjgl.glfw.GLFW;
 import ruby.RubyClient;
 
 public class Keybind {
-    private final int code;
-    private final boolean isKey;
+    public static final int UNKNOWN = Keybind.CODE_MASK;
+
+    private static final int CODE_MASK = 0x3FFFFFFF;
+    private static final int KEY_FLAG  = 0x80000000;
+    private static final int TOR_FLAG  = 0x40000000;
+
+    private int code;
+    private boolean isKey;
+    private boolean tor;
 
     private boolean wasPressed0;
     private boolean wasPressed1;
 
-    private boolean tor;
-
     private Keybind(int code, boolean isKey, boolean tor) {
-        this.code = code;
+        this.code = code & Keybind.CODE_MASK;
         this.isKey = isKey;
         this.tor = tor;
     }
 
     public static Keybind unbound() {
-        return new Keybind(GLFW.GLFW_KEY_UNKNOWN, true, false);
-    }
-    public static Keybind key(int code, boolean tor) {
-        return new Keybind(code, true, tor);
-    }
-    public static Keybind mouse(int button, boolean tor) {
-        return new Keybind(button, false, tor);
+        return new Keybind(Keybind.UNKNOWN, true, false);
     }
 
     public boolean togglesOnRelease() {
@@ -37,22 +36,42 @@ public class Keybind {
     }
 
     public static boolean canBindTo(int code, boolean isKey) {
-        if(code == GLFW.GLFW_KEY_UNKNOWN) return false;
+        code = code & Keybind.CODE_MASK;
+        if(code == Keybind.UNKNOWN) return false;
 
         if(isKey) return code != GLFW.GLFW_KEY_ESCAPE;
         return code != GLFW.GLFW_MOUSE_BUTTON_LEFT && code != GLFW.GLFW_MOUSE_BUTTON_RIGHT;
     }
 
-    public boolean isKey() {
-        return this.isKey;
+    public void unbind() {
+        this.code = Keybind.UNKNOWN;
     }
-    public int getCode() {
-        return this.code;
+    public void key(int code) {
+        this.bind(code, true);
     }
-    public boolean isUnbound() {
-        return this.code == GLFW.GLFW_KEY_UNKNOWN;
+    public void mouse(int code) {
+        this.bind(code, false);
+    }
+    public void bind(int code, boolean isKey) {
+        this.code = code & Keybind.CODE_MASK;
+        this.isKey = isKey;
     }
 
+    public int serialize() {
+        return (this.isKey ? Keybind.KEY_FLAG : 0) |
+                (this.tor ? Keybind.TOR_FLAG : 0) |
+                this.code;
+    }
+
+    public void deserialize(int d) {
+        this.code = d & Keybind.CODE_MASK;
+        this.isKey = (d & Keybind.KEY_FLAG) != 0;
+        this.tor = (d & Keybind.TOR_FLAG) != 0;
+    }
+
+    public boolean isUnbound() {
+        return this.code == Keybind.UNKNOWN;
+    }
     public boolean isHeld() {
         if(this.code < 0) return false;
 
@@ -76,9 +95,7 @@ public class Keybind {
             return true;
         }
 
-        if(!isHeld)
-            this.wasPressed0 = false;
-
+        if(!isHeld) this.wasPressed0 = false;
         return false;
     }
 
@@ -93,9 +110,7 @@ public class Keybind {
             return true;
         }
 
-        if(isHeld)
-            this.wasPressed1 = true;
-
+        if(isHeld) this.wasPressed1 = true;
         return false;
     }
 

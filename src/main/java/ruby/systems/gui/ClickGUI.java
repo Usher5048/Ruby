@@ -49,27 +49,20 @@ public class ClickGUI extends WindowedScreen {
 
         Map<String, int[]> positions = ConfigManager.getPanelPositions();
 
-        int spacing = 200;
-        int totalCategories = 0;
+        int xOffset = 20;
         for (ModuleType cat : CATEGORIES) {
-            if (!Modules.getByCategory(cat).isEmpty()) totalCategories++;
-        }
-
-        int totalWidth = totalCategories * spacing;
-        int startX = Math.max(20, (this.width - totalWidth) / 2);
-
-        int col = 0;
-        for (ModuleType cat : CATEGORIES) {
-            var modules = Modules.getByCategory(cat);
+            var modules = Modules.getByType(cat);
             if (modules.isEmpty()) continue;
 
             String key = cat.toString();
             int[] saved = positions.get(key);
-            int px = saved != null ? saved[0] : startX + col * spacing;
-            int py = saved != null ? saved[1] : 60;
+            int px = saved != null ? saved[0] : xOffset;
+            int py = saved != null ? saved[1] : 20;
 
-            this.addWindow(new ModuleTypeWindow(px, py, cat, modules));
-            col++;
+            ModuleTypeWindow type = new ModuleTypeWindow(px, py, cat, modules);
+            xOffset += type.getWidth() + 20;
+
+            this.addWindow(type);
         }
 
         this.searchText = "";
@@ -147,7 +140,7 @@ public class ClickGUI extends WindowedScreen {
         for(ModuleType type : ModuleType.values()) {
             for(Window child : this.windows()) {
                 if(!(child instanceof ModuleTypeWindow mWin)) continue;
-                if(mWin.getTitle().equals(type.toString())) continue;
+                if(!mWin.getTitle().equals(type.toString())) continue;
 
                 child.setPosition(xOffset, 20);
                 xOffset += child.getWidth() + 20;
