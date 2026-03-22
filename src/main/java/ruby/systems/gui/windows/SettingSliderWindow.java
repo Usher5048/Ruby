@@ -38,7 +38,7 @@ public class SettingSliderWindow extends SettingWindow {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY) {
+    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
         GUIStyle style = GUIStyle.get();
         int w = this.getWidth();
 

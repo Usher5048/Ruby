@@ -33,15 +33,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY) {
-
-        // Pre-update children animation so getHeight() is accurate for border drawing
-        for (Window child : this.windows()) {
-            if (child instanceof ModuleWindow mw) {
-                mw.updateAnimation();
-                mw.animationUpdatedThisFrame = true;
-            }
-        }
+    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
 
         // fix order
         int yOffset = this.getHeaderHeight();
@@ -56,14 +48,17 @@ public class ModuleTypeWindow extends CollapsibleWindow {
             }
         }
 
-        super.onRender(context, mouseX, mouseY);
+        super.onRender(context, mouseX, mouseY, dt);
     }
 
     private static final int BOTTOM_PADDING = 8;
 
     @Override
-    public int getHeight() {
-        return super.getHeight() + (this.handleChildren ? BOTTOM_PADDING : 0);
+    protected int getExpandedHeight() {
+        return super.getExpandedHeight() + (
+                this.handleChildren ?
+                        BOTTOM_PADDING : 0
+        );
     }
 
     @Override

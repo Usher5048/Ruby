@@ -21,13 +21,11 @@ public class ModuleWindow extends CollapsibleWindow {
 
     private boolean waitingForBind;
     private boolean settingsOpen = false;
-    private float expandProgress = 0f;
     private float hoverProgress = 0f;
-    boolean animationUpdatedThisFrame = false;
 
     public ModuleWindow(int x, int y, Module module) {
         super(x, y, 240, 28);
-        this.handleChildren = false;
+        this.expanded = false;
 
         this.module = module;
         this.moduleTOR = (BooleanValue) new BooleanValue.Builder("Hold bind")
@@ -72,16 +70,18 @@ public class ModuleWindow extends CollapsibleWindow {
         return this.module;
     }
 
-    private int getExpandedHeight() {
+    @Override
+    protected int getExpandedHeight() {
         int h = this.getHeaderHeight() + 8;
-        for (Window child : this.windows()) {
+        for (Window child : this.windows())
             h += child.getHeight() + SETTING_GAP;
-        }
-        return h + 26 + 8;
+        return h + 8;
     }
 
     @Override
     public void onTick() {
+        super.onTick();
+
         if(this.module.showsToasts() != this.moduleToasts.value())
             this.module.showsToasts(this.moduleToasts.value());
 
@@ -90,30 +90,9 @@ public class ModuleWindow extends CollapsibleWindow {
     }
 
     @Override
-    public int getHeight() {
-        if (this.expandProgress <= 0f) return this.getHeaderHeight();
-        if (this.expandProgress >= 1f) return this.getExpandedHeight();
-        int expanded = this.getExpandedHeight();
-        float eased = easeInOutCubic(this.expandProgress);
-        return this.getHeaderHeight() + (int) ((expanded - this.getHeaderHeight()) * eased);
-    }
-
-    private static float easeInOutCubic(float t) {
-        return t < 0.5f ? 4f * t * t * t : 1f - (float) Math.pow(-2 * t + 2, 3) / 2f;
-    }
-
-    /**
-     * Pre-update expand/collapse animation and relayout settings.
-     * Called by the parent ModuleTypeWindow BEFORE it draws its border,
-     * so that getHeight() returns the current-frame value.
-     */
-    public void updateAnimation() {
-        float target = this.settingsOpen ? 1f : 0f;
-        this.expandProgress += (target - this.expandProgress) * 0.2f;
-        if (Math.abs(this.expandProgress - target) < 0.005f) this.expandProgress = target;
-        this.handleChildren = this.expandProgress > 0.99f;
-
-        if(this.expandProgress > 0.01f) {
+    public void updateAnimation(float delta) {
+        super.updateAnimation(delta);
+        if(this.expandProgress() > 0.01f) {
             int settingY = this.getHeaderHeight() + 8;
             for(Window child : this.windows()) {
                 child.setPosition(0, settingY);
@@ -123,7 +102,9 @@ public class ModuleWindow extends CollapsibleWindow {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY) {
+    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+        super.onRender(context, mouseX, mouseY, dt);
+
         int settingY = this.getHeaderHeight() + 8;
 
         LinkedHashSet<String> keys = new LinkedHashSet<>(this.module.config.getAll());
@@ -133,10 +114,8 @@ public class ModuleWindow extends CollapsibleWindow {
             Value<?> value = this.module.config.get(key);
             if(value == null) {
                 if(this.moduleToasts.name().equals(key)) value = this.moduleToasts;
-                if(this.moduleTOR.name().equals(key)) {
+                if(this.moduleTOR.name().equals(key))
                     value = this.moduleTOR;
-                    settingY += 26;
-                }
             }
 
             for(Window child : this.windows()) {
@@ -150,21 +129,13 @@ public class ModuleWindow extends CollapsibleWindow {
             }
         }
 
-        // Animation & layout already handled by updateAnimation() called from parent.
-        // Only re-run if it somehow wasn't called yet (direct rendering).
-        if (!this.animationUpdatedThisFrame) {
-            this.updateAnimation();
-        }
-        this.animationUpdatedThisFrame = false;
-
         // Animate hover
         float hoverTarget = (mouseX >= 0 && mouseY >= 0 && mouseX < this.getWidth() && mouseY < this.getHeaderHeight()) ? 1f : 0f;
         this.hoverProgress += (hoverTarget - this.hoverProgress) * 0.25f;
         if (Math.abs(this.hoverProgress - hoverTarget) < 0.01f) this.hoverProgress = hoverTarget;
-        this.drawHeader(context);
 
         // Settings background when expanded/animating (inset 1px)
-        if (this.expandProgress > 0.01f && !this.windows().isEmpty()) {
+        if (this.expandProgress() > 0.01f && !this.windows().isEmpty()) {
             context.fill(1, this.getHeaderHeight(), this.getWidth() - 1, this.getHeight(), 0x33000000);
         }
     }
@@ -245,7 +216,7 @@ public class ModuleWindow extends CollapsibleWindow {
         }
 
         if (click.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
-            this.settingsOpen = !this.settingsOpen;
+            this.expanded = !this.expanded;
             return true;
         }
 

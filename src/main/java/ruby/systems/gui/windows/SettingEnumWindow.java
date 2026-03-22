@@ -16,7 +16,7 @@ public class SettingEnumWindow extends SettingWindow {
 
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY) {
+    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
         GUIStyle style = GUIStyle.get();
         int h = this.getHeight();
         int w = this.getWidth();

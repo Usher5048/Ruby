@@ -14,6 +14,7 @@ import java.util.function.Function;
 
 public class Window extends AbstractParentElement implements Drawable, Selectable {
     private final List<Window> children = new ArrayList<>();
+    private int[] scissorSpace;
     private int x;
     private int y;
 
@@ -31,13 +32,12 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         this.height = height;
 
         this.handleChildren = true;
-        this.draggableBounds = new int[]{
-                0, 0,
-                this.width, this.height
-        };
+        this.draggableBounds = new int[] {0, 0, this.width, this.height};
+
+        this.disableCutout();
     }
 
-    public void onRender(DrawContext context, int mouseX, int mouseY) {}
+    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {}
 
     public boolean onMouseDown(Click click, boolean doubled) {
         return false;
@@ -70,6 +70,13 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
     public boolean onFocusRemoved() {
         return true;
+    }
+
+    public void disableCutout() {
+        this.scissorSpace = new int[] {-1, -1, -1, -1};
+    }
+    public void enableCutout(int x1, int y1, int x2, int y2) {
+        this.scissorSpace = new int[] {x1, y1, x2, y2};
     }
 
     public void drawText(FontRenderer font, DrawContext context, String text, int x, int y, int color) {
@@ -181,7 +188,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
+    public void render(DrawContext context, int mouseX, int mouseY, float dt) {
         context.getMatrices().pushMatrix();
         context.getMatrices().scale(
                 1f / (float) RubyClient.client.getWindow().getScaleFactor(),
@@ -195,18 +202,28 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
 
         context.getMatrices().translate(this.x, this.y);
-        this.onRender(context, sMouseX - this.x, sMouseY - this.y);
+        this.onRender(context, sMouseX - this.x, sMouseY - this.y, dt);
         context.getMatrices().popMatrix();
 
         context.getMatrices().pushMatrix();
-        context.getMatrices().translate(
-                this.x / (float) RubyClient.client.getWindow().getScaleFactor(),
-                this.y / (float) RubyClient.client.getWindow().getScaleFactor()
-        );
+        context.getMatrices().translate((float) sX, (float) sY);
 
         if(!this.handleChildren) {
             context.getMatrices().popMatrix();
             return;
+        }
+
+        boolean scissorEnabled =
+                this.scissorSpace[0] != -1 && this.scissorSpace[1] != -1 &&
+                        this.scissorSpace[2] != -1 && this.scissorSpace[3] != -1;
+
+        if(scissorEnabled) {
+            context.enableScissor(
+                    this.scissorSpace[0] / RubyClient.client.getWindow().getScaleFactor(),
+                    this.scissorSpace[1] / RubyClient.client.getWindow().getScaleFactor(),
+                    this.scissorSpace[2] / RubyClient.client.getWindow().getScaleFactor(),
+                    this.scissorSpace[3] / RubyClient.client.getWindow().getScaleFactor()
+            );
         }
 
         for(Window window : this.windows()) {
@@ -214,10 +231,11 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
                     context,
                     (int) (mouseX - sX),
                     (int) (mouseY - sY),
-                    deltaTicks
+                    dt
             );
         }
 
+        if(scissorEnabled) context.disableScissor();
         context.getMatrices().popMatrix();
     }
 
