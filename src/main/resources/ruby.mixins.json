@@ -12,6 +12,7 @@
     "InGameHudMixin",
     "MinecraftClientAccessor",
     "MinecraftClientMixin",
+    "PlayerInteractEntityC2SPacketAccessor",
     "TitleScreenMixin",
     "WindowMixin"
   ],

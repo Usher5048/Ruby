@@ -31,6 +31,7 @@ public class Modules {
         Modules.modules.add(new Criticals());
         Modules.modules.add(new Hitboxes());
         Modules.modules.add(new Reach());
+        Modules.modules.add(new ShieldBreaker());
 
         // Exploit
         Modules.modules.add(new ClickTP());

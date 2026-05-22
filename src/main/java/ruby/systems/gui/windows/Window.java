@@ -215,7 +215,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
 
         boolean scissorEnabled =
                 this.scissorSpace[0] != -1 && this.scissorSpace[1] != -1 &&
-                        this.scissorSpace[2] != -1 && this.scissorSpace[3] != -1;
+                this.scissorSpace[2] != -1 && this.scissorSpace[3] != -1;
 
         if(scissorEnabled) {
             context.enableScissor(
@@ -273,8 +273,8 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         ), deltaX, deltaY)) return true;
 
         if(this.isDragging() && click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            this.x += sDeltaX;
-            this.y += sDeltaY;
+            this.x += (int) sDeltaX;
+            this.y += (int) sDeltaY;
         }
 
         return false;
