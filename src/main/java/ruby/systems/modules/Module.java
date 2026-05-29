@@ -22,7 +22,7 @@ public abstract class Module {
     public final Configuration config;
     public Keybind keybind;
 
-    public Module(String name, String description, ModuleType type) {
+    protected Module(String name, String description, ModuleType type) {
         this.name = name;
         this.description = description;
         this.type = type;
