@@ -51,7 +51,7 @@ public class ShieldBreaker extends Module {
     private boolean skipNext = false;
 
     public ShieldBreaker() {
-        super("shield-breaker", "Automatically disables the shield of your opponent.", ModuleType.COMBAT);
+        super("Shield Breaker", "Automatically disables the shield of your opponent.", ModuleType.COMBAT);
 
         Events.PACKET.register(PacketEvents.SEND, event -> {
             if(RubyClient.client.world == null) return;
