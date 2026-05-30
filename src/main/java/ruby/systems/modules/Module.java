@@ -68,6 +68,10 @@ public abstract class Module {
         );
     }
 
+    @Override
+    public String toString() {
+        return this.name();
+    }
 
     public void tick() {}
     public void onEnable() {}
