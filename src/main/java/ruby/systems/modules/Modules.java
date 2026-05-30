@@ -44,6 +44,7 @@ public class Modules {
         Modules.modules.add(new AntiVoid());
         Modules.modules.add(new AutoJump());
         Modules.modules.add(new AutoWalk());
+        Modules.modules.add(new Boost());
         Modules.modules.add(new Dolphin());
         Modules.modules.add(new ElytraBoost());
         Modules.modules.add(new FastClimb());
