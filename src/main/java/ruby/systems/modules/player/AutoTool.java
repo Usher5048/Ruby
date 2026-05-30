@@ -13,31 +13,58 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
 /**
- * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
- * Licensed under GPL-3.0
- * <p>
- * Meteor's AutoTool: On StartBreakingBlockEvent, finds the best tool for the targeted block.
- * Uses ItemStack.getMiningSpeedMultiplier(BlockState) to score tools.
- * Adapted to tick-based: checks crosshair target each tick while attack button is held.
- * Swaps the selected slot so both client and server agree on the active tool.
+ * Uses the best hotbar tool for mining while rendering the player's chosen slot.
  */
 public class AutoTool extends Module {
+    public static AutoTool INSTANCE;
+
+    private static final int TOOLTIP_Y_OFFSET = 82;
+
     private final BooleanValue antiBreak;
 
-    private int prevSlot = -1;
-    private boolean swapped = false;
-
-    // Exposed for mixins to read
+    /** Real hotbar slot used for mining and server packets. */
+    public static int miningSlot = -1;
+    /** True while mining with a different slot than the one shown client-side. */
     public static boolean silentSwapped = false;
+    /** Hotbar slot shown in the HUD and first-person hand. */
     public static int visualSlot = -1;
 
     public AutoTool() {
         super("Auto Tool", "Automatically switches to the best tool for mining.", ModuleType.PLAYER);
+        INSTANCE = this;
 
         antiBreak = config.create(new BooleanValue.Builder("Anti Break")
                 .description("Stops using tools that are about to break.")
                 .defaultValue(true)
                 .build());
+    }
+
+    public static boolean shouldUseMiningSlot() {
+        return silentSwapped && miningSlot >= 0 && INSTANCE != null && INSTANCE.enabled();
+    }
+
+    public static boolean shouldSpoofVisualSlot() {
+        return shouldUseMiningSlot() && visualSlot >= 0 && AutoToolVisualContext.isActive();
+    }
+
+    public static boolean shouldSuppressVanillaHeldItemTooltip() {
+        return shouldUseMiningSlot();
+    }
+
+    private static void clearMiningState() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        ClientPlayerEntity player = mc.player;
+
+        int display = visualSlot;
+        boolean wasSilent = silentSwapped;
+
+        miningSlot = -1;
+        silentSwapped = false;
+        visualSlot = -1;
+
+        if (player != null && wasSilent && display >= 0) {
+            AutoToolServerSlot.restoreVisualSlot(player, display);
+        }
     }
 
     @Override
@@ -47,22 +74,29 @@ public class AutoTool extends Module {
         if (player == null || mc.world == null) return;
         if (mc.currentScreen != null) return;
 
+        if (!silentSwapped) {
+            visualSlot = player.getInventory().getSelectedSlot();
+        }
+
         if (!mc.options.attackKey.isPressed()) {
-            if (swapped && prevSlot != -1) {
-                player.getInventory().setSelectedSlot(prevSlot);
-                prevSlot = -1;
-                swapped = false;
-                silentSwapped = false;
-                visualSlot = -1;
-            }
+            clearMiningState();
             return;
         }
 
-        if (!(mc.crosshairTarget instanceof BlockHitResult blockHit)) return;
-        if (mc.crosshairTarget.getType() != HitResult.Type.BLOCK) return;
+        if (!(mc.crosshairTarget instanceof BlockHitResult blockHit)) {
+            clearMiningState();
+            return;
+        }
+        if (mc.crosshairTarget.getType() != HitResult.Type.BLOCK) {
+            clearMiningState();
+            return;
+        }
 
         BlockState state = mc.world.getBlockState(blockHit.getBlockPos());
-        if (state.isAir()) return;
+        if (state.isAir()) {
+            clearMiningState();
+            return;
+        }
 
         int bestSlot = -1;
         double bestSpeed = -1;
@@ -82,30 +116,31 @@ public class AutoTool extends Module {
             }
         }
 
-        int currentSlot = player.getInventory().getSelectedSlot();
-        double currentSpeed = player.getInventory().getStack(currentSlot).getMiningSpeedMultiplier(state);
-        if (currentSpeed >= bestSpeed) return;
+        int displaySlot = visualSlot >= 0 ? visualSlot : player.getInventory().getSelectedSlot();
+        double displaySpeed = player.getInventory().getStack(displaySlot).getMiningSpeedMultiplier(state);
 
-        if (bestSlot != -1 && bestSlot != currentSlot) {
-            if (!swapped) {
-                prevSlot = currentSlot;
-                swapped = true;
-            }
-            player.getInventory().setSelectedSlot(bestSlot);
-            silentSwapped = true;
-            visualSlot = prevSlot;
+        if (bestSlot == -1 || displaySpeed >= bestSpeed) {
+            miningSlot = displaySlot;
+            silentSwapped = false;
+            return;
+        }
+
+        miningSlot = bestSlot;
+        silentSwapped = bestSlot != displaySlot;
+
+        if (silentSwapped) {
+            AutoToolServerSlot.applyMiningSlot(player, miningSlot);
         }
     }
 
     @Override
     public void render2D(Render2DEvent event) {
-        if (!swapped) return;
+        if (!silentSwapped || miningSlot < 0) return;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.options.hudHidden) return;
 
-        int activeSlot = mc.player.getInventory().getSelectedSlot();
-        ItemStack toolStack = mc.player.getInventory().getStack(activeSlot);
+        ItemStack toolStack = mc.player.getInventory().getStack(miningSlot);
         if (toolStack.isEmpty()) return;
 
         TextRenderer font = mc.textRenderer;
@@ -118,7 +153,7 @@ public class AutoTool extends Module {
         int centerX = screenWidth / 2;
 
         int bgX = centerX - totalWidth / 2 - 4;
-        int bgY = screenHeight - 60;
+        int bgY = screenHeight - TOOLTIP_Y_OFFSET;
 
         event.getContext().fill(bgX, bgY, bgX + totalWidth + 8, bgY + 20, 0x80000000);
 
@@ -130,13 +165,6 @@ public class AutoTool extends Module {
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player != null && swapped && prevSlot != -1) {
-            mc.player.getInventory().setSelectedSlot(prevSlot);
-        }
-        swapped = false;
-        prevSlot = -1;
-        silentSwapped = false;
-        visualSlot = -1;
+        clearMiningState();
     }
 }

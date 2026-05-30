@@ -6,12 +6,15 @@
   "client": [
     "ClientCommonNetworkHandlerMixin",
     "ClientPlayerEntityMixin",
+    "ClientPlayerInteractionManagerAccessor",
     "ClientPlayerInteractionManagerMixin",
     "EntityMixin",
     "HeldItemRendererMixin",
     "InGameHudMixin",
+    "LivingEntityMixin",
     "MinecraftClientAccessor",
     "MinecraftClientMixin",
+    "PlayerInventoryMixin",
     "PlayerInteractEntityC2SPacketAccessor",
     "TitleScreenMixin",
     "WindowMixin"
