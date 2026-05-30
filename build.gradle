@@ -22,7 +22,8 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-    modRuntimeOnly "maven.modrinth:in-game-account-switcher:9.0.6-alpha.2+1.21.11-fabric"
+    modRuntimeOnly "maven.modrinth:auth-me:fmliMC7y"
+    modRuntimeOnly "maven.modrinth:resourceful-config:8bR7M6K7"
 }
 
 processResources {
