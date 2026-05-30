@@ -13,4 +13,13 @@ public abstract class Command {
         this.description = description;
         this.origin = RubyClient.MOD_NAME;
     }
+
+    public String name() {
+        return this.name;
+    }
+    public String description() {
+        return this.description;
+    }
+
+    public abstract void execute(String[] args);
 }

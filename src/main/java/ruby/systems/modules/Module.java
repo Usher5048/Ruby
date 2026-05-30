@@ -1,14 +1,10 @@
 package ruby.systems.modules;
 
 import net.minecraft.text.Text;
-import org.apache.commons.lang3.StringUtils;
 import ruby.RubyClient;
 import ruby.systems.config.Configuration;
 import ruby.systems.events.render.Render2DEvent;
 import ruby.systems.events.render.Render3DEvent;
-
-import java.util.Arrays;
-import java.util.stream.Collectors;
 
 public abstract class Module {
     private final String name;
@@ -78,11 +74,4 @@ public abstract class Module {
     public void onDisable() {}
     public void render2D(Render2DEvent event) {}
     public void render3D(Render3DEvent event) {}
-
-    @Override
-    public String toString() {
-        return Arrays.stream(name.split("-"))
-                .map(StringUtils::capitalize)
-                .collect(Collectors.joining(" "));
-    }
 }

@@ -14,6 +14,7 @@ import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ruby.systems.commands.Commands;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.config.Configuration;
 import ruby.systems.events.Events;
@@ -81,12 +82,10 @@ public class RubyClient implements ModInitializer {
 
 	public static void loadClient(LoadingOverlay overlay) {
 		overlay.log("Loaded " + Modules.getModules().size() + " modules");
+		overlay.log("Loaded " + Commands.getCommands().size() + " commands");
 
 		if(ConfigManager.loadState()) overlay.log("Loaded client configs");
 		else overlay.log("Failed to load client configs, using default!", 0xFF3333);
-
-		Modules.resetMovementKeys();
-		overlay.log("Reset movement key states");
 
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::saveState));
 		overlay.log("Attached shutdown hook to runtime");
