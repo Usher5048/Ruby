@@ -10,19 +10,22 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
-// TODO: Compress the save file
 public class ConfigManager {
     private interface ConfigLoader {
         boolean load(ByteArrayInputStream stream);
     }
 
-    private static final int VERSION = 1;
+    public static final int VERSION_ERROR = -1;
+    private static final int VERSION = 2;
     private static final File configFile = new File(RubyClient.client.runDirectory.getAbsolutePath() + "/config/" + RubyClient.MOD_ID);
     private static final HashMap<Integer, ConfigLoader> loaders = new HashMap<>();
 
     static {
         ConfigManager.loaders.put(1, ConfigManager::loadV1);
+        ConfigManager.loaders.put(2, ConfigManager::loadV2);
     }
 
     private static final Map<String, int[]> panelPositions = new HashMap<>();
@@ -103,8 +106,6 @@ public class ConfigManager {
     public static void saveState() {
         try {
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            stream.write(ConfigManager.VERSION);
-
             ConfigManager.configToBytes(stream, RubyClient.config);
 
             ConfigManager.writeShort(stream, Modules.getModules().size());
@@ -121,8 +122,26 @@ public class ConfigManager {
                 ConfigManager.writeInt(stream, entry.getValue()[1]);
             }
 
+            Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+            deflater.setInput(stream.toByteArray());
+            deflater.finish();
+
+            byte[] buf = new byte[1024];
+            ByteArrayOutputStream compressedStream = new ByteArrayOutputStream();
+
+            while(!deflater.finished()) {
+                int count = deflater.deflate(buf);
+                compressedStream.write(buf, 0, count);
+            }
+
+            deflater.end();
+
+            ByteArrayOutputStream finalStream = new ByteArrayOutputStream();
+            finalStream.write(ConfigManager.VERSION);
+            compressedStream.writeTo(finalStream);
+
             ConfigManager.configFile.getParentFile().mkdirs();
-            Files.write(ConfigManager.configFile.toPath(), stream.toByteArray());
+            Files.write(ConfigManager.configFile.toPath(), finalStream.toByteArray());
         } catch(Exception ignored) {}
     }
 
@@ -158,18 +177,38 @@ public class ConfigManager {
         return true;
     }
 
-    public static boolean loadState() {
+    public static boolean loadV2(ByteArrayInputStream stream) {
+        Inflater inflater = new Inflater();
+        inflater.setInput(stream.readAllBytes());
+
+        byte[] buf = new byte[1024];
+        ByteArrayOutputStream decompressedStream = new ByteArrayOutputStream();
+
+        while(!inflater.finished()) {
+            try {
+                int count = inflater.inflate(buf);
+                decompressedStream.write(buf, 0, count);
+            } catch(Exception ignored) { return false; }
+        }
+
+        inflater.end();
+        return ConfigManager.loadV1(new ByteArrayInputStream(
+                decompressedStream.toByteArray()
+        ));
+    }
+
+    public static int loadState() {
         try {
             byte[] data = Files.readAllBytes(ConfigManager.configFile.toPath());
             ByteArrayInputStream stream = new ByteArrayInputStream(data);
 
             int version = stream.read();
-            if(!ConfigManager.loaders.containsKey(version))
-                return false;
+            if(!ConfigManager.loaders.containsKey(version)) return ConfigManager.VERSION_ERROR;
+            if(!ConfigManager.loaders.get(version).load(stream)) return ConfigManager.VERSION_ERROR;
 
-            return ConfigManager.loaders.get(version).load(stream);
+            return version;
         } catch(Exception e) {
-            return false;
+            return ConfigManager.VERSION_ERROR;
         }
     }
 }

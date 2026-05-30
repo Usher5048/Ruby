@@ -92,7 +92,7 @@ public class LoadingOverlay extends WindowedOverlay {
                 if(this.logRemoveTimers.get(i) > 0) this.logRemoveTimers.set(i, 0);
             }
 
-            if(this.logs.size() > 0) return;
+            if(!this.logs.isEmpty()) return;
 
             this.welcomeOpacity = (int) (this.welcomeOpacity / 1.5);
             if(this.welcomeOpacity <= 0) {

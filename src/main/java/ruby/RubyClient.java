@@ -84,7 +84,8 @@ public class RubyClient implements ModInitializer {
 		overlay.log("Loaded " + Modules.getModules().size() + " modules");
 		overlay.log("Loaded " + Commands.getCommands().size() + " commands");
 
-		if(ConfigManager.loadState()) overlay.log("Loaded client configs");
+		int configVer = ConfigManager.loadState();
+		if(configVer != ConfigManager.VERSION_ERROR) overlay.log("Loaded client config (v" + configVer + ")");
 		else overlay.log("Failed to load client configs, using default!", 0xFF3333);
 
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::saveState));
