@@ -113,6 +113,18 @@ public class Modules {
         return null;
     }
 
+    public static void resetMovementKeys() {
+        if (RubyClient.client == null || RubyClient.client.options == null) return;
+
+        RubyClient.client.options.forwardKey.setPressed(false);
+        RubyClient.client.options.backKey.setPressed(false);
+        RubyClient.client.options.leftKey.setPressed(false);
+        RubyClient.client.options.rightKey.setPressed(false);
+        RubyClient.client.options.jumpKey.setPressed(false);
+        RubyClient.client.options.sneakKey.setPressed(false);
+        RubyClient.client.options.sprintKey.setPressed(false);
+    }
+
     public static void enable(Module module) {
         if(module == null) return;
         if(module.enabled()) return;

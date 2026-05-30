@@ -8,6 +8,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.SlotActionType;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
+import ruby.systems.modules.Modules;
 
 /**
  * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
@@ -41,8 +42,7 @@ public class ChestSwap extends Module {
             if (slot != -1) swapWithChestSlot(mc, player, slot);
         }
 
-        // Auto-disable after swap
-        this.enabled = false;
+        Modules.disable(this);
     }
 
     private boolean isElytra(ItemStack stack) {

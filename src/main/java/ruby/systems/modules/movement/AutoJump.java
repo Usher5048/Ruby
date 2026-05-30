@@ -34,7 +34,7 @@ public class AutoJump extends Module {
 
         jumpWhen = config.create(new EnumValue.Builder<JumpWhen>("Jump When")
                 .description("When to automatically jump.")
-                .defaultValue(JumpWhen.Always)
+                .defaultValue(JumpWhen.Walking)
                 .build());
 
         velocityHeight = config.create(new DoubleValue.Builder("Velocity Height")
@@ -45,11 +45,15 @@ public class AutoJump extends Module {
 
     @Override
     public void tick() {
+        if (!enabled()) return;
+
         MinecraftClient mc = MinecraftClient.getInstance();
         ClientPlayerEntity player = mc.player;
-        if (player == null) return;
+        if (player == null || mc.world == null || mc.currentScreen != null) return;
+        if (player.getVehicle() != null || player.isGliding() || player.isClimbing()) return;
 
-        if (!player.isOnGround() || player.isSneaking()) return;
+        if (!player.isOnGround() || player.isSneaking() || mc.options.sneakKey.isPressed()) return;
+        if (mc.options.jumpKey.isPressed()) return;
         if (!shouldJump(player)) return;
 
         if (mode.value() == Mode.Jump) {
@@ -60,10 +64,21 @@ public class AutoJump extends Module {
     }
 
     private boolean shouldJump(ClientPlayerEntity player) {
+        boolean moving = isMoving(player);
+
         return switch (jumpWhen.value()) {
-            case Sprinting -> player.isSprinting() && (player.forwardSpeed != 0 || player.sidewaysSpeed != 0);
-            case Walking -> player.forwardSpeed != 0 || player.sidewaysSpeed != 0;
+            case Sprinting -> player.isSprinting() && moving;
+            case Walking -> moving;
             case Always -> true;
         };
+    }
+
+    private boolean isMoving(ClientPlayerEntity player) {
+        if (player.input == null) {
+            return player.forwardSpeed != 0 || player.sidewaysSpeed != 0;
+        }
+
+        var input = player.input.playerInput;
+        return input.forward() || input.backward() || input.left() || input.right();
     }
 }

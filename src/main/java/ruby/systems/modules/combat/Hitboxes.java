@@ -163,6 +163,11 @@ public class Hitboxes extends Module {
         return INSTANCE.resolveOutputRotation(vanillaYaw, vanillaPitch, isMoving);
     }
 
+    /** True only when silent aim needs to rewrite outgoing movement packets. */
+    public static boolean shouldOverrideMovementPackets() {
+        return INSTANCE != null && INSTANCE.enabled() && INSTANCE.silentAim.value();
+    }
+
     // ── Internal logic ────────────────────────────────────────────────────────
 
     private double getEntityValueInternal(Entity entity) {

@@ -85,6 +85,9 @@ public class RubyClient implements ModInitializer {
 		if(ConfigManager.loadState()) overlay.log("Loaded client configs");
 		else overlay.log("Failed to load client configs, using default!", 0xFF3333);
 
+		Modules.resetMovementKeys();
+		overlay.log("Reset movement key states");
+
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::saveState));
 		overlay.log("Attached shutdown hook to runtime");
 
