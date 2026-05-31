@@ -76,6 +76,7 @@ public class Modules {
         // Render
         Modules.modules.add(new ActiveModules());
         Modules.modules.add(new Fullbright());
+        Modules.modules.add(new Zoom());
 
         // World
         Modules.modules.add(new Nuker());

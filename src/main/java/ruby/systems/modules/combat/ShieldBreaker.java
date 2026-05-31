@@ -25,23 +25,23 @@ import ruby.systems.modules.ModuleType;
 import java.util.HashMap;
 
 public class ShieldBreaker extends Module {
-    public final DoubleValue range = this.config.create(new DoubleValue.Builder("range")
+    public final DoubleValue range = this.config.create(new DoubleValue.Builder("Range")
             .description("The max distance you can be from the target")
             .defaultValue(4)
             .range(0, 10)
             .build());
 
-    public final BooleanValue allowInventory = this.config.create(new BooleanValue.Builder("allow-inventory")
+    public final BooleanValue allowInventory = this.config.create(new BooleanValue.Builder("Allow Inventory")
             .description("Whether to allow taking items from the inventory rather than just the hotbar")
             .defaultValue(false)
             .build());
 
-    public final BooleanValue onlyOnHit = this.config.create(new BooleanValue.Builder("only-on-hit")
+    public final BooleanValue onlyOnHit = this.config.create(new BooleanValue.Builder("Only On Hit")
             .description("Whether to only disable shields upon hitting the target")
             .defaultValue(true)
             .build());
 
-    public final DoubleValue vectorRange = this.config.create(new DoubleValue.Builder("shield-vector-range")
+    public final DoubleValue vectorRange = this.config.create(new DoubleValue.Builder("Facing Range")
             .description("The range of the angle of the shield that can be considered facing you")
             .defaultValue(0.1)
             .range(0, 0.3, 0.01)
@@ -171,4 +171,3 @@ public class ShieldBreaker extends Module {
         }
     }
 }
-

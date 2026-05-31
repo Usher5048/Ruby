@@ -22,8 +22,9 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-    modRuntimeOnly "maven.modrinth:auth-me:fmliMC7y"
+    implementation "org.apache.httpcomponents:httpclient:4.5.14"
     modRuntimeOnly "maven.modrinth:resourceful-config:8bR7M6K7"
+    modRuntimeOnly "maven.modrinth:auth-me:fmliMC7y"
 }
 
 processResources {
