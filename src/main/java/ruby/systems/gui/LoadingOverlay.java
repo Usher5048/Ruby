@@ -59,6 +59,10 @@ public class LoadingOverlay extends WindowedOverlay {
         try { Thread.sleep(100); } catch(Exception ignored) {}
     }
 
+    public void exit() {
+        if(!this.ranLoadThread) this.loadThread.start();
+    }
+
     @Override
     public void onTick() {
         if(this.start == 0) this.start = System.currentTimeMillis();

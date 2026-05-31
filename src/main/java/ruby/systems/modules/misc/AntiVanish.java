@@ -17,17 +17,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class AntiVanish extends Module {
-    public final EnumValue<Mode> mode = this.config.create(new EnumValue.Builder<Mode>("mode")
+    public final EnumValue<Mode> mode = this.config.create(new EnumValue.Builder<Mode>("Mode")
             .defaultValue(Mode.LeaveMessage)
             .build());
 
-    public final IntegerValue checkInterval = this.config.create(new IntegerValue.Builder("check-interval")
+    public final IntegerValue checkInterval = this.config.create(new IntegerValue.Builder("Check Interval")
             .description("How often to check for vanished players in ticks")
             .defaultValue(60)
             .range(0, 1200)
             .build());
 
-    public final StringValue command = this.config.create(new StringValue.Builder("command")
+    public final StringValue command = this.config.create(new StringValue.Builder("Command")
             .description("The command to use to check if players are still in the server")
             .defaultValue("minecraft:msg")
             .visible(() -> this.mode.value() == Mode.CommandCompletion)
@@ -48,7 +48,7 @@ public class AntiVanish extends Module {
     }
 
     public AntiVanish() {
-        super("anti-vanish", "Notifies you when players enter or exit vanish.", ModuleType.MISC);
+        super("Anti-Vanish", "Notifies you when players enter or exit vanish.", ModuleType.MISC);
 
         Events.CHAT.register(ChatEvents.RECEIVE, event -> this.messageList.add(event.message().getString()));
         Events.PACKET.register(PacketEvents.RECEIVE, event -> {

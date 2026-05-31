@@ -10,13 +10,13 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
 public class GamemodeNotifier extends Module {
-    public final BooleanValue excludeSelf = this.config.create(new BooleanValue.Builder("exclude-self")
+    public final BooleanValue excludeSelf = this.config.create(new BooleanValue.Builder("Exclude Self")
             .description("Whether or not to skip notifying if you changed gamemodes")
             .defaultValue(true)
             .build());
 
     public GamemodeNotifier() {
-        super("gamemode-notifier", "Notifies you when player change their gamemode.", ModuleType.MISC);
+        super("Gamemode Notifier", "Notifies you when player change their gamemode.", ModuleType.MISC);
 
         Events.PACKET.register(PacketEvents.RECEIVE, event -> {
             if(!this.enabled()) return;

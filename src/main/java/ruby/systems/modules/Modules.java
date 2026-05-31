@@ -37,7 +37,9 @@ public class Modules {
         Modules.modules.add(new ClickTP());
 
         // Misc
+        Modules.modules.add(new AntiVanish());
         Modules.modules.add(new AutoReconnect());
+        Modules.modules.add(new GamemodeNotifier());
 
         // Movement
         Modules.modules.add(new AirJump());
@@ -71,6 +73,7 @@ public class Modules {
         Modules.modules.add(new AutoTool());
         Modules.modules.add(new ChestSwap());
         Modules.modules.add(new FastPlace());
+        Modules.modules.add(new InventoryTweaks());
         Modules.modules.add(new Portals());
 
         // Render
@@ -81,6 +84,7 @@ public class Modules {
         // World
         Modules.modules.add(new Nuker());
         Modules.modules.add(new Scaffold());
+        Modules.modules.add(new SpeedMine());
         Modules.modules.add(new Timer());
     }
 
