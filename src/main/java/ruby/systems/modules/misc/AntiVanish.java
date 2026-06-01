@@ -42,7 +42,7 @@ public class AntiVanish extends Module {
 
     private int timer = 0;
 
-    private enum Mode {
+    public enum Mode {
         LeaveMessage,
         CommandCompletion
     }
