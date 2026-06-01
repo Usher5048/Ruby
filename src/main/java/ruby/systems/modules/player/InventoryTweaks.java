@@ -1,18 +1,18 @@
 package ruby.systems.modules.player;
 
-import net.minecraft.client.gui.screen.ingame.Generic3x3ContainerScreen;
-import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
+import net.minecraft.client.gui.screen.ingame.*;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
 import net.minecraft.screen.slot.Slot;
 import org.lwjgl.glfw.GLFW;
 import ruby.RubyClient;
 import ruby.helpers.Slots;
 import ruby.mixin.HandledScreenAccessor;
 import ruby.systems.config.BooleanValue;
+import ruby.systems.events.Events;
+import ruby.systems.events.packet.PacketEvents;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
@@ -31,8 +31,35 @@ public class InventoryTweaks extends Module {
             .defaultValue(true)
             .build());
 
+    private boolean openedOnServer = false;
+    public final BooleanValue xCarryEnabled = this.config.create(new BooleanValue.Builder("Enable XCarry")
+            .description("Allows carrying 4 extra items in the crafting grid slots")
+            .defaultValue(true)
+            .changed(val -> {
+                if(val) return;
+                if(RubyClient.client.player == null) return;
+                if(RubyClient.client.getNetworkHandler() == null) return;
+
+                this.openedOnServer = false;
+                RubyClient.client.getNetworkHandler().sendPacket(new CloseHandledScreenC2SPacket(
+                        RubyClient.client.player.playerScreenHandler.syncId
+                ));
+            }).build());
+
     public InventoryTweaks() {
         super("Inventory Tweaks", "Tweaks the way inventories work", ModuleType.PLAYER);
+
+        Events.PACKET.register(PacketEvents.SEND, event -> {
+            if(!this.enabled()) return;
+            if(!this.xCarryEnabled.value()) return;
+            if(RubyClient.client.player == null) return;
+
+            if(!(event.packet() instanceof CloseHandledScreenC2SPacket packet)) return;
+            if(packet.getSyncId() != RubyClient.client.player.playerScreenHandler.syncId) return;
+
+            this.openedOnServer = true;
+            event.setCancelled(true);
+        });
     }
 
     private boolean pressedLastCheck = false;
@@ -134,5 +161,17 @@ public class InventoryTweaks extends Module {
     @Override
     public void tick() {
         if(this.sortingEnabled.value()) this.tickSort();
+    }
+
+    @Override
+    public void onDisable() {
+        if(!this.openedOnServer) return;
+        if(RubyClient.client.player == null) return;
+        if(RubyClient.client.getNetworkHandler() == null) return;
+
+        this.openedOnServer = false;
+        RubyClient.client.getNetworkHandler().sendPacket(new CloseHandledScreenC2SPacket(
+                RubyClient.client.player.playerScreenHandler.syncId
+        ));
     }
 }
