@@ -2,6 +2,8 @@ package ruby.systems.config;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 public class EnumValue<T extends Enum<?>> extends Value<T> {
     private final T[] enumValues;
@@ -9,9 +11,10 @@ public class EnumValue<T extends Enum<?>> extends Value<T> {
     @SuppressWarnings("unchecked")
     protected EnumValue(
             String name, String description,
-            IFlagHandler flagHandler, T defaultValue
+            Consumer<T> changed, Callable<Boolean> visible,
+            T defaultValue
     ) {
-        super(name, description, flagHandler, defaultValue);
+        super(name, description, changed, visible, defaultValue);
         this.enumValues = (T[]) this.defaultValue().getDeclaringClass().getEnumConstants();
     }
 
@@ -21,14 +24,14 @@ public class EnumValue<T extends Enum<?>> extends Value<T> {
     }
 
     public void cycle() {
-        int idx = this.value.ordinal() + 1;
+        int idx = this.value().ordinal() + 1;
         if (idx >= this.enumValues.length) idx = 0;
-        this.value = this.enumValues[idx];
+        this.setValue(this.enumValues[idx]);
     }
 
     @Override
     public String toString() {
-        return this.value.toString();
+        return this.value().toString();
     }
 
     @Override
@@ -36,7 +39,7 @@ public class EnumValue<T extends Enum<?>> extends Value<T> {
         for(T val : this.enumValues) {
             if(!str.equalsIgnoreCase(val.toString())) continue;
 
-            this.value = val;
+            this.setValue(val);
             return true;
         }
 
@@ -45,13 +48,13 @@ public class EnumValue<T extends Enum<?>> extends Value<T> {
 
     @Override
     public int serialize(ByteArrayOutputStream stream) {
-        stream.write(this.value.ordinal());
+        stream.write(this.value().ordinal());
         return 1;
     }
 
     @Override
     public void deserialize(ByteArrayInputStream stream) {
-        this.value = this.enumValues[stream.read()];
+        this.setValue(this.enumValues[stream.read()]);
     }
 
     public static class Builder<T extends Enum<?>> extends Value.Builder<T, Builder<T>> {
@@ -68,7 +71,8 @@ public class EnumValue<T extends Enum<?>> extends Value<T> {
         protected EnumValue<T> buildValue() {
             return new EnumValue<>(
                     this.name, this.description,
-                    this.flagHandler, this.defaultValue
+                    this.changed, this.visible,
+                    this.defaultValue
             );
         }
     }

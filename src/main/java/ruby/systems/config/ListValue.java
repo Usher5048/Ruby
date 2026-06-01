@@ -4,14 +4,17 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public abstract class ListValue<T> extends Value<List<T>> {
     protected ListValue(
             String name, String description,
-            IFlagHandler flagHandler, List<T> defaultValue
+            Consumer<List<T>> changed, Callable<Boolean> visible,
+            List<T> defaultValue
     ) {
-        super(name, description, flagHandler, defaultValue);
+        super(name, description, changed, visible, defaultValue);
     }
 
     protected abstract String toStringElement(T value);
@@ -19,20 +22,20 @@ public abstract class ListValue<T> extends Value<List<T>> {
 
     @Override
     public String toString() {
-        return this.value.stream()
+        return this.value().stream()
                 .map(this::toStringElement)
                 .collect(Collectors.joining(", "));
     }
 
     @Override
     public boolean fromString(String str) {
-        this.value.clear();
+        this.value().clear();
 
         for (String s : str.split(", ")) {
             T val = this.fromStringElement(s);
             if (val == null) return false;
 
-            this.value.add(val);
+            this.value().add(val);
         }
 
         return true;
@@ -43,14 +46,14 @@ public abstract class ListValue<T> extends Value<List<T>> {
 
     @Override
     public int serialize(ByteArrayOutputStream stream) {
-        int size = this.value.size();
+        int size = this.value().size();
         stream.writeBytes(new byte[] {
                 (byte) (size >> 8),
                 (byte) size
         });
 
         int elmSize = 0;
-        for (T val : this.value) elmSize += this.serializeElement(stream, val);
+        for (T val : this.value()) elmSize += this.serializeElement(stream, val);
 
         return 2 + elmSize;
     }
@@ -61,16 +64,16 @@ public abstract class ListValue<T> extends Value<List<T>> {
         int lo = stream.read();
 
         if (hi < 0 || lo < 0) {
-            this.value.clear();
+            this.value().clear();
             return;
         }
 
         int size = (hi << 8) | lo;
 
-        this.value.clear();
+        this.value().clear();
         for (int i = 0; i < size; i++) {
             T element = this.deserializeElement(stream);
-            if (element != null) this.value.add(element);
+            if (element != null) this.value().add(element);
         }
     }
 

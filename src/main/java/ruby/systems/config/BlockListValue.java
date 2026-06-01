@@ -7,14 +7,17 @@ import net.minecraft.util.Identifier;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 public class BlockListValue extends ListValue<Block> {
 
     protected BlockListValue(
             String name, String description,
-            IFlagHandler flagHandler, List<Block> defaultValue
+            Consumer<List<Block>> changed, Callable<Boolean> visible,
+            List<Block> defaultValue
     ) {
-        super(name, description, flagHandler, defaultValue);
+        super(name, description, changed, visible, defaultValue);
     }
 
     @Override
@@ -73,7 +76,8 @@ public class BlockListValue extends ListValue<Block> {
         protected BlockListValue buildValue() {
             return new BlockListValue(
                     this.name, this.description,
-                    this.flagHandler, this.defaultValue
+                    this.changed, this.visible,
+                    this.defaultValue
             );
         }
     }

@@ -93,9 +93,9 @@ public class SettingSliderWindow extends SettingWindow {
         newVal = Math.round(newVal / this.step) * this.step;
         newVal = Math.max(this.min, Math.min(this.max, newVal));
         if (this.isInteger) {
-            ((IntegerValue) this.value).value((int) Math.round(newVal));
+            ((IntegerValue) this.value).setValue((int) Math.round(newVal));
         } else {
-            ((DoubleValue) this.value).value(newVal);
+            ((DoubleValue) this.value).setValue(newVal);
         }
     }
 

@@ -61,7 +61,7 @@ public class SettingToggleWindow extends SettingWindow {
     @Override
     public boolean onMouseDown(Click click, boolean doubled) {
         if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
-        ((BooleanValue) this.value).value(!(boolean) this.value.value());
+        ((BooleanValue) this.value).setValue(!(boolean) this.value.value());
         return true;
     }
 }

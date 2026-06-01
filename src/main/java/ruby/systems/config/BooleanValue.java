@@ -2,24 +2,27 @@ package ruby.systems.config;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 public class BooleanValue extends Value<Boolean> {
     protected BooleanValue(
             String name, String description,
-            IFlagHandler flagHandler, boolean defaultValue
+            Consumer<Boolean> changed, Callable<Boolean> visible,
+            boolean defaultValue
     ) {
-        super(name, description, flagHandler, defaultValue);
+        super(name, description, changed, visible, defaultValue);
     }
 
     @Override
     public String toString() {
-        return this.value.toString();
+        return this.value().toString();
     }
 
     @Override
     public boolean fromString(String str) {
         try {
-            this.value = Boolean.parseBoolean(str);
+            this.setValue(Boolean.parseBoolean(str));
             return true;
         } catch(NumberFormatException e) {
             return false;
@@ -28,13 +31,13 @@ public class BooleanValue extends Value<Boolean> {
 
     @Override
     public int serialize(ByteArrayOutputStream stream) {
-        stream.write(this.value ? 1 : 0);
+        stream.write(this.value() ? 1 : 0);
         return 1;
     }
 
     @Override
     public void deserialize(ByteArrayInputStream stream) {
-        this.value = stream.read() == 1;
+        this.setValue(stream.read() == 1);
     }
 
     public static class Builder extends Value.Builder<Boolean, Builder> {
@@ -51,7 +54,8 @@ public class BooleanValue extends Value<Boolean> {
         protected BooleanValue buildValue() {
             return new BooleanValue(
                     this.name, this.description,
-                    this.flagHandler, this.defaultValue
+                    this.changed, this.visible,
+                    this.defaultValue
             );
         }
     }

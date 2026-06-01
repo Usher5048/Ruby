@@ -2,22 +2,28 @@ package ruby.systems.config;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 // this is so much better than the old DynamicValue class
 public abstract class Value<T> {
-    public interface IFlagHandler { boolean isVisible(); }
-
     private final String name;
     private final String description;
-    private final IFlagHandler flagHandler;
+    private final Callable<Boolean> visible;
+    private final Consumer<T> changed;
     private final T defaultValue;
 
-    protected T value;
+    private T value;
 
-    protected Value(String name, String description, IFlagHandler flagHandler, T defaultValue) {
+    protected Value(
+            String name, String description,
+            Consumer<T> changed, Callable<Boolean> visible,
+            T defaultValue
+    ) {
         this.name = name;
         this.description = description;
-        this.flagHandler = flagHandler;
+        this.changed = changed;
+        this.visible = visible;
         this.defaultValue = defaultValue;
 
         this.value = defaultValue;
@@ -29,18 +35,19 @@ public abstract class Value<T> {
     public String description() {
         return this.description;
     }
-    public boolean isVisible() {
-        return this.flagHandler.isVisible();
+    public boolean visible() {
+        try { return this.visible.call(); } catch(Exception ignored) { return true; }
     }
     public T defaultValue() {
         return this.defaultValue;
     }
 
-    public void value(T value) {
-        this.value = value;
-    }
     public T value() {
         return this.value;
+    }
+    public void setValue(T value) {
+        this.value = value;
+        this.changed.accept(value);
     }
 
     @Override
@@ -52,9 +59,10 @@ public abstract class Value<T> {
 
     protected static abstract class Builder<T, B extends Builder<T, B>> {
         protected String name;
-        protected String description       = "";
-        protected IFlagHandler flagHandler = () -> true;
-        protected T defaultValue           = null;
+        protected String description        = "";
+        protected Consumer<T> changed       = t -> {};
+        protected Callable<Boolean> visible = () -> true;
+        protected T defaultValue            = null;
 
         public Builder(String name) {
             this.name = name;
@@ -69,8 +77,13 @@ public abstract class Value<T> {
             return this.self();
         }
 
-        public B visible(IFlagHandler f) {
-            this.flagHandler = f;
+        public B visible(Callable<Boolean> v) {
+            this.visible = v;
+            return this.self();
+        }
+
+        public B changed(Consumer<T> c) {
+            this.changed = c;
             return this.self();
         }
 

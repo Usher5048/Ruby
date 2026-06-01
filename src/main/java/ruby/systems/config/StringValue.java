@@ -2,30 +2,33 @@ package ruby.systems.config;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 public class StringValue extends Value<String> {
     protected StringValue(
             String name, String description,
-            IFlagHandler flagHandler, String defaultValue
+            Consumer<String> changed, Callable<Boolean> visible,
+            String defaultValue
     ) {
-        super(name, description, flagHandler, defaultValue);
+        super(name, description, changed, visible, defaultValue);
     }
 
 
     @Override
     public String toString() {
-        return this.value;
+        return this.value();
     }
 
     @Override
     public boolean fromString(String str) {
-        this.value = str;
+        this.setValue(str);
         return true;
     }
 
     @Override
     public int serialize(ByteArrayOutputStream stream) {
-        byte[] bytes = this.value.getBytes();
+        byte[] bytes = this.value().getBytes();
         short len = (short) bytes.length;
 
         stream.write(len >> 8);
@@ -41,7 +44,7 @@ public class StringValue extends Value<String> {
         byte[] bytes = new byte[length];
 
         stream.readNBytes(bytes, 0, length);
-        this.value = new String(bytes);
+        this.setValue(new String(bytes));
     }
 
     public static class Builder extends Value.Builder<String, Builder> {
@@ -58,7 +61,8 @@ public class StringValue extends Value<String> {
         protected StringValue buildValue() {
             return new StringValue(
                     this.name, this.description,
-                    this.flagHandler, this.defaultValue
+                    this.changed, this.visible,
+                    this.defaultValue
             );
         }
     }

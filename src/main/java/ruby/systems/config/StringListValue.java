@@ -3,13 +3,16 @@ package ruby.systems.config;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 public class StringListValue extends ListValue<String> {
     protected StringListValue(
             String name, String description,
-            IFlagHandler flagHandler, List<String> defaultValue
+            Consumer<List<String>> changed, Callable<Boolean> visible,
+            List<String> defaultValue
     ) {
-        super(name, description, flagHandler, defaultValue);
+        super(name, description, changed, visible, defaultValue);
     }
 
     @Override
@@ -57,7 +60,8 @@ public class StringListValue extends ListValue<String> {
         protected StringListValue buildValue() {
             return new StringListValue(
                     this.name, this.description,
-                    this.flagHandler, this.defaultValue
+                    this.changed, this.visible,
+                    this.defaultValue
             );
         }
     }

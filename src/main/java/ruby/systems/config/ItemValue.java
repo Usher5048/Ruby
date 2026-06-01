@@ -6,19 +6,22 @@ import net.minecraft.util.Identifier;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 public class ItemValue extends Value<Item> {
     protected ItemValue(
             String name, String description,
-            IFlagHandler flagHandler, Item defaultValue
+            Consumer<Item> changed, Callable<Boolean> visible,
+            Item defaultValue
     ) {
-        super(name, description, flagHandler, defaultValue);
+        super(name, description, changed, visible, defaultValue);
     }
 
 
     @Override
     public String toString() {
-        return this.value.getName().getString();
+        return this.value().getName().getString();
     }
 
     @Override
@@ -35,7 +38,7 @@ public class ItemValue extends Value<Item> {
 
     @Override
     public int serialize(ByteArrayOutputStream stream) {
-        String itemID = Registries.ITEM.getId(this.value).toString();
+        String itemID = Registries.ITEM.getId(this.value()).toString();
 
         byte[] bytes = itemID.getBytes();
         short len = (short) bytes.length;
@@ -55,7 +58,7 @@ public class ItemValue extends Value<Item> {
         stream.readNBytes(bytes, 0, length);
         String itemID = new String(bytes);
 
-        this.value = Registries.ITEM.get(Identifier.tryParse(itemID));
+        this.setValue(Registries.ITEM.get(Identifier.tryParse(itemID)));
     }
 
     public static class Builder extends Value.Builder<Item, Builder> {
@@ -72,7 +75,8 @@ public class ItemValue extends Value<Item> {
         protected ItemValue buildValue() {
             return new ItemValue(
                     this.name, this.description,
-                    this.flagHandler, this.defaultValue
+                    this.changed, this.visible,
+                    this.defaultValue
             );
         }
     }

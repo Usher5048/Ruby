@@ -6,19 +6,21 @@ import net.minecraft.util.Identifier;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 public class BlockValue extends Value<Block> {
     protected BlockValue(
             String name, String description,
-            IFlagHandler flagHandler, Block defaultValue
+            Consumer<Block> changed, Callable<Boolean> visible,
+            Block defaultValue
     ) {
-        super(name, description, flagHandler, defaultValue);
+        super(name, description, changed, visible, defaultValue);
     }
-
 
     @Override
     public String toString() {
-        return this.value.getName().getString();
+        return this.value().getName().getString();
     }
 
     @Override
@@ -35,7 +37,7 @@ public class BlockValue extends Value<Block> {
 
     @Override
     public int serialize(ByteArrayOutputStream stream) {
-        String blockID = Registries.BLOCK.getId(this.value).toString();
+        String blockID = Registries.BLOCK.getId(this.value()).toString();
 
         byte[] bytes = blockID.getBytes();
         short len = (short) bytes.length;
@@ -55,7 +57,7 @@ public class BlockValue extends Value<Block> {
         stream.readNBytes(bytes, 0, length);
         String blockID = new String(bytes);
 
-        this.value = Registries.BLOCK.get(Identifier.tryParse(blockID));
+        this.setValue(Registries.BLOCK.get(Identifier.tryParse(blockID)));
     }
 
     public static class Builder extends Value.Builder<Block, Builder> {
@@ -72,7 +74,8 @@ public class BlockValue extends Value<Block> {
         protected BlockValue buildValue() {
             return new BlockValue(
                     this.name, this.description,
-                    this.flagHandler, this.defaultValue
+                    this.changed, this.visible,
+                    this.defaultValue
             );
         }
     }
