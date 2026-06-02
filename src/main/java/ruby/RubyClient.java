@@ -2,6 +2,7 @@ package ruby;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
@@ -14,6 +15,7 @@ import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ruby.plugins.ModelModifierPlugin;
 import ruby.systems.commands.Commands;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.config.Configuration;
@@ -96,7 +98,7 @@ public class RubyClient implements ModInitializer {
 				RubyClient.client.setScreen(new ClickGUI());
 		});
 
-		overlay.log("Attached tick listener to gui");
+		overlay.log("Attached keybind listener to GUI");
 
 		HudElementRegistry.attachElementBefore(
 				VanillaHudElements.MISC_OVERLAYS,
@@ -121,7 +123,7 @@ public class RubyClient implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		// useless
+		ModelLoadingPlugin.register(new ModelModifierPlugin());
 	}
 }
 

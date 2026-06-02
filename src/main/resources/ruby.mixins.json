@@ -2,7 +2,7 @@
   "required": true,
   "package": "ruby.mixin",
   "compatibilityLevel": "JAVA_21",
-  "plugin": "ruby.MixinPlugin",
+  "plugin": "ruby.plugins.MixinPlugin",
   "client": [
     "ClientCommonNetworkHandlerMixin",
     "ClientPlayerEntityMixin",

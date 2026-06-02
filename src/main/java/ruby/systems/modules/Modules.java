@@ -79,6 +79,7 @@ public class Modules {
         // Render
         Modules.modules.add(new ActiveModules());
         Modules.modules.add(new Fullbright());
+        Modules.modules.add(new TextureTweaks());
         Modules.modules.add(new Zoom());
 
         // World

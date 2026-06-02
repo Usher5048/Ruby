@@ -1,4 +1,4 @@
-package ruby;
+package ruby.plugins;
 
 import net.fabricmc.loader.api.FabricLoader;
 import org.objectweb.asm.tree.ClassNode;
