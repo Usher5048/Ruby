@@ -21,6 +21,10 @@
 Ruby is a streamlined Minecraft utility client focused on clean architecture and practical functionality.
 It is designed to avoid unnecessary plugin bloat and feature sprawl, keeping the core tight and efficient.
 
+## Releases
+
+Releases will be published and available when Ruby is in a consumer-able state, as of now there will be no builds publicly available on the repository. If you wish to contribute or toy with Ruby as of now you will have to build from source.
+
 ## Building
 
 - Clone the repository
