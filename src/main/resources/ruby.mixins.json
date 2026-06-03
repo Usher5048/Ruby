@@ -19,6 +19,7 @@
     "MouseMixin",
     "PlayerInventoryMixin",
     "PlayerInteractEntityC2SPacketAccessor",
+    "SimpleOptionMixin",
     "TitleScreenMixin",
     "WindowMixin"
   ],
