@@ -143,26 +143,15 @@ public class TextureTweaksWrapper extends WrapperBlockStateModel implements Bloc
                 Blocks.LIGHT_BLUE_STAINED_GLASS, Blocks.LIGHT_GRAY_STAINED_GLASS, Blocks.LIME_STAINED_GLASS,
                 Blocks.MAGENTA_STAINED_GLASS, Blocks.ORANGE_STAINED_GLASS, Blocks.PINK_STAINED_GLASS,
                 Blocks.PURPLE_STAINED_GLASS, Blocks.RED_STAINED_GLASS, Blocks.WHITE_STAINED_GLASS,
-                Blocks.YELLOW_STAINED_GLASS, Blocks.TINTED_GLASS
-        );
-
-        List<Block> pane = List.of(
-                Blocks.GRAY_STAINED_GLASS_PANE, Blocks.BLACK_STAINED_GLASS_PANE, Blocks.BLUE_STAINED_GLASS_PANE,
-                Blocks.BROWN_STAINED_GLASS_PANE, Blocks.CYAN_STAINED_GLASS_PANE, Blocks.GREEN_STAINED_GLASS_PANE,
-                Blocks.LIGHT_BLUE_STAINED_GLASS_PANE, Blocks.LIGHT_GRAY_STAINED_GLASS_PANE, Blocks.LIME_STAINED_GLASS_PANE,
-                Blocks.MAGENTA_STAINED_GLASS_PANE, Blocks.ORANGE_STAINED_GLASS_PANE, Blocks.PINK_STAINED_GLASS_PANE,
-                Blocks.PURPLE_STAINED_GLASS_PANE, Blocks.RED_STAINED_GLASS_PANE, Blocks.WHITE_STAINED_GLASS_PANE,
-                Blocks.YELLOW_STAINED_GLASS_PANE
+                Blocks.YELLOW_STAINED_GLASS
         );
 
         ArrayList<Block> blocks = new ArrayList<>(tweaks.connectedBlocks.value());
         if(blocks.contains(Blocks.GLASS)) blocks.addAll(glass);
-        if(blocks.contains(Blocks.GLASS_PANE)) blocks.addAll(pane);
 
         if(!blocks.contains(state.getBlock())) return false;
 
         Predicate<Vec3i> same = off -> view.getBlockState(pos.add(off)).isOf(state.getBlock());
-
         for(Direction face : Direction.values()) {
             boolean north; boolean south;
             boolean east; boolean west;
@@ -265,70 +254,6 @@ public class TextureTweaksWrapper extends WrapperBlockStateModel implements Bloc
             if(!south || !west || !sw) this.emitRegion(sprite, emitter, face, 0, 0, z, z, 0, 0, z, z);
             else this.emitRegion(sprite, emitter, face, 0, 0, z, z, z, offsetY ? o-z : o, z+z, offsetY ? o : 1);
         }
-
-
-//        emitter.pushTransform(quad -> {
-//            Direction face = quad.nominalFace();
-//            if(face == null || state.hasBlockEntity()) return true;
-//
-//            Predicate<Direction> same = off -> view.getBlockState(pos.offset(off)).isOf(state.getBlock());
-//
-//            boolean north; boolean south;
-//            boolean east; boolean west;
-//
-//            switch(face) {
-//                case UP, DOWN -> {
-//                    north = same.test(Direction.NORTH);
-//                    south = same.test(Direction.SOUTH);
-//                    east = same.test(Direction.EAST);
-//                    west = same.test(Direction.WEST);
-//                }
-//
-//                case NORTH, SOUTH -> {
-//                    north = same.test(Direction.UP);
-//                    south = same.test(Direction.DOWN);
-//                    east = same.test(Direction.EAST);
-//                    west = same.test(Direction.WEST);
-//                }
-//
-//                case EAST, WEST -> {
-//                    north = same.test(Direction.UP);
-//                    south = same.test(Direction.DOWN);
-//                    east = same.test(Direction.NORTH);
-//                    west = same.test(Direction.SOUTH);
-//                }
-//
-//                default -> {
-//                    return true;
-//                }
-//            }
-//
-//            boolean tmp;
-//            if(face == Direction.NORTH || face == Direction.WEST) { tmp = east; east = west; west = tmp; }
-//            if(face == Direction.DOWN) { tmp = north; north = south; south = tmp; }
-//
-//            Sprite sprite = this.getSprite(state, random, face);
-//
-//            float uMin = sprite.getMinU();
-//            float uMax = sprite.getMaxU();
-//            float vMin = sprite.getMinV();
-//            float vMax = sprite.getMaxV();
-//
-//            float du = (uMax - uMin) * 0.125f;
-//            float dv = (vMax - vMin) * 0.125f;
-//
-//            if(west)  vMin += dv;
-//            if(east)  vMax -= dv;
-//            if(north) uMin += du;
-//            if(south) uMax -= du;
-//
-//            quad.uv(0, uMin, vMin);
-//            quad.uv(1, uMax, vMin);
-//            quad.uv(2, uMax, vMax);
-//            quad.uv(3, uMin, vMax);
-//
-//            return true;
-//        });
 
         return true;
     }

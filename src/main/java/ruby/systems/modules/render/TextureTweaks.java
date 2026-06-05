@@ -46,7 +46,7 @@ public class TextureTweaks extends Module {
             .description("Which blocks to connect adjacent textures of")
             .visible(this.connectedEnabled::value)
             .changed(v -> RubyClient.client.worldRenderer.reload())
-            .defaultValue(Blocks.GLASS, Blocks.GLASS_PANE, Blocks.BOOKSHELF)
+            .defaultValue(Blocks.GLASS, Blocks.TINTED_GLASS, Blocks.BOOKSHELF)
             .build());
 
     public TextureTweaks() {
