@@ -123,11 +123,11 @@ public class TextureTweaksWrapper extends WrapperBlockStateModel implements Bloc
             float ul, float vb, float ur, float vt
     ) {
         emitter.square(face, gl, gb, gr, gt, 0);
-        emitter.uv(0, vb, ul);
-        emitter.uv(1, vt, ul);
-        emitter.uv(2, vt, ur);
-        emitter.uv(3, vb, ur);
-        emitter.spriteBake(sprite, MutableQuadView.BAKE_ROTATE_270 | MutableQuadView.BAKE_NORMALIZED);
+        emitter.uv(0, vb * 16, ul * 16);
+        emitter.uv(1, vt * 16, ul * 16);
+        emitter.uv(2, vt * 16, ur * 16);
+        emitter.uv(3, vb * 16, ur * 16);
+        emitter.spriteBake(sprite, MutableQuadView.BAKE_ROTATE_90 | MutableQuadView.BAKE_FLIP_V);
         emitter.emit();
     }
 
