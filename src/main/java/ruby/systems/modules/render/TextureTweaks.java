@@ -36,6 +36,19 @@ public class TextureTweaks extends Module {
                     Blocks.WARPED_NYLIUM, Blocks.CRIMSON_NYLIUM, Blocks.DIRT_PATH
             ).build());
 
+    public final BooleanValue connectedEnabled = this.config.create(new BooleanValue.Builder("Connected Textures")
+            .description("Whether or not to connect adjacent block's textures")
+            .changed(v -> RubyClient.client.worldRenderer.reload())
+            .defaultValue(true)
+            .build());
+
+    public final BlockListValue connectedBlocks = this.config.create(new BlockListValue.Builder("Connected Blocks")
+            .description("Which blocks to connect adjacent textures of")
+            .visible(this.connectedEnabled::value)
+            .changed(v -> RubyClient.client.worldRenderer.reload())
+            .defaultValue(Blocks.GLASS, Blocks.GLASS_PANE, Blocks.BOOKSHELF)
+            .build());
+
     public TextureTweaks() {
         super("Texture Tweaks", "Tweaks the textures used for some blocks", ModuleType.RENDER);
     }
