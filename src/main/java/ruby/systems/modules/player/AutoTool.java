@@ -1,14 +1,15 @@
 package ruby.systems.modules.player;
 
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import ruby.systems.config.BooleanValue;
-import ruby.systems.events.render.Render2DEvent;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
@@ -18,7 +19,49 @@ import ruby.systems.modules.ModuleType;
 public class AutoTool extends Module {
     public static AutoTool INSTANCE;
 
-    private static final int TOOLTIP_Y_OFFSET = 82;
+    private static final int SLOT_SPACING = 20;
+    private static final int SELECTION_WIDTH = 24;
+    private static final int SELECTION_HEIGHT = 23;
+    private static final int SELECTION_OVERLAP = SELECTION_WIDTH - SLOT_SPACING;
+
+    public static void renderHotbarSelection(DrawContext context, RenderPipeline pipeline, Identifier texture,
+            int x, int y, int width, int height) {
+        boolean dual = shouldUseMiningSlot() && miningSlot != visualSlot;
+        int gap = dual ? Math.abs(miningSlot - visualSlot) : 0;
+
+        if (dual && gap == 1) {
+            if (miningSlot > visualSlot) {
+                context.enableScissor(x, y, x + SELECTION_WIDTH - SELECTION_OVERLAP, y + SELECTION_HEIGHT);
+            } else {
+                context.enableScissor(x + SELECTION_OVERLAP, y, x + SELECTION_WIDTH, y + SELECTION_HEIGHT);
+            }
+        }
+
+        context.drawGuiTexture(pipeline, texture, x, y, width, height);
+
+        if (dual && gap == 1) {
+            context.disableScissor();
+        }
+
+        if (!dual) return;
+
+        int mx = context.getScaledWindowWidth() / 2 - 92 + miningSlot * SLOT_SPACING;
+        int my = context.getScaledWindowHeight() - SELECTION_HEIGHT;
+
+        if (gap == 1) {
+            if (miningSlot > visualSlot) {
+                context.enableScissor(mx + SELECTION_OVERLAP, my, mx + SELECTION_WIDTH, my + SELECTION_HEIGHT);
+            } else {
+                context.enableScissor(mx, my, mx + SELECTION_WIDTH - SELECTION_OVERLAP, my + SELECTION_HEIGHT);
+            }
+        }
+
+        context.drawGuiTexture(pipeline, texture, mx, my, SELECTION_WIDTH, SELECTION_HEIGHT);
+
+        if (gap == 1) {
+            context.disableScissor();
+        }
+    }
 
     private final BooleanValue antiBreak;
 
@@ -120,47 +163,23 @@ public class AutoTool extends Module {
         double displaySpeed = player.getInventory().getStack(displaySlot).getMiningSpeedMultiplier(state);
 
         if (bestSlot == -1 || displaySpeed >= bestSpeed) {
+            if (silentSwapped) {
+                AutoToolServerSlot.restoreVisualSlot(player, displaySlot);
+            }
             miningSlot = displaySlot;
             silentSwapped = false;
             return;
         }
 
         miningSlot = bestSlot;
+        boolean wasSilent = silentSwapped;
         silentSwapped = bestSlot != displaySlot;
 
         if (silentSwapped) {
             AutoToolServerSlot.applyMiningSlot(player, miningSlot);
+        } else if (wasSilent) {
+            AutoToolServerSlot.restoreVisualSlot(player, displaySlot);
         }
-    }
-
-    @Override
-    public void render2D(Render2DEvent event) {
-        if (!silentSwapped || miningSlot < 0) return;
-
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.options.hudHidden) return;
-
-        ItemStack toolStack = mc.player.getInventory().getStack(miningSlot);
-        if (toolStack.isEmpty()) return;
-
-        TextRenderer font = mc.textRenderer;
-        int screenWidth = mc.getWindow().getScaledWidth();
-        int screenHeight = mc.getWindow().getScaledHeight();
-
-        String toolName = toolStack.getName().getString();
-        int textWidth = font.getWidth(toolName);
-        int totalWidth = 16 + 4 + textWidth;
-        int centerX = screenWidth / 2;
-
-        int bgX = centerX - totalWidth / 2 - 4;
-        int bgY = screenHeight - TOOLTIP_Y_OFFSET;
-
-        event.getContext().fill(bgX, bgY, bgX + totalWidth + 8, bgY + 20, 0x80000000);
-
-        int iconX = centerX - totalWidth / 2;
-        event.getContext().drawItem(toolStack, iconX, bgY + 2);
-
-        event.getContext().drawTextWithShadow(font, toolName, iconX + 20, bgY + 6, 0xFFCC3344);
     }
 
     @Override
