@@ -56,12 +56,12 @@ public record GUIStyle(
         FontRenderer profile = FontRenderer.create(
                 RubyClient.getResourceStream("fonts/DMSans-Medium.ttf"), "profile", 12, Font.PLAIN);
         FontRenderer mono = FontRenderer.create(
-                RubyClient.getResourceStream("fonts/JetBrainsMono.ttf"), "monospace", 16, Font.PLAIN);
+                RubyClient.getResourceStream("fonts/JetBrainsMono.ttf"), "monospace", 12, Font.PLAIN);
 
         if(
                 logo == null || sub == null ||
-                body == null || label == null || badge == null ||
-                profile == null || mono == null
+                        body == null || label == null || badge == null ||
+                        profile == null || mono == null
         ) throw new IllegalStateException("Failed to load GUI fonts from /assets/ruby/fonts/");
 
         return new GUIStyle(
