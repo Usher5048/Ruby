@@ -24,45 +24,30 @@ public class AutoTool extends Module {
     private static final int SLOT_SPACING = 20;
     private static final int SELECTION_WIDTH = 24;
     private static final int SELECTION_HEIGHT = 23;
-    private static final int SELECTION_OVERLAP = SELECTION_WIDTH - SLOT_SPACING;
 
     public static void renderHotbarSelection(DrawContext context, RenderPipeline pipeline, Identifier texture,
             int x, int y, int width, int height) {
         boolean dual = shouldUseMiningSlot() && miningSlot != visualSlot;
-        int gap = dual ? Math.abs(miningSlot - visualSlot) : 0;
-
-        if (dual && gap == 1) {
-            if (miningSlot > visualSlot) {
-                context.enableScissor(x, y, x + SELECTION_WIDTH - SELECTION_OVERLAP, y + SELECTION_HEIGHT);
-            } else {
-                context.enableScissor(x + SELECTION_OVERLAP, y, x + SELECTION_WIDTH, y + SELECTION_HEIGHT);
-            }
-        }
 
         context.drawGuiTexture(pipeline, texture, x, y, width, height);
-
-        if (dual && gap == 1) {
-            context.disableScissor();
-        }
 
         if (!dual) return;
 
         int mx = context.getScaledWindowWidth() / 2 - 92 + miningSlot * SLOT_SPACING;
         int my = context.getScaledWindowHeight() - SELECTION_HEIGHT;
 
-        if (gap == 1) {
-            if (miningSlot > visualSlot) {
-                context.enableScissor(mx + SELECTION_OVERLAP, my, mx + SELECTION_WIDTH, my + SELECTION_HEIGHT);
-            } else {
-                context.enableScissor(mx, my, mx + SELECTION_WIDTH - SELECTION_OVERLAP, my + SELECTION_HEIGHT);
-            }
-        }
+        int hotbarX = context.getScaledWindowWidth() / 2 - 91;
+        int hotbarY = context.getScaledWindowHeight() - 22;
+        Identifier hotbarTexture = Identifier.ofVanilla("hud/hotbar");
 
-        context.drawGuiTexture(pipeline, texture, mx, my, SELECTION_WIDTH, SELECTION_HEIGHT);
+        int x1 = mx + 2;
+        int x2 = mx + SELECTION_WIDTH - 2;
+        if(miningSlot - visualSlot == 1) x1++;
+        if(visualSlot - miningSlot == 1) x2--;
 
-        if (gap == 1) {
-            context.disableScissor();
-        }
+        context.enableScissor(x1, my, x2, my + SELECTION_HEIGHT);
+        context.drawGuiTexture(pipeline, hotbarTexture, hotbarX, hotbarY, 182, 22, 0xFFCC3366);
+        context.disableScissor();
     }
 
     private final BooleanValue antiBreak;
