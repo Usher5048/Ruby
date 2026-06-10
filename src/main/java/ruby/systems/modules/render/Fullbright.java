@@ -4,6 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
+import ruby.RubyClient;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -21,6 +22,7 @@ public class Fullbright extends Module {
     public enum Mode { Potion, Gamma }
 
     private final EnumValue<Mode> mode;
+    private double originalGamma;
 
     public Fullbright() {
         super("Fullbright", "Makes everything fully bright.", ModuleType.RENDER);
@@ -43,8 +45,11 @@ public class Fullbright extends Module {
                     StatusEffects.NIGHT_VISION, 260, 0, false, false, false
             );
             player.addStatusEffect(nightVision);
+            return;
         }
-        // Gamma mode would require a mixin to override GameOptions.getGamma()
+
+        this.originalGamma = RubyClient.client.options.getGamma().getValue();
+        RubyClient.client.options.getGamma().setValue(100d);
     }
 
     @Override
@@ -54,6 +59,9 @@ public class Fullbright extends Module {
 
         if (mode.value() == Mode.Potion) {
             mc.player.removeStatusEffect(StatusEffects.NIGHT_VISION);
+            return;
         }
+
+        RubyClient.client.options.getGamma().setValue(this.originalGamma);
     }
 }
