@@ -8,18 +8,18 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import ruby.systems.modules.player.AutoTool;
+import ruby.systems.modules.player.AutoToolVisualContext;
 
 @Mixin(HeldItemRenderer.class)
 public class HeldItemRendererMixin {
     @Inject(method = "updateHeldItems", at = @At("HEAD"))
     private void ruby$beforeUpdateHeldItems(CallbackInfo ci) {
-        AutoTool.AutoToolVisualContext.enter();
+        AutoToolVisualContext.enter();
     }
 
     @Inject(method = "updateHeldItems", at = @At("RETURN"))
     private void ruby$afterUpdateHeldItems(CallbackInfo ci) {
-        AutoTool.AutoToolVisualContext.exit();
+        AutoToolVisualContext.exit();
     }
 
     @Inject(
@@ -29,7 +29,7 @@ public class HeldItemRendererMixin {
     private void ruby$beforeRenderFirstPersonItem(float tickProgress, MatrixStack matrices,
                                                   OrderedRenderCommandQueue queue, ClientPlayerEntity player,
                                                   int light, CallbackInfo ci) {
-        AutoTool.AutoToolVisualContext.enter();
+        AutoToolVisualContext.enter();
     }
 
     @Inject(
@@ -39,6 +39,6 @@ public class HeldItemRendererMixin {
     private void ruby$afterRenderFirstPersonItem(float tickProgress, MatrixStack matrices,
                                                  OrderedRenderCommandQueue queue, ClientPlayerEntity player,
                                                  int light, CallbackInfo ci) {
-        AutoTool.AutoToolVisualContext.exit();
+        AutoToolVisualContext.exit();
     }
 }

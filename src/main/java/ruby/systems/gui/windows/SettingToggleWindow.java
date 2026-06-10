@@ -8,6 +8,7 @@ import ruby.systems.gui.GUIStyle;
 
 public class SettingToggleWindow extends SettingWindow {
 
+    private static final int INDENT = 14;
     private float knobProgress;
 
     public SettingToggleWindow(int x, int y, int width, BooleanValue value) {
@@ -22,31 +23,29 @@ public class SettingToggleWindow extends SettingWindow {
         int h = this.getHeight();
         int w = this.getWidth();
 
-        // Animate knob
         float target = (boolean) this.value.value() ? 1f : 0f;
         this.knobProgress += (target - this.knobProgress) * 0.2f;
         if (Math.abs(this.knobProgress - target) < 0.01f) this.knobProgress = target;
 
-        // Label (left-aligned, indented 34px)
-        int textY = (h - (int) this.getTextHeight(style.bodyFont())) / 2;
-        this.drawText(style.bodyFont(), context, this.value.name(), 34, textY, 0xFF8B8B8B);
+        int textY = (h - style.bodyFont().fontHeight) / 2;
+        this.drawText(style.bodyFont(), context, this.value.name(), INDENT, textY, 0xFF6A6567);
 
-        // Toggle switch (26x14, right-aligned with 14px padding)
-        int swW = 26, swH = 14;
-        int swX = w - 14 - swW;
+        int swW = 32, swH = 16;
+        int swX = w - INDENT - swW;
         int swY = (h - swH) / 2;
 
-        // Track (pill shape) — color interpolated
-        int trackColor = lerpColor(0xFF333333, 0xFFCC3344, this.knobProgress);
-        ModuleTypeWindow.fillSmoothRoundedRect(context, swX, swY, swX + swW, swY + swH, 7, trackColor);
+        int trackRadius = swH / 2;
+        int trackColor = lerpColor(style.trackOff(), style.ruby(), this.knobProgress);
+        ModuleTypeWindow.fillSmoothRoundedRect(context, swX, swY, swX + swW, swY + swH, trackRadius, trackColor);
 
-        // Knob (10x10 circle) — position interpolated
-        int knobSize = 10;
+        int knobSize = 12;
+        int knobRadius = knobSize / 2;
         int knobTravel = swW - knobSize - 4;
         int knobX = swX + 2 + (int) (knobTravel * this.knobProgress);
         int knobY = swY + 2;
+        int knobColor = this.knobProgress > 0.5f ? 0xFFE8E4E5 : 0xFFCCCCCC;
         ModuleTypeWindow.fillSmoothRoundedRect(context, knobX, knobY,
-                knobX + knobSize, knobY + knobSize, 5, 0xFFFFFFFF);
+                knobX + knobSize, knobY + knobSize, knobRadius, knobColor);
     }
 
     private static int lerpColor(int c1, int c2, float t) {

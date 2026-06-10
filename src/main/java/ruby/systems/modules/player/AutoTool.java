@@ -5,12 +5,10 @@ import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
-import ruby.mixin.ClientPlayerInteractionManagerAccessor;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -24,30 +22,45 @@ public class AutoTool extends Module {
     private static final int SLOT_SPACING = 20;
     private static final int SELECTION_WIDTH = 24;
     private static final int SELECTION_HEIGHT = 23;
+    private static final int SELECTION_OVERLAP = SELECTION_WIDTH - SLOT_SPACING;
 
     public static void renderHotbarSelection(DrawContext context, RenderPipeline pipeline, Identifier texture,
             int x, int y, int width, int height) {
         boolean dual = shouldUseMiningSlot() && miningSlot != visualSlot;
+        int gap = dual ? Math.abs(miningSlot - visualSlot) : 0;
+
+        if (dual && gap == 1) {
+            if (miningSlot > visualSlot) {
+                context.enableScissor(x, y, x + SELECTION_WIDTH - SELECTION_OVERLAP, y + SELECTION_HEIGHT);
+            } else {
+                context.enableScissor(x + SELECTION_OVERLAP, y, x + SELECTION_WIDTH, y + SELECTION_HEIGHT);
+            }
+        }
 
         context.drawGuiTexture(pipeline, texture, x, y, width, height);
+
+        if (dual && gap == 1) {
+            context.disableScissor();
+        }
 
         if (!dual) return;
 
         int mx = context.getScaledWindowWidth() / 2 - 92 + miningSlot * SLOT_SPACING;
         int my = context.getScaledWindowHeight() - SELECTION_HEIGHT;
 
-        int hotbarX = context.getScaledWindowWidth() / 2 - 91;
-        int hotbarY = context.getScaledWindowHeight() - 22;
-        Identifier hotbarTexture = Identifier.ofVanilla("hud/hotbar");
+        if (gap == 1) {
+            if (miningSlot > visualSlot) {
+                context.enableScissor(mx + SELECTION_OVERLAP, my, mx + SELECTION_WIDTH, my + SELECTION_HEIGHT);
+            } else {
+                context.enableScissor(mx, my, mx + SELECTION_WIDTH - SELECTION_OVERLAP, my + SELECTION_HEIGHT);
+            }
+        }
 
-        int x1 = mx + 2;
-        int x2 = mx + SELECTION_WIDTH - 2;
-        if(miningSlot - visualSlot == 1) x1++;
-        if(visualSlot - miningSlot == 1) x2--;
+        context.drawGuiTexture(pipeline, texture, mx, my, SELECTION_WIDTH, SELECTION_HEIGHT);
 
-        context.enableScissor(x1, my, x2, my + SELECTION_HEIGHT);
-        context.drawGuiTexture(pipeline, hotbarTexture, hotbarX, hotbarY, 182, 22, 0xFFCC3366);
-        context.disableScissor();
+        if (gap == 1) {
+            context.disableScissor();
+        }
     }
 
     private final BooleanValue antiBreak;
@@ -172,79 +185,5 @@ public class AutoTool extends Module {
     @Override
     public void onDisable() {
         clearMiningState();
-    }
-
-    public static final class AutoToolServerSlot {
-        private static boolean applyingMiningSlot;
-
-        private AutoToolServerSlot() {
-        }
-
-        public static boolean isApplyingMiningSlot() {
-            return applyingMiningSlot;
-        }
-
-        /** Keeps the real selected slot (and server sync) on the mining tool. */
-        public static void applyMiningSlot(ClientPlayerEntity player, int slot) {
-            if (player == null || slot < 0 || slot > 8) return;
-
-            PlayerInventory inv = player.getInventory();
-            if (inv.getSelectedSlot() == slot) return;
-
-            applyingMiningSlot = true;
-            try {
-                inv.setSelectedSlot(slot);
-            } finally {
-                applyingMiningSlot = false;
-            }
-
-            syncSelectedSlot();
-        }
-
-        /** Restores the player's visible slot to the server when mining ends. */
-        public static void restoreVisualSlot(ClientPlayerEntity player, int slot) {
-            if (player == null || slot < 0 || slot > 8) return;
-
-            PlayerInventory inv = player.getInventory();
-            if (inv.getSelectedSlot() == slot) {
-                syncSelectedSlot();
-                return;
-            }
-
-            applyingMiningSlot = true;
-            try {
-                inv.setSelectedSlot(slot);
-            } finally {
-                applyingMiningSlot = false;
-            }
-
-            syncSelectedSlot();
-        }
-
-        private static void syncSelectedSlot() {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.interactionManager != null) {
-                ((ClientPlayerInteractionManagerAccessor) mc.interactionManager).ruby$syncSelectedSlot();
-            }
-        }
-    }
-
-    public static final class AutoToolVisualContext {
-        private static int depth;
-
-        private AutoToolVisualContext() {
-        }
-
-        public static void enter() {
-            depth++;
-        }
-
-        public static void exit() {
-            if (depth > 0) depth--;
-        }
-
-        public static boolean isActive() {
-            return depth > 0;
-        }
     }
 }

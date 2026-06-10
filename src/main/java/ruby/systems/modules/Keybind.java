@@ -116,13 +116,14 @@ public class Keybind {
 
     @Override
     public String toString() {
-        if(this.isUnbound()) return "None";
+        if (this.isUnbound()) return "None";
 
-        if(this.isKey) {
+        if (this.isKey) {
             String keyname = GLFW.glfwGetKeyName(this.code, GLFW.glfwGetKeyScancode(this.code));
-            return keyname != null ? keyname : "key." + this.code;
+            if (keyname != null) return keyname.toUpperCase(java.util.Locale.ROOT);
+            return "KEY." + this.code;
         }
 
-        return "Mouse Button " + (this.code + 1);
+        return "MB" + (this.code + 1);
     }
 }

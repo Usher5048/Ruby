@@ -154,9 +154,34 @@ public class Modules {
     }
 
     public static void setEnabled(Module module, boolean isEnabled) {
-        if(module == null) return;
-        if(module.enabled != isEnabled)
-            Modules.toggle(module);
+        if (module == null) return;
+        if (module.enabled != isEnabled) Modules.toggle(module);
+    }
+
+    public static void disableAllSilently() {
+        for (Module module : Modules.modules) {
+            Modules.disableSilently(module);
+        }
+    }
+
+    public static void disableSilently(Module module) {
+        if (module == null || !module.enabled()) return;
+        Modules.activeModules.remove(module);
+        module.enabled = false;
+        module.onDisable();
+    }
+
+    public static void enableSilently(Module module) {
+        if (module == null || module.enabled()) return;
+        Modules.activeModules.add(module);
+        module.enabled = true;
+        module.onEnable();
+    }
+
+    public static void setEnabledSilently(Module module, boolean isEnabled) {
+        if (module == null) return;
+        if (isEnabled) Modules.enableSilently(module);
+        else Modules.disableSilently(module);
     }
 
     public static void tick(Events.GenericEvent event) {

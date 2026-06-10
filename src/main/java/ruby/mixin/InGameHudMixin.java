@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ruby.systems.modules.player.AutoTool;
+import ruby.systems.modules.player.AutoToolVisualContext;
 
 @Mixin(InGameHud.class)
 public class InGameHudMixin {
@@ -19,7 +20,7 @@ public class InGameHudMixin {
 
     @Inject(method = "renderHotbar", at = @At("HEAD"))
     private void ruby$beforeRenderHotbar(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
-        AutoTool.AutoToolVisualContext.enter();
+        AutoToolVisualContext.enter();
     }
 
     @Redirect(method = "renderHotbar", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawGuiTexture(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/util/Identifier;IIII)V", ordinal = 1))
@@ -30,7 +31,7 @@ public class InGameHudMixin {
 
     @Inject(method = "renderHotbar", at = @At("RETURN"))
     private void ruby$afterRenderHotbar(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
-        AutoTool.AutoToolVisualContext.exit();
+        AutoToolVisualContext.exit();
     }
 
     @Inject(method = "renderHeldItemTooltip", at = @At("HEAD"), cancellable = true)

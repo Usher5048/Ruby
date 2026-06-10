@@ -10,6 +10,8 @@ import ruby.systems.gui.GUIStyle;
 
 public class SettingSliderWindow extends SettingWindow {
 
+    private static final int INDENT = 14;
+
     private final Value<?> value;
     private final double min;
     private final double max;
@@ -42,38 +44,33 @@ public class SettingSliderWindow extends SettingWindow {
         GUIStyle style = GUIStyle.get();
         int w = this.getWidth();
 
-        // Label (top-left, indented 34px)
-        this.drawText(style.bodyFont(), context, this.value.name(), 34, 6, 0xFF8B8B8B);
+        this.drawText(style.bodyFont(), context, this.value.name(), INDENT, 6, 0xFF6A6567);
 
-        // Value display (top-right)
         String displayVal = this.isInteger
                 ? String.valueOf(((IntegerValue) this.value).value())
                 : String.format("%.1f", ((DoubleValue) this.value).value());
-        int valW = (int) this.getTextWidth(style.monospaceFont(), displayVal);
-        this.drawText(style.monospaceFont(), context, displayVal, w - 14 - valW, 6, 0xFF8B8B8B);
+        int valW = style.monospaceFont().getWidth(displayVal);
+        this.drawText(style.monospaceFont(), context, displayVal, w - INDENT - valW, 6, style.ruby());
 
-        // Slider track
-        int trackLeft = 34;
-        int trackRight = w - 14;
+        int trackLeft = INDENT;
+        int trackRight = w - INDENT;
         int trackY = 30;
         int trackH = 4;
         ModuleTypeWindow.fillSmoothRoundedRect(context,
-                trackLeft, trackY, trackRight, trackY + trackH, 2, 0xFF333333);
+                trackLeft, trackY, trackRight, trackY + trackH, 2, style.trackOff());
 
-        // Filled portion (accent color)
         double normalized = getNormalized();
         int fillX = (int) (trackLeft + normalized * (trackRight - trackLeft));
         if (fillX > trackLeft) {
             ModuleTypeWindow.fillSmoothRoundedRect(context,
-                    trackLeft, trackY, fillX, trackY + trackH, 2, 0xFFCC3344);
+                    trackLeft, trackY, fillX, trackY + trackH, 2, style.ruby());
         }
 
-        // Thumb (12x12 circle)
         int thumbSize = 12;
         int thumbX = fillX - thumbSize / 2;
         int thumbY = trackY + trackH / 2 - thumbSize / 2;
         ModuleTypeWindow.fillSmoothRoundedRect(context,
-                thumbX, thumbY, thumbX + thumbSize, thumbY + thumbSize, 6, 0xFFCC3344);
+                thumbX, thumbY, thumbX + thumbSize, thumbY + thumbSize, GUIStyle.RADIUS_PILL, style.ruby());
     }
 
     private double getNormalized() {
@@ -85,8 +82,8 @@ public class SettingSliderWindow extends SettingWindow {
     }
 
     private void updateFromMouse(double mouseX) {
-        int trackLeft = 34;
-        int trackRight = this.getWidth() - 14;
+        int trackLeft = INDENT;
+        int trackRight = this.getWidth() - INDENT;
         double normalized = (mouseX - trackLeft) / (trackRight - trackLeft);
         normalized = Math.max(0, Math.min(1, normalized));
         double newVal = this.min + normalized * (this.max - this.min);

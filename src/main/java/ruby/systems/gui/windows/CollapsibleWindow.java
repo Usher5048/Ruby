@@ -3,6 +3,8 @@ package ruby.systems.gui.windows;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import org.lwjgl.glfw.GLFW;
+import ruby.systems.gui.GuiEasing;
+import ruby.systems.gui.GuiTime;
 
 public abstract class CollapsibleWindow extends Window {
     private final int headerHeight;
@@ -18,9 +20,7 @@ public abstract class CollapsibleWindow extends Window {
         this.draggableBounds = new int[] {0, 0, minWidth, headerHeight};
     }
 
-    private static float easeInOutCubic(float t) {
-        return t < 0.5f ? 4f * t * t * t : 1f - (float) Math.pow(-2 * t + 2, 3) / 2f;
-    }
+    private static final float EXPAND_SEC = 0.2f;
 
     public float expandProgress() {
         return this.expandProgress;
@@ -39,13 +39,14 @@ public abstract class CollapsibleWindow extends Window {
         if(this.expandProgress <= 0f) return this.getHeaderHeight();
         if(this.expandProgress >= 1f) return this.getExpandedHeight();
         int expanded = this.getExpandedHeight();
-        float eased = easeInOutCubic(this.expandProgress);
+        float eased = GuiEasing.smooth(this.expandProgress);
         return this.getHeaderHeight() + (int) ((expanded - this.getHeaderHeight()) * eased);
     }
 
     public void updateAnimation(float delta) {
+        float step = GuiTime.toSeconds(delta) / EXPAND_SEC;
         this.expandProgress = Math.clamp(
-                this.expandProgress + (this.expanded ? delta : -delta) * 0.02f,
+                this.expandProgress + (this.expanded ? step : -step),
                 0, 1
         );
     }
@@ -85,9 +86,8 @@ public abstract class CollapsibleWindow extends Window {
         this.drawHeader(context);
 
         this.handleChildren = this.expandProgress > 0;
-        this.expandProgress = Math.clamp(this.expandProgress + (
-                this.expanded ? dt : -dt
-        ) * 0.2f, 0, 1);
+        float step = GuiTime.toSeconds(dt) / EXPAND_SEC;
+        this.expandProgress = Math.clamp(this.expandProgress + (this.expanded ? step : -step), 0, 1);
 
         this.enableCutout(0, 0, this.getWidth(), this.getHeight());
     }

@@ -168,7 +168,7 @@ public class SettingListWindow extends SettingWindow {
 
         // Label
         int ty = (HEADER_H - (int) this.getTextHeight(style.bodyFont())) / 2;
-        this.drawText(style.bodyFont(), ctx, this.value.name(), 34, ty, 0xFF8B8B8B);
+        this.drawText(style.bodyFont(), ctx, this.value.name(), 14, ty, 0xFF6A6567);
 
         // Count badge
         int count = ((ListValue<?>) this.value).value().size();
@@ -178,20 +178,21 @@ public class SettingListWindow extends SettingWindow {
         int bx = w - 14 - bw;
         int by = (HEADER_H - bh) / 2;
 
-        ModuleTypeWindow.fillSmoothRoundedRect(ctx, bx, by, bx + bw, by + bh, 4, 0x1AFFFFFF);
-        this.drawText(style.monospaceFont(), ctx, badge, bx + 6, by + 2, 0xFFCC3344);
+        ModuleTypeWindow.fillSmoothRoundedRect(ctx, bx, by, bx + bw, by + bh, GUIStyle.RADIUS_BADGE, 0x1AFFFFFF);
+        this.drawText(style.monospaceFont(), ctx, badge, bx + 6, by + 2, style.ruby());
     }
 
     private void renderSearch(DrawContext ctx, GUIStyle style, int w) {
         int y = HEADER_H + 2;
         int h = SEARCH_H - 4;
-        int l = 34, r = w - 14;
+        int l = 14, r = w - 14;
 
         // Focus glow
         if (searchFocused) {
-            ModuleTypeWindow.fillSmoothRoundedRect(ctx, l - 1, y - 1, r + 1, y + h + 1, 5, 0x33CC3344);
+            ModuleTypeWindow.fillSmoothRoundedRect(ctx, l - 1, y - 1, r + 1, y + h + 1, GUIStyle.RADIUS_ROW,
+                    GUIStyle.withAlpha(style.ruby(), 0.2f));
         }
-        ModuleTypeWindow.fillSmoothRoundedRect(ctx, l, y, r, y + h, 4, 0xFF1A1A1A);
+        ModuleTypeWindow.fillSmoothRoundedRect(ctx, l, y, r, y + h, GUIStyle.RADIUS_BADGE, style.bgBase());
 
         // Search text or placeholder
         String text = filterText.isEmpty() && !searchFocused ? "Search..." : filterText;
@@ -227,25 +228,25 @@ public class SettingListWindow extends SettingWindow {
             boolean sel = isSelected(entry);
 
             // Row hover highlight
-            if (mx >= 34 && mx < w - 14 && my >= ry && my < ry + ROW_H) {
-                ctx.fill(34, ry, w - 14, ry + ROW_H, 0x0DFFFFFF);
+            if (mx >= 14 && mx < w - 14 && my >= ry && my < ry + ROW_H) {
+                ctx.fill(14, ry, w - 14, ry + ROW_H, style.bgHover());
             }
 
             // Checkbox (10x10)
-            int cbx = 36, cby = ry + (ROW_H - 10) / 2;
+            int cbx = 16, cby = ry + (ROW_H - 10) / 2;
             if (sel) {
                 ModuleTypeWindow.fillSmoothRoundedRect(ctx, cbx, cby,
-                        cbx + 10, cby + 10, 3, 0xFFCC3344);
+                        cbx + 10, cby + 10, 3, style.ruby());
                 // Inner check mark
                 ctx.fill(cbx + 3, cby + 3, cbx + 7, cby + 7, 0xFFFFFFFF);
             } else {
                 ModuleTypeWindow.fillSmoothRoundedRect(ctx, cbx, cby,
-                        cbx + 10, cby + 10, 3, 0xFF333333);
+                        cbx + 10, cby + 10, 3, style.trackOff());
             }
 
             // Item name (truncated to fit)
             String name = entry.name;
-            int maxW = w - 14 - 52;
+            int maxW = w - 14 - 32;
             if (this.getTextWidth(style.monospaceFont(), name) > maxW) {
                 while (name.length() > 1
                         && this.getTextWidth(style.monospaceFont(), name + "…") > maxW) {
@@ -255,8 +256,8 @@ public class SettingListWindow extends SettingWindow {
             }
 
             int ny = ry + (ROW_H - (int) this.getTextHeight(style.monospaceFont())) / 2;
-            this.drawText(style.monospaceFont(), ctx, name, 52, ny,
-                    sel ? 0xFFCCCCCC : 0xFF777777);
+            this.drawText(style.monospaceFont(), ctx, name, 32, ny,
+                    sel ? style.textBright() : style.textMuted());
         }
 
         // Thin scrollbar when list overflows

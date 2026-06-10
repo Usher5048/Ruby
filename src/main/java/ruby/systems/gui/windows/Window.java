@@ -93,6 +93,16 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         );
     }
 
+    public void drawTextInRect(
+            FontRenderer font, DrawContext context, String text,
+            int x1, int y1, int x2, int y2, int color
+    ) {
+        FontRenderer.TextBounds bounds = font.measure(text);
+        int tx = x1 + (x2 - x1 - bounds.width()) / 2 - bounds.left();
+        int ty = y1 + (y2 - y1 - bounds.height()) / 2 - bounds.top();
+        font.draw(context, text, tx, ty, color);
+    }
+
     public void drawBorder(DrawContext context, int x1, int y1, int x2, int y2, int color, int thickness) {
         context.fill(x1, y1, x2, y1 + thickness, color);
         context.fill(x1, y2, x2, y2 - thickness, color);

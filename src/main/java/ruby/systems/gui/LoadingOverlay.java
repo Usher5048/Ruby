@@ -125,7 +125,7 @@ public class LoadingOverlay extends WindowedOverlay {
 
         if(LoadingOverlay.welcomeFont == null) {
             LoadingOverlay.welcomeFont = FontRenderer.create(
-                    RubyClient.getResourceStream("fonts/Nunito.ttf"),
+                    RubyClient.getResourceStream("fonts/DMSans-SemiBold.ttf"),
                     "LoadingOverlayFont", 24
             );
 

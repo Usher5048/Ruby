@@ -8,12 +8,12 @@ import ruby.systems.gui.GUIStyle;
 
 public class SettingEnumWindow extends SettingWindow {
 
+    private static final int INDENT = 14;
+
     public SettingEnumWindow(int x, int y, int width, EnumValue<?> value) {
         super(x, y, width, 26, value);
         this.handleChildren = false;
     }
-
-
 
     @Override
     public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
@@ -21,23 +21,22 @@ public class SettingEnumWindow extends SettingWindow {
         int h = this.getHeight();
         int w = this.getWidth();
 
-        // Label (left-aligned, indented 34px)
-        int textY = (h - (int) this.getTextHeight(style.bodyFont())) / 2;
-        this.drawText(style.bodyFont(), context, this.value.name(), 34, textY, 0xFF8B8B8B);
+        int textY = (h - style.bodyFont().fontHeight) / 2;
+        this.drawText(style.bodyFont(), context, this.value.name(), INDENT, textY, 0xFF6A6567);
 
-        // Value badge (right-aligned)
         String display = this.value.value().toString();
-        int valW = (int) this.getTextWidth(style.monospaceFont(), display);
-        int badgeW = valW + 12;
-        int badgeH = (int) this.getTextHeight(style.monospaceFont()) + 4;
-        int badgeX = w - 14 - badgeW;
+        int valW = style.monospaceFont().getWidth(display);
+        int badgeW = valW + 16;
+        int badgeH = style.monospaceFont().fontHeight + 4;
+        int badgeX = w - INDENT - badgeW;
         int badgeY = (h - badgeH) / 2;
 
         ModuleTypeWindow.fillSmoothRoundedRect(context, badgeX, badgeY,
-                badgeX + badgeW, badgeY + badgeH, 4, 0x1AFFFFFF);
+                badgeX + badgeW, badgeY + badgeH, GUIStyle.RADIUS_BADGE, style.bgHover());
+        this.drawBorder(context, badgeX, badgeY, badgeX + badgeW, badgeY + badgeH, style.border(), 1);
 
         this.drawText(style.monospaceFont(), context, display,
-                badgeX + 6, badgeY + 2, 0xFFCC3344);
+                badgeX + 8, badgeY + 2, style.ruby());
     }
 
     @Override
