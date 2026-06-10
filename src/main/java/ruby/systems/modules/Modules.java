@@ -79,6 +79,7 @@ public class Modules {
         // Render
         Modules.modules.add(new ActiveModules());
         Modules.modules.add(new Fullbright());
+        Modules.modules.add(new Hud());
         Modules.modules.add(new TextureTweaks());
         Modules.modules.add(new Zoom());
 
@@ -171,8 +172,16 @@ public class Modules {
     }
 
     public static void render2D(Render2DEvent event) {
+        event.getContext().getMatrices().pushMatrix();
+        event.getContext().getMatrices().scale(
+                1f / RubyClient.client.getWindow().getScaleFactor(),
+                1f / RubyClient.client.getWindow().getScaleFactor()
+        );
+
         for(Module module : Modules.activeModules)
             module.render2D(event);
+
+        event.getContext().getMatrices().popMatrix();
     }
 
     public static void render3D(Render3DEvent event) {
