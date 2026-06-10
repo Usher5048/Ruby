@@ -5,10 +5,12 @@ import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
+import ruby.mixin.ClientPlayerInteractionManagerAccessor;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -185,5 +187,79 @@ public class AutoTool extends Module {
     @Override
     public void onDisable() {
         clearMiningState();
+    }
+
+    public static final class AutoToolServerSlot {
+        private static boolean applyingMiningSlot;
+
+        private AutoToolServerSlot() {
+        }
+
+        public static boolean isApplyingMiningSlot() {
+            return applyingMiningSlot;
+        }
+
+        /** Keeps the real selected slot (and server sync) on the mining tool. */
+        public static void applyMiningSlot(ClientPlayerEntity player, int slot) {
+            if (player == null || slot < 0 || slot > 8) return;
+
+            PlayerInventory inv = player.getInventory();
+            if (inv.getSelectedSlot() == slot) return;
+
+            applyingMiningSlot = true;
+            try {
+                inv.setSelectedSlot(slot);
+            } finally {
+                applyingMiningSlot = false;
+            }
+
+            syncSelectedSlot();
+        }
+
+        /** Restores the player's visible slot to the server when mining ends. */
+        public static void restoreVisualSlot(ClientPlayerEntity player, int slot) {
+            if (player == null || slot < 0 || slot > 8) return;
+
+            PlayerInventory inv = player.getInventory();
+            if (inv.getSelectedSlot() == slot) {
+                syncSelectedSlot();
+                return;
+            }
+
+            applyingMiningSlot = true;
+            try {
+                inv.setSelectedSlot(slot);
+            } finally {
+                applyingMiningSlot = false;
+            }
+
+            syncSelectedSlot();
+        }
+
+        private static void syncSelectedSlot() {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.interactionManager != null) {
+                ((ClientPlayerInteractionManagerAccessor) mc.interactionManager).ruby$syncSelectedSlot();
+            }
+        }
+    }
+
+    public static final class AutoToolVisualContext {
+        private static int depth;
+
+        private AutoToolVisualContext() {
+        }
+
+        public static void enter() {
+            depth++;
+        }
+
+        public static void exit() {
+            if (depth > 0) depth--;
+        }
+
+        public static boolean isActive() {
+            return depth > 0;
+        }
     }
 }
