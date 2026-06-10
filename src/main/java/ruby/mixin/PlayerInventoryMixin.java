@@ -8,7 +8,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ruby.systems.modules.player.AutoTool;
-import ruby.systems.modules.player.AutoToolServerSlot;
 
 @Mixin(PlayerInventory.class)
 public abstract class PlayerInventoryMixin {
@@ -28,7 +27,7 @@ public abstract class PlayerInventoryMixin {
 
     @Inject(method = "setSelectedSlot", at = @At("HEAD"), cancellable = true)
     private void ruby$onSetSelectedSlot(int slot, CallbackInfo ci) {
-        if (AutoToolServerSlot.isApplyingMiningSlot()) return;
+        if (AutoTool.AutoToolServerSlot.isApplyingMiningSlot()) return;
         if (!AutoTool.shouldUseMiningSlot()) return;
         if (slot == AutoTool.miningSlot) return;
 
