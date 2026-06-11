@@ -39,4 +39,9 @@ public class Timer extends Module {
         if (INSTANCE == null || !INSTANCE.enabled()) return 1.0;
         return INSTANCE.multiplier.value();
     }
+
+    @Override
+    public String getInfoString() {
+        return String.format("%.1f", this.multiplier.value());
+    }
 }

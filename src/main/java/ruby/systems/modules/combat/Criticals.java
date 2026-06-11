@@ -63,5 +63,10 @@ public class Criticals extends Module {
                     player.setVelocity(player.getVelocity().x, 0.1, player.getVelocity().z);
         }
     }
+
+    @Override
+    public String getInfoString() {
+        return this.mode.value().name();
+    }
 }
 

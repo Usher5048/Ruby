@@ -83,5 +83,10 @@ public class Reach extends Module {
         EntityAttributeInstance blockAttr = mc.player.getAttributeInstance(EntityAttributes.BLOCK_INTERACTION_RANGE);
         if (blockAttr != null) blockAttr.setBaseValue(prevBlockRange);
     }
+
+    @Override
+    public String getInfoString() {
+        return String.format("%.1f", this.entityReach.value());
+    }
 }
 

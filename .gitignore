@@ -34,6 +34,18 @@ bin/
 
 run/
 
+# local user data (accounts, profiles, themes, client config)
+
+config/ruby/
+config/ruby_profiles/
+**/accounts.json
+**/theme.json
+**/*_profiles/
+
+# local reference clones
+
+test/
+
 # java
 
 hs_err_*.log

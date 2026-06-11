@@ -50,6 +50,7 @@ public class ModulePanelWindow extends Window {
     private final Map<ModuleType, List<ModuleWindow>> moduleWindows = new EnumMap<>(ModuleType.class);
     private final FriendsPanelContent friendsPanel;
     private final ProfilesPanelContent profilesPanel;
+    private final ThemePanelContent themePanel;
 
     private int bodyHeight = 0;
 
@@ -74,6 +75,7 @@ public class ModulePanelWindow extends Window {
 
         this.friendsPanel = new FriendsPanelContent(0, HEADER_H, WIDTH);
         this.profilesPanel = new ProfilesPanelContent(0, HEADER_H, WIDTH);
+        this.themePanel = new ThemePanelContent(0, HEADER_H, WIDTH);
         this.rebuildChildren();
     }
 
@@ -81,10 +83,18 @@ public class ModulePanelWindow extends Window {
         if (this.selection.equals(sel)) return;
         this.selection = sel;
         this.pendingSelection = sel;
-        if (this.switchPhase == SwitchPhase.IDLE) {
-            this.switchPhase = SwitchPhase.FADE_OUT;
-            this.switchTimer = 0f;
-            this.itemStaggerActive = false;
+        switch (this.switchPhase) {
+            case IDLE -> {
+                this.switchPhase = SwitchPhase.FADE_OUT;
+                this.switchTimer = 0f;
+                this.itemStaggerActive = false;
+            }
+            case FADE_IN -> {
+                this.switchPhase = SwitchPhase.FADE_OUT;
+                this.switchTimer = 0f;
+                this.itemStaggerActive = false;
+            }
+            case FADE_OUT, PAUSE -> {}
         }
     }
 
@@ -119,6 +129,17 @@ public class ModulePanelWindow extends Window {
         }
     }
 
+    private Window specialPanel() {
+        if (!(this.displayedSelection instanceof ClickGuiSelection.Special special)) {
+            return this.friendsPanel;
+        }
+        return switch (special.view()) {
+            case FRIENDS -> this.friendsPanel;
+            case PROFILES -> this.profilesPanel;
+            case THEME -> this.themePanel;
+        };
+    }
+
     private void rebuildChildren() {
         this.windows().clear();
         if (this.displayedSelection instanceof ClickGuiSelection.ModuleCategory cat) {
@@ -129,20 +150,22 @@ public class ModulePanelWindow extends Window {
                 }
             }
         } else if (this.displayedSelection instanceof ClickGuiSelection.Special special) {
-            if (special.view() == ClickGuiSelection.SpecialView.FRIENDS) {
-                this.addWindow(this.friendsPanel);
-            } else {
-                this.addWindow(this.profilesPanel);
-            }
+            Window panel = switch (special.view()) {
+                case FRIENDS -> this.friendsPanel;
+                case PROFILES -> this.profilesPanel;
+                case THEME -> this.themePanel;
+            };
+            this.addWindow(panel);
         }
     }
 
     private String headerTitle() {
-        return switch (this.displayedSelection) {
+        return switch (this.selection) {
             case ClickGuiSelection.ModuleCategory cat -> cat.type().toString();
             case ClickGuiSelection.Special special -> switch (special.view()) {
                 case FRIENDS -> "Friends";
                 case PROFILES -> "Profiles";
+                case THEME -> "Theme";
             };
         };
     }
@@ -170,6 +193,7 @@ public class ModulePanelWindow extends Window {
             return switch (special.view()) {
                 case FRIENDS -> this.friendsPanel.getHeight() + 2;
                 case PROFILES -> this.profilesPanel.getHeight() + 2;
+                case THEME -> this.themePanel.getHeight();
             };
         }
         return 0;
@@ -269,9 +293,7 @@ public class ModulePanelWindow extends Window {
                 idx++;
             }
         } else {
-            Window panel = this.displayedSelection instanceof ClickGuiSelection.Special s
-                    && s.view() == ClickGuiSelection.SpecialView.FRIENDS
-                    ? this.friendsPanel : this.profilesPanel;
+            Window panel = this.specialPanel();
             int staggerY = Math.round(this.getStaggerOffsetY(0));
             panel.setPosition(0, HEADER_H + staggerY);
             float staggerAlpha = this.getStaggerAlpha(0);
@@ -280,6 +302,9 @@ public class ModulePanelWindow extends Window {
             }
             if (panel instanceof ProfilesPanelContent p) {
                 p.setContentAlpha(this.panelAlpha * staggerAlpha);
+            }
+            if (panel instanceof ThemePanelContent t) {
+                t.setContentAlpha(this.panelAlpha * staggerAlpha);
             }
         }
     }
@@ -365,15 +390,16 @@ public class ModulePanelWindow extends Window {
                 this.panelOffsetY = -6f * (1f - panelEased);
                 this.panelScale = 0.985f + 0.015f * panelEased;
                 if (panelT >= 1f) {
-                    this.switchPhase = SwitchPhase.IDLE;
                     this.panelAlpha = 1f;
                     this.panelOffsetY = 0f;
                     this.panelScale = 1f;
-                    if (this.pendingSelection != null && !this.pendingSelection.equals(this.selection)) {
+                    if (!this.selection.equals(this.displayedSelection)) {
                         this.pendingSelection = this.selection;
                         this.switchPhase = SwitchPhase.FADE_OUT;
                         this.switchTimer = 0f;
                         this.itemStaggerActive = false;
+                    } else {
+                        this.switchPhase = SwitchPhase.IDLE;
                     }
                 }
             }

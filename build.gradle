@@ -57,10 +57,48 @@ jar {
     }
 }
 
+def userHome = System.getenv('USERPROFILE') ?: System.getProperty('user.home')
+def localAppData = System.getenv('LOCALAPPDATA') ?: new File(userHome, 'AppData/Local').absolutePath
+def qolProfileDir = new File(userHome, 'AppData/Roaming/ModrinthApp/profiles/QoL Profile')
+def qolModsDir = new File(qolProfileDir, 'mods')
+def modrinthApp = new File(localAppData, 'Modrinth App/Modrinth App.exe')
+
+tasks.register('deployQoL', Copy) {
+    dependsOn remapJar
+    from remapJar.archiveFile
+    into qolModsDir
+    doFirst {
+        qolModsDir.mkdirs()
+        qolModsDir.listFiles()?.findAll { it.name.startsWith('ruby-') && it.name.endsWith('.jar') }?.each { it.delete() }
+    }
+}
+
 loom {
     runConfigs.configureEach {
         vmArgs '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
     }
+}
+
+tasks.register('launchModrinth') {
+    dependsOn deployQoL
+    doLast {
+        if (!modrinthApp.isFile()) {
+            throw new GradleException("Modrinth App not found at: ${modrinthApp.absolutePath}")
+        }
+        exec {
+            commandLine modrinthApp.absolutePath
+        }
+    }
+}
+
+tasks.register('play') {
+    group = 'fabric'
+    description = 'Deploy jar to QoL profile and open Modrinth App'
+    dependsOn launchModrinth
+}
+
+tasks.named('runClient').configure {
+    dependsOn deployQoL
 }
 
 publishing {

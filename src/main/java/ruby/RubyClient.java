@@ -16,6 +16,7 @@ import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ruby.plugins.ModelModifierPlugin;
+import ruby.systems.accounts.AccountsManager;
 import ruby.systems.commands.Commands;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.config.Configuration;
@@ -24,6 +25,7 @@ import ruby.systems.events.render.Render2DEvent;
 import ruby.systems.events.render.Render3DEvent;
 import ruby.systems.events.tick.TickEvents;
 import ruby.systems.gui.ClickGUI;
+import ruby.systems.gui.ThemeManager;
 import ruby.systems.gui.LoadingOverlay;
 import ruby.systems.modules.Modules;
 
@@ -89,6 +91,12 @@ public class RubyClient implements ModInitializer {
 		int configVer = ConfigManager.loadState();
 		if(configVer != ConfigManager.VERSION_ERROR) overlay.log("Loaded client config (v" + configVer + ")");
 		else overlay.log("Failed to load client configs, using default!", 0xFF3333);
+
+		ThemeManager.get().load();
+		overlay.log("Loaded theme");
+
+		AccountsManager.load();
+		overlay.log("Loaded " + AccountsManager.getAccounts().size() + " accounts");
 
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::saveState));
 		overlay.log("Attached shutdown hook to runtime");

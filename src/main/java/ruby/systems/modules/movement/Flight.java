@@ -115,4 +115,9 @@ public class Flight extends Module {
         mc.player.sendAbilitiesUpdate();
         antiKickTimer = 0;
     }
+
+    @Override
+    public String getInfoString() {
+        return this.mode.value().name();
+    }
 }

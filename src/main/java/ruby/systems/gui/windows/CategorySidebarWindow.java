@@ -50,7 +50,7 @@ public class CategorySidebarWindow extends Window {
 
     @Override
     public int getHeight() {
-        int h = HEADER_H + 6 + this.categories.size() * ROW_H + 9 + MISC_LABEL_H + 2 * ROW_H + 6;
+        int h = HEADER_H + 6 + this.categories.size() * ROW_H + 8 + MISC_LABEL_H + 3 * ROW_H;
         this.height = h;
         return h;
     }
@@ -92,8 +92,10 @@ public class CategorySidebarWindow extends Window {
 
         y = this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, "Friends",
                 new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.FRIENDS), false);
-        this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, "Profiles",
-                new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.PROFILES), true);
+        y = this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, "Profiles",
+                new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.PROFILES), false);
+        this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, "Theme",
+                new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.THEME), true);
 
         context.disableScissor();
     }
@@ -143,7 +145,7 @@ public class CategorySidebarWindow extends Window {
             y += ROW_H;
         }
 
-        y += 9 + MISC_LABEL_H;
+        y += 8 + MISC_LABEL_H;
         if (click.y() >= y && click.y() < y + ROW_H) {
             this.select(new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.FRIENDS));
             return true;
@@ -151,6 +153,11 @@ public class CategorySidebarWindow extends Window {
         y += ROW_H;
         if (click.y() >= y && click.y() < y + ROW_H) {
             this.select(new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.PROFILES));
+            return true;
+        }
+        y += ROW_H;
+        if (click.y() >= y && click.y() < y + ROW_H) {
+            this.select(new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.THEME));
             return true;
         }
 

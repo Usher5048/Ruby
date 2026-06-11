@@ -69,6 +69,9 @@ public class ModuleWindow extends CollapsibleWindow {
             } else if (value instanceof ListValue<?> lv) {
                 this.addWindow(new SettingListWindow(0, settingY, PANEL_WIDTH, lv));
                 settingY += 26;
+            } else if (value instanceof ColorValue cv) {
+                this.addWindow(new SettingColorPickerWindow(0, settingY, PANEL_WIDTH, cv));
+                settingY += 26;
             }
         }
 
@@ -114,8 +117,9 @@ public class ModuleWindow extends CollapsibleWindow {
     @Override
     protected int getExpandedHeight() {
         int h = ROW_H + 8;
-        for (Window child : this.windows())
-            h += child.getHeight() + SETTING_GAP;
+        for (Window child : this.windows()) {
+            h += child.getHeight();
+        }
         h += 8;
         if (this.lastInList) h += LAST_ROW_PAD;
         return h;

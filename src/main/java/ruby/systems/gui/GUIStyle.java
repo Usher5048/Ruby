@@ -81,6 +81,7 @@ public record GUIStyle(
     private static GUIStyle current = GUIStyle.DEFAULT;
 
     public static GUIStyle get() {
+        ThemeManager.get().applyIfNeeded();
         return GUIStyle.current;
     }
 

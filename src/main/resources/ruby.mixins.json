@@ -16,6 +16,8 @@
     "LivingEntityMixin",
     "MinecraftClientAccessor",
     "MinecraftClientMixin",
+    "MinecraftClientSessionAccessor",
+    "MultiplayerScreenMixin",
     "MouseMixin",
     "PlayerInventoryMixin",
     "PlayerInteractEntityC2SPacketAccessor",

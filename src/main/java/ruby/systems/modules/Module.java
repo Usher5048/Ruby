@@ -14,6 +14,7 @@ public abstract class Module {
     protected String origin;
     protected boolean enabled = false;
     protected boolean showToasts = true;
+    private final int hudColor;
 
     public final Configuration config;
     public Keybind keybind;
@@ -26,6 +27,24 @@ public abstract class Module {
         this.origin = RubyClient.MOD_NAME;
         this.config = new Configuration();
         this.keybind = Keybind.unbound();
+        this.hudColor = Module.colorFromName(name);
+    }
+
+    /** Optional suffix shown next to the module name on the active-modules HUD. */
+    public String getInfoString() {
+        return null;
+    }
+
+    /** Stable per-module color used by the active-modules HUD random color mode. */
+    public int hudColor() {
+        return this.hudColor;
+    }
+
+    private static int colorFromName(String name) {
+        int hash = name.hashCode();
+        float hue = ((hash & 0x7FFFFFFF) % 360) / 360f;
+        int rgb = java.awt.Color.HSBtoRGB(hue, 0.55f, 1.0f);
+        return 0xFF000000 | (rgb & 0x00FFFFFF);
     }
 
     public String name() {

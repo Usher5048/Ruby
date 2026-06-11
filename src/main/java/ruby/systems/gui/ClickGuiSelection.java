@@ -6,6 +6,7 @@ public sealed interface ClickGuiSelection permits ClickGuiSelection.ModuleCatego
 
     enum SpecialView {
         FRIENDS,
-        PROFILES
+        PROFILES,
+        THEME
     }
 }

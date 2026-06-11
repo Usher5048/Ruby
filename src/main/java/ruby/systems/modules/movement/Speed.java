@@ -245,4 +245,9 @@ public class Speed extends Module {
         if (!whenSneaking.value() && player.isSneaking()) return true;
         return !inLiquids.value() && (player.isTouchingWater() || player.isInLava());
     }
+
+    @Override
+    public String getInfoString() {
+        return this.mode.value().name();
+    }
 }

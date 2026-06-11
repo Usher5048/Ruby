@@ -19,4 +19,12 @@ public class Configuration {
     public Value<?> get(String key) {
         return this.options.get(key);
     }
+
+    @SuppressWarnings("unchecked")
+    public void resetToDefaults() {
+        for (String key : this.getAll()) {
+            Value<Object> value = (Value<Object>) this.get(key);
+            value.setValue(value.defaultValue());
+        }
+    }
 }
