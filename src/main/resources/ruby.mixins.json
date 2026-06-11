@@ -22,6 +22,7 @@
     "MultiplayerScreenMixin",
     "MouseMixin",
     "PlayerInventoryMixin",
+    "RenderTickCounterDynamicMixin",
     "PlayerInteractEntityC2SPacketAccessor",
     "SimpleOptionMixin",
     "TitleScreenMixin",

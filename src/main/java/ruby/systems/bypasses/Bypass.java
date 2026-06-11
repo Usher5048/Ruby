@@ -12,36 +12,39 @@ import ruby.RubyClient;
 
 public class Bypass {
     protected ClientConnection connection;
-    private boolean serverOnGround = false;
-    private Vec3d serverPosition = null;
-    private Vec3d lastServerPosition = null;
-    private Vec3d serverVelocity = null;
+    private boolean serverOnGround;
+    private Vec3d serverPosition;
+    private Vec3d lastServerPosition;
+    private Vec3d serverVelocity = Vec3d.ZERO;
     private float serverYaw = Float.NaN;
     private float serverPitch = Float.NaN;
 
     public Packet<?> modifyPacket(Packet<?> packet) {
         return packet;
     }
+
     protected void onPacket(Packet<?> packet) {}
+
     public void init() {}
+
     public void tick() {}
 
     protected Vec3d position() {
-        if(this.serverPosition == null) return Vec3d.ZERO;
-        return this.serverPosition;
+        return this.serverPosition != null ? this.serverPosition : Vec3d.ZERO;
     }
 
     protected Vec3d lastPosition() {
-        return this.lastServerPosition;
+        return this.lastServerPosition != null ? this.lastServerPosition : this.position();
     }
+
     protected Vec3d velocity() {
-        if(this.serverVelocity == null) return Vec3d.ZERO;
         return this.serverVelocity;
     }
 
     protected boolean onGround() {
         return this.serverOnGround;
     }
+
     protected float yaw() {
         if(Float.isNaN(this.serverYaw) && RubyClient.client.player != null)
             return RubyClient.client.player.getYaw();
@@ -57,54 +60,51 @@ public class Bypass {
     public void resetConnection(ClientConnection connection) {
         this.connection = connection;
     }
+
     public void updateServer(Packet<?> packet) {
         switch(packet) {
-            case PlayerMoveC2SPacket c2sMove -> {
+            case PlayerMoveC2SPacket move -> {
                 if(RubyClient.client.player == null) return;
 
-                this.serverYaw = c2sMove.getYaw(RubyClient.client.player.getYaw());
-                this.serverPitch = c2sMove.getPitch(RubyClient.client.player.getPitch());
-                this.serverOnGround = c2sMove.isOnGround();
-                this.lastServerPosition = this.serverPosition;
-                this.serverPosition = new Vec3d(
-                        c2sMove.getX(RubyClient.client.player.getX()),
-                        c2sMove.getY(RubyClient.client.player.getY()),
-                        c2sMove.getZ(RubyClient.client.player.getZ())
-                );
+                if(move.changesLook()) {
+                    this.serverYaw = move.getYaw(RubyClient.client.player.getYaw());
+                    this.serverPitch = move.getPitch(RubyClient.client.player.getPitch());
+                }
+                this.serverOnGround = move.isOnGround();
 
-                this.serverVelocity = this.serverPosition.subtract(this.lastServerPosition);
+                if(move.changesPosition()) {
+                    Vec3d next = new Vec3d(
+                            move.getX(RubyClient.client.player.getX()),
+                            move.getY(RubyClient.client.player.getY()),
+                            move.getZ(RubyClient.client.player.getZ())
+                    );
+                    if(this.serverPosition != null) this.serverVelocity = next.subtract(this.serverPosition);
+                    this.lastServerPosition = this.serverPosition;
+                    this.serverPosition = next;
+                }
             }
 
-            case PlayerPositionLookS2CPacket s2cFull -> {
-                EntityPosition pos = new EntityPosition(
-                        this.position(),
-                        this.velocity(),
-                        this.yaw(), this.pitch()
+            case PlayerPositionLookS2CPacket teleport -> {
+                EntityPosition current = new EntityPosition(
+                        this.position(), this.velocity(), this.yaw(), this.pitch()
                 );
-
-                EntityPosition newPos = EntityPosition.apply(pos, s2cFull.change(), s2cFull.relatives());
-
-                this.serverYaw = newPos.yaw();
-                this.serverPitch = newPos.pitch();
+                EntityPosition next = EntityPosition.apply(current, teleport.change(), teleport.relatives());
+                this.serverYaw = next.yaw();
+                this.serverPitch = next.pitch();
                 this.lastServerPosition = this.serverPosition;
-                this.serverPosition = newPos.position();
-                this.serverVelocity = newPos.deltaMovement();
+                this.serverPosition = next.position();
+                this.serverVelocity = next.deltaMovement();
             }
 
             case PlayerRotationS2CPacket(float yaw, boolean rYaw, float pitch, boolean rPitch) -> {
-                EntityPosition pos = new EntityPosition(
-                        this.position(),
-                        this.velocity(),
-                        this.yaw(), this.pitch()
+                EntityPosition current = new EntityPosition(
+                        this.position(), this.velocity(), this.yaw(), this.pitch()
                 );
-
-                EntityPosition newPos = EntityPosition.apply(
-                        pos, pos.withRotation(yaw, pitch),
-                        PositionFlag.ofRot(rYaw, rPitch)
+                EntityPosition next = EntityPosition.apply(
+                        current, current.withRotation(yaw, pitch), PositionFlag.ofRot(rYaw, rPitch)
                 );
-
-                this.serverYaw = newPos.yaw();
-                this.serverPitch = newPos.pitch();
+                this.serverYaw = next.yaw();
+                this.serverPitch = next.pitch();
             }
 
             default -> {}

@@ -7,22 +7,21 @@ import net.minecraft.util.math.Vec3d;
 import ruby.RubyClient;
 
 public class Rotations {
-    public static void serverLookAt(EntityAnchorArgumentType.EntityAnchor anchorPoint, Vec3d target) {
-        if(RubyClient.client.player == null) return;
-        if(RubyClient.client.getNetworkHandler() == null) return;
+    public static void serverLookAt(EntityAnchorArgumentType.EntityAnchor anchor, Vec3d target) {
+        if(RubyClient.client.player == null || RubyClient.client.getNetworkHandler() == null) return;
 
-        Vec3d pos = anchorPoint.positionAt(RubyClient.client.player);
+        Vec3d eye = anchor.positionAt(RubyClient.client.player);
+        double dx = target.getX() - eye.getX();
+        double dy = target.getY() - eye.getY();
+        double dz = target.getZ() - eye.getZ();
+        double horiz = Math.sqrt(dx * dx + dz * dz);
 
-        double offX = target.getX() - pos.getX();
-        double offY = target.getY() - pos.getY();
-        double offZ = target.getZ() - pos.getZ();
-        double horizontalDist = Math.sqrt(offX * offX + offZ * offZ);
+        float yaw = MathHelper.wrapDegrees((float) Math.toDegrees(Math.atan2(dz, dx)) - 90f);
+        float pitch = MathHelper.wrapDegrees((float) Math.toDegrees(-Math.atan2(dy, horiz)));
 
+        var player = RubyClient.client.player;
         RubyClient.client.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.LookAndOnGround(
-                MathHelper.wrapDegrees((float) Math.toDegrees(Math.atan2(offZ, offX)) - 90f),
-                MathHelper.wrapDegrees((float) Math.toDegrees(-Math.atan2(offY, horizontalDist))),
-                RubyClient.client.player.isOnGround(),
-                RubyClient.client.player.horizontalCollision
+                yaw, pitch, player.isOnGround(), player.horizontalCollision
         ));
     }
 }
