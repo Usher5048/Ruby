@@ -16,10 +16,12 @@ import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ruby.plugins.ModelModifierPlugin;
+import ruby.systems.bypasses.Bypasses;
 import ruby.systems.accounts.AccountsManager;
 import ruby.systems.commands.Commands;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.config.Configuration;
+import ruby.systems.config.StringValue;
 import ruby.systems.events.Events;
 import ruby.systems.events.render.Render2DEvent;
 import ruby.systems.events.render.Render3DEvent;
@@ -52,6 +54,11 @@ public class RubyClient implements ModInitializer {
 			GLFW.GLFW_KEY_RIGHT_SHIFT,
 			KeyBinding.Category.create(Identifier.of(RubyClient.MOD_ID,  "ruby"))
 	));
+
+	public static final StringValue chatPrefix = RubyClient.config.create(new StringValue.Builder("Chat Prefix")
+			.description("The prefix for chat commands")
+			.defaultValue(".")
+			.build());
 
 	public static InputStream getResourceStream(String path) {
 		return RubyClient.class.getResourceAsStream(String.format(
@@ -101,7 +108,9 @@ public class RubyClient implements ModInitializer {
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::saveState));
 		overlay.log("Attached shutdown hook to runtime");
 
+		Bypasses.get().init();
 		Events.TICK.register(TickEvents.BEGIN, event -> {
+			Bypasses.get().tick();
 			if(RubyClient.openGUIKey.wasPressed())
 				RubyClient.client.setScreen(new ClickGUI());
 		});

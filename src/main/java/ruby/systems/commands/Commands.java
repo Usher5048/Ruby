@@ -7,6 +7,7 @@ public class Commands {
 
     static {
         Commands.commands.add(new Help());
+        Commands.commands.add(new Test());
     }
 
     public static ArrayList<Command> getCommands() {

@@ -4,10 +4,12 @@
   "compatibilityLevel": "JAVA_21",
   "plugin": "ruby.plugins.MixinPlugin",
   "client": [
+    "ChatHudMixin",
     "ClientCommonNetworkHandlerMixin",
-    "ClientPlayerEntityMixin",
+    "ClientConnectionMixin",
     "ClientPlayerInteractionManagerAccessor",
     "ClientPlayerInteractionManagerMixin",
+    "ClientPlayNetworkHandlerMixin",
     "EntityMixin",
     "HandledScreenAccessor",
     "HandledScreenMixin",
