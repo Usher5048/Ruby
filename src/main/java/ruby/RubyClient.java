@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ruby.plugins.ModelModifierPlugin;
 import ruby.helpers.RotationManager;
+import ruby.helpers.inventory.InventoryManager;
 import ruby.systems.bypasses.Bypasses;
 import ruby.systems.accounts.AccountsManager;
 import ruby.systems.commands.Commands;
@@ -105,11 +106,13 @@ public class RubyClient implements ModInitializer {
 
 		AccountsManager.load();
 		overlay.log("Loaded " + AccountsManager.getAccounts().size() + " accounts");
+		AccountsManager.loginLast();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::saveState));
 		overlay.log("Attached shutdown hook to runtime");
 
 		Bypasses.get().init();
+		InventoryManager.init();
 		RotationManager.reset();
 		Events.TICK.register(TickEvents.BEGIN, event -> {
 			Bypasses.get().tick();

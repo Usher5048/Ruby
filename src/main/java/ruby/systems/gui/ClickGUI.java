@@ -2,6 +2,7 @@ package ruby.systems.gui;
 
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 import org.lwjgl.glfw.GLFW;
 import ruby.RubyClient;
@@ -77,11 +78,20 @@ public class ClickGUI extends WindowedScreen {
     }
 
     @Override
-    public boolean onKeyPress(KeyInput input) {
+    public boolean keyPressed(KeyInput input) {
         if (input.key() == GLFW.GLFW_KEY_RIGHT_SHIFT) {
             this.close();
             return true;
         }
+        if (super.keyPressed(input)) return true;
+        if (ClickGUI.sharedLayout != null && ClickGUI.sharedLayout.handleSearchKey(input)) return true;
+        return false;
+    }
+
+    @Override
+    public boolean charTyped(CharInput input) {
+        if (super.charTyped(input)) return true;
+        if (ClickGUI.sharedLayout != null && ClickGUI.sharedLayout.handleSearchChar(input)) return true;
         return false;
     }
 

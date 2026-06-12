@@ -1,90 +1,150 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.screen.slot.SlotActionType;
+import ruby.helpers.Slots;
+import ruby.helpers.inventory.*;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
+import ruby.systems.config.IntegerValue;
+import ruby.systems.events.Events;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
-/**
- * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
- * Licensed under GPL-3.0
- * <p>
- * Core logic: find Totem of Undying in inventory, move to offhand.
- * Meteor's modes: Smart (only when health <threshold), Strict (always).
- * Uses clickSlot inventory operations for server-side validity.
- */
+import java.util.ArrayList;
+import java.util.List;
+
 public class AutoTotem extends Module {
     private final BooleanValue smart;
     private final DoubleValue healthThreshold;
+    private final BooleanValue considerAbsorption;
+    private final BooleanValue missingArmor;
+    private final BooleanValue predictFall;
+    private final BooleanValue smartSwitch;
+    private final IntegerValue startDelay;
+    private final IntegerValue clickDelayMin;
+    private final IntegerValue clickDelayMax;
+    private final IntegerValue closeDelay;
 
     public AutoTotem() {
         super("Auto Totem", "Automatically moves totems to your offhand.", ModuleType.COMBAT);
 
         smart = config.create(new BooleanValue.Builder("Smart")
-                .description("Only equips totem when health is below threshold.")
-                .defaultValue(false)
+                .description("Only equip when health or danger checks fail.")
+                .defaultValue(true)
                 .build());
 
         healthThreshold = config.create(new DoubleValue.Builder("Health")
-                .description("Health threshold to equip totem in smart mode.")
-                .defaultValue(10.0).min(1).max(36).step(0.5)
+                .description("Health threshold to equip totem.")
+                .defaultValue(14.0).min(1).max(36).step(0.5)
                 .visible(smart::value)
                 .build());
+
+        considerAbsorption = config.create(new BooleanValue.Builder("Absorption")
+                .description("Include absorption hearts in health checks.")
+                .defaultValue(true)
+                .build());
+
+        missingArmor = config.create(new BooleanValue.Builder("Missing Armor")
+                .description("Equip when any armor slot is empty.")
+                .defaultValue(true)
+                .visible(smart::value)
+                .build());
+
+        predictFall = config.create(new BooleanValue.Builder("Fall Damage")
+                .description("Equip when a fall would bring you below the health threshold.")
+                .defaultValue(true)
+                .visible(smart::value)
+                .build());
+
+        smartSwitch = config.create(new BooleanValue.Builder("Smart Switch")
+                .description("Use offhand swap packets for hotbar totems.")
+                .defaultValue(true)
+                .build());
+
+        startDelay = config.create(new IntegerValue.Builder("Start Delay")
+                .description("Ticks to wait before the first action.")
+                .defaultValue(1).min(0).max(20)
+                .build());
+
+        clickDelayMin = config.create(new IntegerValue.Builder("Click Delay Min")
+                .description("Minimum ticks between inventory clicks.")
+                .defaultValue(2).min(0).max(20)
+                .build());
+
+        clickDelayMax = config.create(new IntegerValue.Builder("Click Delay Max")
+                .description("Maximum ticks between inventory clicks.")
+                .defaultValue(4).min(0).max(20)
+                .build());
+
+        closeDelay = config.create(new IntegerValue.Builder("Close Delay")
+                .description("Ticks to wait before closing inventory.")
+                .defaultValue(1).min(0).max(20)
+                .build());
+
+        Events.INVENTORY_SCHEDULE.register(this::onSchedule);
     }
 
-    @Override
-    public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.interactionManager == null) return;
-        if (mc.currentScreen != null) return;
+    private void onSchedule(ScheduleInventoryActionEvent event) {
+        if(!this.enabled()) return;
 
-        // Check if offhand already has totem
-        ItemStack offhand = player.getOffHandStack();
-        boolean locked = false;
-        if (offhand.isOf(Items.TOTEM_OF_UNDYING)) {
-            locked = false;
-            return;
-        }
+        ClientPlayerEntity player = mc();
+        if(player == null || player.isSpectator()) return;
+        if(InventoryManager.isOperating()) return;
 
-        // Smart mode: only equip when low health
-        if (smart.value() && player.getHealth() + player.getAbsorptionAmount() > healthThreshold.value()) {
-            return;
-        }
+        if(!TotemEvaluator.shouldEquip(
+                player,
+                this.smart.value(),
+                this.healthThreshold.value().floatValue(),
+                this.considerAbsorption.value(),
+                this.missingArmor.value(),
+                this.predictFall.value()
+        )) return;
 
-        // Find totem in inventory
-        int totemSlot = findTotem(player);
-        if (totemSlot == -1) return;
+        int totemSlot = this.findTotemSlot(player);
+        if(totemSlot == Slots.INVALID_SLOT) return;
 
-        // Move totem to offhand
-        moveToOffhand(mc, player, totemSlot);
-        locked = true;
+        List<InventoryAction> actions = this.buildActions(totemSlot);
+        if(actions.isEmpty()) return;
+
+        boolean needsInventory = actions.stream().anyMatch(InventoryAction::requiresInventoryOpen);
+        InventoryConstraints constraints = new InventoryConstraints(
+                this.startDelay.value(),
+                this.clickDelayMin.value(),
+                this.clickDelayMax.value(),
+                this.closeDelay.value(),
+                needsInventory,
+                true
+        );
+
+        event.schedule(constraints, actions, InventoryPriority.IMPORTANT);
     }
 
-    private int findTotem(ClientPlayerEntity player) {
-        // Search hotbar first (0-8), then main inventory (9-35)
-        for (int i = 0; i < 36; i++) {
-            ItemStack stack = player.getInventory().getStack(i);
-            if (stack.isOf(Items.TOTEM_OF_UNDYING)) return i;
+    private List<InventoryAction> buildActions(int totemSlot) {
+        if(Slots.HOTBAR.contains(totemSlot) && this.smartSwitch.value())
+            return List.of(new InventoryAction.SwapOffhandHotbar(totemSlot));
+
+        List<InventoryAction> actions = new ArrayList<>();
+        int sourceId = Slots.indexToID(totemSlot);
+        int offhandId = InventoryAction.offhandScreenSlot();
+
+        if(Slots.HOTBAR.contains(totemSlot)) {
+            actions.add(InventoryAction.Click.swap(offhandId, totemSlot));
+            return actions;
         }
-        return -1;
+
+        actions.add(InventoryAction.Click.pickup(sourceId));
+        actions.add(InventoryAction.Click.pickup(offhandId));
+        return actions;
     }
 
-    private void moveToOffhand(MinecraftClient mc, ClientPlayerEntity player, int invSlot) {
-        int syncId = player.currentScreenHandler.syncId;
+    private int findTotemSlot(ClientPlayerEntity player) {
+        int hotbar = Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.isOf(Items.TOTEM_OF_UNDYING));
+        if(hotbar != Slots.INVALID_SLOT) return hotbar;
+        return Slots.findFirst(Slots.MAIN, (stack, index) -> stack.isOf(Items.TOTEM_OF_UNDYING));
+    }
 
-        if (invSlot < 9) {
-            // Hotbar slot: swap with offhand using SWAP action (button = hotbar slot)
-            mc.interactionManager.clickSlot(syncId, 45, invSlot, SlotActionType.SWAP, player);
-        } else {
-            // Main inventory slot 9-35: pickup then place in offhand
-            mc.interactionManager.clickSlot(syncId, invSlot, 0, SlotActionType.PICKUP, player);
-            mc.interactionManager.clickSlot(syncId, 45, 0, SlotActionType.PICKUP, player);
-        }
+    private static ClientPlayerEntity mc() {
+        return ruby.RubyClient.client.player;
     }
 }

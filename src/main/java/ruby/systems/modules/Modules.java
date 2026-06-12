@@ -27,6 +27,8 @@ public class Modules {
 
         // Combat
         Modules.modules.add(new AutoArmor());
+        Modules.modules.add(new AutoGapple());
+        Modules.modules.add(new AutoPot());
         Modules.modules.add(new AutoTotem());
         Modules.modules.add(new Criticals());
         Modules.modules.add(new Hitboxes());
@@ -86,6 +88,7 @@ public class Modules {
 
         // World
         Modules.modules.add(new Nuker());
+        Modules.modules.add(new Extinguish());
         Modules.modules.add(new Scaffold());
         Modules.modules.add(new SpeedMine());
         Modules.modules.add(new Timer());

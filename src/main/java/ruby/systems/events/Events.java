@@ -1,5 +1,6 @@
 package ruby.systems.events;
 
+import ruby.helpers.inventory.ScheduleInventoryActionEvent;
 import ruby.systems.events.chat.ChatEvent;
 import ruby.systems.events.chat.ChatEvents;
 import ruby.systems.events.entity.EntityEvent;
@@ -20,4 +21,5 @@ public final class Events {
 
     public static final EventBuses.Single<Render2DEvent> RENDER2D = new EventBuses.Single<>();
     public static final EventBuses.Single<Render3DEvent> RENDER3D = new EventBuses.Single<>();
+    public static final EventBuses.Single<ScheduleInventoryActionEvent> INVENTORY_SCHEDULE = new EventBuses.Single<>();
 }

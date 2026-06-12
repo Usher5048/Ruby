@@ -25,6 +25,7 @@ public class CategorySidebarWindow extends Window {
 
     private final List<ModuleType> categories;
     private ClickGuiSelection selection;
+    private boolean searchActive;
     private final Consumer<ClickGuiSelection> onSelect;
     private final Runnable onHeaderDrag;
 
@@ -46,6 +47,14 @@ public class CategorySidebarWindow extends Window {
 
     public ClickGuiSelection selection() {
         return this.selection;
+    }
+
+    public void setSelection(ClickGuiSelection selection) {
+        this.selection = selection;
+    }
+
+    public void setSearchActive(boolean searchActive) {
+        this.searchActive = searchActive;
     }
 
     @Override
@@ -104,7 +113,7 @@ public class CategorySidebarWindow extends Window {
             DrawContext context, GUIStyle style, int innerR, int y,
             int mouseX, int mouseY, String label, ClickGuiSelection sel, boolean lastRow
     ) {
-        boolean active = this.selection.equals(sel);
+        boolean active = !this.searchActive && this.selection.equals(sel);
         boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + ROW_H;
 
         if (active || hovered) {

@@ -3,6 +3,7 @@ package ruby.systems.gui.windows;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import org.lwjgl.glfw.GLFW;
+import ruby.systems.gui.ClickGuiSearch;
 import ruby.systems.gui.ClickGuiSelection;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.gui.GuiEasing;
@@ -79,8 +80,46 @@ public class ModulePanelWindow extends Window {
         this.rebuildChildren();
     }
 
+    public ClickGuiSelection selection() {
+        return this.selection;
+    }
+
+    public void setSelectionImmediate(ClickGuiSelection sel) {
+        this.selection = sel;
+        this.displayedSelection = sel;
+        this.pendingSelection = null;
+        this.switchPhase = SwitchPhase.IDLE;
+        this.switchTimer = 0f;
+        this.itemStaggerActive = false;
+        this.panelAlpha = 1f;
+        this.panelOffsetY = 0f;
+        this.panelScale = 1f;
+        this.rebuildChildren();
+    }
+
+    public void updateSearch(String query) {
+        ClickGuiSelection.Search sel = new ClickGuiSelection.Search(query);
+        this.selection = sel;
+        this.displayedSelection = sel;
+        this.pendingSelection = null;
+        this.switchPhase = SwitchPhase.IDLE;
+        this.switchTimer = 0f;
+        this.itemStaggerTimer = 0f;
+        this.itemStaggerActive = false;
+        this.panelAlpha = 1f;
+        this.panelOffsetY = 0f;
+        this.panelScale = 1f;
+        this.rebuildChildren();
+    }
+
     public void requestSelection(ClickGuiSelection sel) {
         if (this.selection.equals(sel)) return;
+
+        if (sel instanceof ClickGuiSelection.Search search) {
+            this.updateSearch(search.query());
+            return;
+        }
+
         this.selection = sel;
         this.pendingSelection = sel;
         switch (this.switchPhase) {
@@ -118,15 +157,35 @@ public class ModulePanelWindow extends Window {
     }
 
     private void onModuleExpandRequest(ModuleWindow source) {
-        if (source.expanded) {
-            for (List<ModuleWindow> list : this.moduleWindows.values()) {
-                for (ModuleWindow win : list) {
-                    if (win != source && win.expanded) {
-                        win.expanded = false;
-                    }
+        if (!source.expanded) return;
+
+        List<ModuleWindow> scope;
+        if (this.displayedSelection instanceof ClickGuiSelection.Search search) {
+            scope = this.searchResults(search.query());
+        } else if (this.displayedSelection instanceof ClickGuiSelection.ModuleCategory cat) {
+            scope = this.moduleWindows.get(cat.type());
+            if (scope == null) return;
+        } else {
+            return;
+        }
+
+        for (ModuleWindow win : scope) {
+            if (win != source && win.expanded) {
+                win.expanded = false;
+            }
+        }
+    }
+
+    private List<ModuleWindow> searchResults(String query) {
+        List<ModuleWindow> results = new ArrayList<>();
+        for (List<ModuleWindow> list : this.moduleWindows.values()) {
+            for (ModuleWindow win : list) {
+                if (ClickGuiSearch.matches(win.module(), query)) {
+                    results.add(win);
                 }
             }
         }
+        return results;
     }
 
     private Window specialPanel() {
@@ -149,6 +208,10 @@ public class ModulePanelWindow extends Window {
                     this.addWindow(win);
                 }
             }
+        } else if (this.displayedSelection instanceof ClickGuiSelection.Search search) {
+            for (ModuleWindow win : this.searchResults(search.query())) {
+                this.addWindow(win);
+            }
         } else if (this.displayedSelection instanceof ClickGuiSelection.Special special) {
             Window panel = switch (special.view()) {
                 case FRIENDS -> this.friendsPanel;
@@ -162,6 +225,7 @@ public class ModulePanelWindow extends Window {
     private String headerTitle() {
         return switch (this.selection) {
             case ClickGuiSelection.ModuleCategory cat -> cat.type().toString();
+            case ClickGuiSelection.Search search -> search.query();
             case ClickGuiSelection.Special special -> switch (special.view()) {
                 case FRIENDS -> "Friends";
                 case PROFILES -> "Profiles";
@@ -183,6 +247,15 @@ public class ModulePanelWindow extends Window {
         if (this.displayedSelection instanceof ClickGuiSelection.ModuleCategory cat) {
             List<ModuleWindow> list = this.moduleWindows.get(cat.type());
             if (list == null || list.isEmpty()) return 0;
+            int h = 0;
+            for (ModuleWindow win : list) {
+                h += win.getHeight();
+            }
+            return h;
+        }
+        if (this.displayedSelection instanceof ClickGuiSelection.Search search) {
+            List<ModuleWindow> list = this.searchResults(search.query());
+            if (list.isEmpty()) return 0;
             int h = 0;
             for (ModuleWindow win : list) {
                 h += win.getHeight();
@@ -280,18 +353,9 @@ public class ModulePanelWindow extends Window {
     private void layoutBodyChildren() {
         int y = HEADER_H;
         if (this.displayedSelection instanceof ClickGuiSelection.ModuleCategory cat) {
-            List<ModuleWindow> list = this.moduleWindows.get(cat.type());
-            if (list == null) return;
-            int idx = 0;
-            int total = list.size();
-            for (ModuleWindow win : list) {
-                int staggerY = Math.round(this.getStaggerOffsetY(idx));
-                win.setPosition(0, y + staggerY);
-                win.setLastInList(idx == total - 1);
-                win.setContentAlpha(this.panelAlpha * this.getStaggerAlpha(idx));
-                y += win.getHeight();
-                idx++;
-            }
+            this.layoutModuleList(this.moduleWindows.get(cat.type()), y);
+        } else if (this.displayedSelection instanceof ClickGuiSelection.Search search) {
+            this.layoutModuleList(this.searchResults(search.query()), y);
         } else {
             Window panel = this.specialPanel();
             int staggerY = Math.round(this.getStaggerOffsetY(0));
@@ -331,10 +395,27 @@ public class ModulePanelWindow extends Window {
         return 6f * (1f - GuiEasing.smooth(Math.min(1f, t)));
     }
 
+    private void layoutModuleList(List<ModuleWindow> list, int y) {
+        if (list == null || list.isEmpty()) return;
+        int idx = 0;
+        int total = list.size();
+        for (ModuleWindow win : list) {
+            int staggerY = Math.round(this.getStaggerOffsetY(idx));
+            win.setPosition(0, y + staggerY);
+            win.setLastInList(idx == total - 1);
+            win.setContentAlpha(this.panelAlpha * this.getStaggerAlpha(idx));
+            y += win.getHeight();
+            idx++;
+        }
+    }
+
     private int maxStaggerItems() {
         if (this.displayedSelection instanceof ClickGuiSelection.ModuleCategory cat) {
             List<ModuleWindow> list = this.moduleWindows.get(cat.type());
             return list == null ? 0 : list.size();
+        }
+        if (this.displayedSelection instanceof ClickGuiSelection.Search search) {
+            return this.searchResults(search.query()).size();
         }
         return 1;
     }

@@ -28,6 +28,8 @@ public class AccountsPanelContent extends Window {
     private static final int SESSION_INPUT_ROW_H = 70;
     private static final int HEAD_SIZE = 24;
     private static final int ACTION_BTN_W = 48;
+    private static final int REMOVE_INSET = 18;
+    private static final int ACTION_GAP = 4;
     private static final int INPUT_GAP = 6;
     private static final int CREATE_BTN_W = 52;
 
@@ -229,13 +231,14 @@ public class AccountsPanelContent extends Window {
                 GUIStyle.withAlpha(style.textMuted(), this.contentAlpha));
 
         boolean active = AccountsManager.isActive(account);
-        int removeX = innerR - 22;
-        int actionX = removeX - 8 - ACTION_BTN_W;
+        int removeX = innerR - REMOVE_INSET;
+        int actionRight = removeX - ACTION_GAP;
+        int actionX = actionRight - ACTION_BTN_W;
         int actionY = y + (ROW_H - 24) / 2;
         if (active) {
             String activeLabel = "Active";
             int activeW = style.bodyFont().getWidth(activeLabel);
-            style.bodyFont().draw(context, activeLabel, removeX - 8 - activeW,
+            style.bodyFont().draw(context, activeLabel, actionRight - activeW,
                     y + (ROW_H - style.bodyFont().fontHeight) / 2,
                     GUIStyle.withAlpha(style.ruby(), this.contentAlpha));
         } else {
@@ -282,6 +285,7 @@ public class AccountsPanelContent extends Window {
             boolean ok = account.fetchInfo() && account.login();
             Util.getMainWorkerExecutor().execute(() -> {
                 if (ok) {
+                    AccountsManager.markLastUsed(account);
                     AccountsManager.save();
                     this.statusMessage = "Logged in as " + account.getUsername();
                 } else {
@@ -392,8 +396,9 @@ public class AccountsPanelContent extends Window {
 
         for (Account account : accounts) {
             if (click.y() >= y && click.y() < y + ROW_H) {
-                int removeX = innerR - 22;
-                int actionX = removeX - 8 - ACTION_BTN_W;
+                int removeX = innerR - REMOVE_INSET;
+                int actionRight = removeX - ACTION_GAP;
+                int actionX = actionRight - ACTION_BTN_W;
                 int actionY = y + (ROW_H - 24) / 2;
                 if (click.x() >= innerR - 28) {
                     AccountsManager.remove(account);

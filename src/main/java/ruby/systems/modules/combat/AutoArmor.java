@@ -1,140 +1,143 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.EquippableComponent;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
-import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.item.Items;
+import ruby.helpers.Slots;
+import ruby.helpers.inventory.*;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.IntegerValue;
+import ruby.systems.events.Events;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
-/**
- * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
- * Licensed under GPL-3.0
- * <p>
- * Core logic from Meteor's AutoArmor:
- * - Scans inventory for armor pieces
- * - Scores each piece (based on durability/material tier as proxy for protection)
- * - Equips best piece for each slot
- * - Delay between operations to avoid flagging anti-cheat
- * - Anti-break: won't equip nearly broken armor
- */
+import java.util.ArrayList;
+import java.util.List;
+
 public class AutoArmor extends Module {
-    private static final EquipmentSlot[] ARMOR_SLOTS = {
-            EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
-    };
-
-    private final IntegerValue delay;
+    private final IntegerValue startDelay;
+    private final IntegerValue clickDelayMin;
+    private final IntegerValue clickDelayMax;
+    private final IntegerValue closeDelay;
+    private final IntegerValue saveThreshold;
+    private final BooleanValue useHotbar;
     private final BooleanValue antiBreak;
-
-    private int timer = 0;
 
     public AutoArmor() {
         super("Auto Armor", "Automatically equips the best armor.", ModuleType.COMBAT);
 
-        delay = config.create(new IntegerValue.Builder("Delay")
-                .description("Delay in ticks between equipping armor pieces.")
+        startDelay = config.create(new IntegerValue.Builder("Start Delay")
+                .description("Ticks to wait after opening inventory.")
                 .defaultValue(1).min(0).max(20)
                 .build());
 
-        antiBreak = config.create(new BooleanValue.Builder("Anti Break")
-                .description("Stops wearing armor if its durability is low.")
+        clickDelayMin = config.create(new IntegerValue.Builder("Click Delay Min")
+                .description("Minimum ticks between inventory clicks.")
+                .defaultValue(1).min(0).max(20)
+                .build());
+
+        clickDelayMax = config.create(new IntegerValue.Builder("Click Delay Max")
+                .description("Maximum ticks between inventory clicks.")
+                .defaultValue(2).min(0).max(20)
+                .build());
+
+        closeDelay = config.create(new IntegerValue.Builder("Close Delay")
+                .description("Ticks to wait before closing inventory.")
+                .defaultValue(1).min(0).max(20)
+                .build());
+
+        saveThreshold = config.create(new IntegerValue.Builder("Save Threshold")
+                .description("Replace armor below this durability percent. 0 disables.")
+                .defaultValue(0).min(0).max(100)
+                .build());
+
+        useHotbar = config.create(new BooleanValue.Builder("Hotbar")
+                .description("Equip armor directly from the hotbar when possible.")
                 .defaultValue(true)
                 .build());
+
+        antiBreak = config.create(new BooleanValue.Builder("Anti Break")
+                .description("Ignore armor that is almost broken.")
+                .defaultValue(true)
+                .build());
+
+        Events.INVENTORY_SCHEDULE.register(this::onSchedule);
     }
 
-    @Override
-    public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.interactionManager == null) return;
-        if (mc.currentScreen != null) return;
+    private void onSchedule(ScheduleInventoryActionEvent event) {
+        if(!this.enabled()) return;
 
-        if (timer > 0) { timer--; return; }
+        ClientPlayerEntity player = mc();
+        if(player == null || player.isSpectator()) return;
+        if(InventoryManager.isOperating()) return;
 
-        for (EquipmentSlot slot : ARMOR_SLOTS) {
-            ItemStack currentArmor = player.getEquippedStack(slot);
-            double currentScore = getArmorScore(currentArmor, slot);
+        int durabilityThreshold = this.antiBreak.value() ? 10 : this.saveThreshold.value();
+        List<ArmorPiece> upgrades = ArmorEvaluation.findUpgrades(player, durabilityThreshold);
+        if(upgrades.isEmpty()) return;
 
-            int bestSlot = -1;
-            double bestScore = currentScore;
+        InventoryConstraints constraints = new InventoryConstraints(
+                this.startDelay.value(),
+                this.clickDelayMin.value(),
+                this.clickDelayMax.value(),
+                this.closeDelay.value(),
+                true,
+                false
+        );
 
-            // Search main inventory + hotbar for better armor
-            for (int i = 0; i < 36; i++) {
-                ItemStack stack = player.getInventory().getStack(i);
-                if (stack.isEmpty()) continue;
+        List<InventoryAction> actions = new ArrayList<>();
+        for(ArmorPiece piece : upgrades)
+            actions.addAll(this.buildActions(player, piece));
 
-                EquippableComponent equip = stack.get(DataComponentTypes.EQUIPPABLE);
-                if (equip == null || equip.slot() != slot) continue;
-
-                double score = getArmorScore(stack, slot);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestSlot = i;
-                }
-            }
-
-            if (bestSlot != -1) {
-                equipArmor(mc, player, bestSlot, slot);
-                timer = delay.value();
-                return; // One swap per cycle
-            }
-        }
+        if(!actions.isEmpty())
+            event.schedule(constraints, actions, InventoryPriority.IMPORTANT);
     }
 
-    private double getArmorScore(ItemStack stack, EquipmentSlot slot) {
-        if (stack.isEmpty()) return -1;
+    private List<InventoryAction> buildActions(ClientPlayerEntity player, ArmorPiece piece) {
+        EquipmentSlot armorSlot = piece.slot();
+        ItemStack equipped = player.getEquippedStack(armorSlot);
+        if(ArmorEvaluation.isElytra(equipped)) return List.of();
 
-        // Anti-break check
-        if (antiBreak.value() && stack.isDamageable()) {
-            if (stack.getMaxDamage() - stack.getDamage() <= 3) return -1;
+        int sourceId = Slots.indexToID(piece.inventorySlot());
+        if(sourceId == Slots.INVALID_SLOT) return List.of();
+
+        boolean inHotbar = Slots.HOTBAR.contains(piece.inventorySlot());
+        boolean armorOccupied = !equipped.isEmpty();
+        int armorScreenId = this.armorScreenSlot(armorSlot);
+
+        if(inHotbar && this.useHotbar.value() && !armorOccupied)
+            return List.of(new InventoryAction.UseHotbar(piece.inventorySlot()));
+
+        List<InventoryAction> actions = new ArrayList<>();
+        if(armorOccupied) {
+            if(this.hasInventorySpace(player))
+                actions.add(InventoryAction.Click.quickMove(armorScreenId));
+            else
+                actions.add(InventoryAction.Click.throwSlot(armorScreenId));
         }
 
-        // Score based on max durability (correlates with material tier)
-        // Netherite > Diamond > Iron > Chain > Gold > Leather
-        double score = stack.getMaxDamage();
-
-        // Bonus for remaining durability
-        if (stack.isDamageable()) {
-            double durabilityPercent = 1.0 - ((double) stack.getDamage() / stack.getMaxDamage());
-            score += durabilityPercent * 10;
-        }
-
-        return score;
+        actions.add(InventoryAction.Click.quickMove(sourceId));
+        return actions;
     }
 
-    private void equipArmor(MinecraftClient mc, ClientPlayerEntity player, int invSlot, EquipmentSlot armorSlot) {
-        int syncId = player.currentScreenHandler.syncId;
-        int armorScreenSlot = armorSlotToScreenSlot(armorSlot);
-        int sourceScreenSlot = invToScreenSlot(invSlot);
-
-        // If armor slot already has something, move it out first
-        ItemStack currentArmor = player.getEquippedStack(armorSlot);
-        if (!currentArmor.isEmpty()) {
-            // Shift-click current armor to inventory
-            mc.interactionManager.clickSlot(syncId, armorScreenSlot, 0, SlotActionType.QUICK_MOVE, player);
+    private boolean hasInventorySpace(ClientPlayerEntity player) {
+        for(int i = 0; i < 36; i++) {
+            if(player.getInventory().getStack(i).isEmpty()) return true;
         }
-
-        // Shift-click new armor from inventory to armor slot
-        mc.interactionManager.clickSlot(syncId, sourceScreenSlot, 0, SlotActionType.QUICK_MOVE, player);
+        return false;
     }
 
-    private int armorSlotToScreenSlot(EquipmentSlot slot) {
-        return switch (slot) {
+    private int armorScreenSlot(EquipmentSlot slot) {
+        return switch(slot) {
             case HEAD -> 5;
             case CHEST -> 6;
             case LEGS -> 7;
             case FEET -> 8;
-            default -> -1;
+            default -> Slots.INVALID_SLOT;
         };
     }
 
-    private int invToScreenSlot(int invSlot) {
-        if (invSlot < 9) return invSlot + 36; // Hotbar 0-8 → Screen 36-44
-        return invSlot; // Main 9-35 → Screen 9-35
+    private static ClientPlayerEntity mc() {
+        return ruby.RubyClient.client.player;
     }
 }
