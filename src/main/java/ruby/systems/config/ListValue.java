@@ -82,6 +82,11 @@ public abstract class ListValue<T> extends Value<List<T>> {
             super(name);
         }
 
+        public B defaultValue(List<T> a) {
+            this.defaultValue = new ArrayList<>(a);
+            return this.self();
+        }
+
         public B defaultValue(T... a) {
             this.defaultValue = new ArrayList<>(List.of(a));
             return this.self();
