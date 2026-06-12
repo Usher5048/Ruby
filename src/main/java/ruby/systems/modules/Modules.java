@@ -30,6 +30,7 @@ public class Modules {
         Modules.modules.add(new AutoTotem());
         Modules.modules.add(new Criticals());
         Modules.modules.add(new Hitboxes());
+        Modules.modules.add(new KillAura());
         Modules.modules.add(new Reach());
         Modules.modules.add(new ShieldBreaker());
 

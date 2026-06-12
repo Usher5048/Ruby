@@ -60,6 +60,18 @@ public class GrimBypass extends Bypass {
         if(move.getYaw(this.yaw()) != this.yaw() || move.getPitch(this.pitch()) != this.pitch())
             return packet;
 
+        // Duplicate rotation: strip look but keep position. Never drop ground-only updates.
+        if(move.changesPosition())
+            return new PlayerMoveC2SPacket.PositionAndOnGround(
+                    move.getX(this.position().getX()),
+                    move.getY(this.position().getY()),
+                    move.getZ(this.position().getZ()),
+                    move.isOnGround(), move.horizontalCollision()
+            );
+
+        if(move.isOnGround() != this.onGround())
+            return packet;
+
         return null;
     }
 

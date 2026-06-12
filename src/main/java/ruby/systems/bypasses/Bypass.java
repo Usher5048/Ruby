@@ -9,7 +9,6 @@ import net.minecraft.network.packet.s2c.play.PlayerRotationS2CPacket;
 import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.util.math.Vec3d;
 import ruby.RubyClient;
-
 public class Bypass {
     protected ClientConnection connection;
     private boolean serverOnGround;
@@ -55,6 +54,14 @@ public class Bypass {
         if(Float.isNaN(this.serverPitch) && RubyClient.client.player != null)
             return RubyClient.client.player.getPitch();
         return this.serverPitch;
+    }
+
+    public float serverYaw() {
+        return this.yaw();
+    }
+
+    public float serverPitch() {
+        return this.pitch();
     }
 
     public void resetConnection(ClientConnection connection) {

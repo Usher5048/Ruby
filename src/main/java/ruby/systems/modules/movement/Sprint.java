@@ -2,19 +2,13 @@ package ruby.systems.modules.movement;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import ruby.helpers.RotationManager;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
+import ruby.systems.modules.combat.Criticals;
 
-/**
- * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
- * Licensed under GPL-3.0
- * <p>
- * Meteor's Sprint: Two modes - Strict (vanilla sprint conditions) and Rage (always sprint).
- * keepSprint prevents sprint from being reset on hit (Meteor uses a mixin for this;
- * the tick-based approach sets sprinting every tick to counteract resets).
- */
 public class Sprint extends Module {
     public enum Mode { Strict, Rage }
 
@@ -36,21 +30,22 @@ public class Sprint extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null) return;
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if(player == null) return;
 
-        if (shouldSprint(player)) {
-            player.setSprinting(true);
+        if(Criticals.blocksSprintInput()) {
+            player.setSprinting(false);
+            return;
         }
+
+        if(RotationManager.hasRotation()) return;
+
+        if(shouldSprint(player)) player.setSprinting(true);
     }
 
     private boolean shouldSprint(ClientPlayerEntity player) {
-        if (player.forwardSpeed <= 0) return false;
-
-        if (mode.value() == Mode.Rage) return true;
-
-        // Strict: respect vanilla sprint conditions
+        if(player.forwardSpeed <= 0) return false;
+        if(mode.value() == Mode.Rage) return true;
         return !player.isSneaking()
                 && !player.isUsingItem()
                 && player.getHungerManager().getFoodLevel() > 6;
@@ -58,7 +53,7 @@ public class Sprint extends Module {
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player != null) mc.player.setSprinting(false);
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if(player != null) player.setSprinting(false);
     }
 }

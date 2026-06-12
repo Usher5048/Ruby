@@ -5,8 +5,11 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import ruby.helpers.RotationManager;
 import ruby.systems.events.Events;
 import ruby.systems.events.tick.TickEvents;
+import ruby.systems.modules.Modules;
+import ruby.systems.modules.combat.KillAura;
 
 @Mixin(MinecraftClient.class)
 public class MinecraftClientMixin {
@@ -20,5 +23,12 @@ public class MinecraftClientMixin {
     private void tickEnd(CallbackInfo info) {
         if(Events.TICK.fire(TickEvents.END, new Events.GenericEvent()))
             info.cancel();
+    }
+
+    @Inject(method = "handleBlockBreaking", at = @At("HEAD"), cancellable = true)
+    private void ruby$noBreakingWhileAiming(boolean breaking, CallbackInfo ci) {
+        KillAura killAura = Modules.getByClass(KillAura.class);
+        if(breaking && killAura != null && killAura.enabled() && RotationManager.hasRotation())
+            ci.cancel();
     }
 }

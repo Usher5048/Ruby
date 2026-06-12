@@ -29,7 +29,7 @@ public class ClientCommonNetworkHandlerMixin {
         Packet<?> bypassedPacket = Bypasses.get().modifyPacket(event.packet());
         if(bypassedPacket == null) return;
 
-        Bypasses.get().updateServer(bypassedPacket);
+        // updateServer runs once from ClientConnectionMixin.send HEAD
         this.connection.send(bypassedPacket);
     }
 }

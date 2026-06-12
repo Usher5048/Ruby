@@ -42,4 +42,11 @@ public final class FriendsManager {
         if (name == null || name.isEmpty()) return name;
         return name.substring(0, 1).toUpperCase(Locale.ROOT) + name.substring(1);
     }
+
+    public static boolean isFriend(String name) {
+        if(name == null || name.isBlank()) return false;
+        for(String friend : FriendsManager.friends)
+            if(friend.equalsIgnoreCase(name.trim())) return true;
+        return false;
+    }
 }

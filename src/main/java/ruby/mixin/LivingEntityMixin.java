@@ -6,11 +6,21 @@ import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import ruby.systems.modules.Modules;
+import ruby.systems.modules.combat.Criticals;
 import ruby.systems.modules.player.AutoTool;
 
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityMixin {
+    @Inject(method = "jump", at = @At("TAIL"))
+    private void ruby$critJumpMotion(CallbackInfo ci) {
+        if(!((Object) this instanceof ClientPlayerEntity)) return;
+        Criticals criticals = Modules.getByClass(Criticals.class);
+        if(criticals != null) criticals.onPlayerJump(0.42f);
+    }
+
     @Inject(method = "getMainHandStack", at = @At("RETURN"), cancellable = true)
     private void ruby$spoofMainHandStack(CallbackInfoReturnable<ItemStack> cir) {
         if (!((Object) this instanceof ClientPlayerEntity player)) return;
