@@ -11,6 +11,8 @@ import ruby.systems.bypasses.Bypasses;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EntityTypeListValue;
+import ruby.systems.events.Events;
+import ruby.systems.events.entity.EntityEvents;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 import ruby.systems.social.FriendsManager;
@@ -34,13 +36,17 @@ public class Hitboxes extends Module {
 
     public Hitboxes() {
         super("Hitboxes", "Expands an entity's hitboxes.", ModuleType.COMBAT);
+
+        Events.ENTITY.register(EntityEvents.BEFORE_ATTACK, event -> {
+
+        });
     }
 
     public double getEntityValue(Entity entity) {
         if(!this.enabled()) return 0;
-        if(this.ignoreFriends.value() && entity instanceof PlayerEntity player
-                && FriendsManager.isFriend(player.getGameProfile().name()))
+        if(this.ignoreFriends.value() && entity instanceof PlayerEntity player && FriendsManager.isFriend(player))
             return 0;
+
         if(this.targets.value().contains(entity.getType())) return this.expand.value();
         return 0;
     }

@@ -192,10 +192,9 @@ public class ESP extends Module {
 
     private int baseColor(Entity entity) {
         if (distanceColors.value()) {
-            if (friendOverride.value() && entity instanceof PlayerEntity player
-                    && FriendsManager.isFriend(player.getGameProfile().name())) {
+            if(friendOverride.value() && entity instanceof PlayerEntity player && FriendsManager.isFriend(player))
                 return friendColor.value();
-            }
+
             double dist = Math.sqrt(RubyClient.client.player.squaredDistanceTo(entity));
             float ratio = (float) Math.min(dist / maxDistance.value(), 1.0);
             int r = (int) (255 * ratio);
@@ -203,9 +202,9 @@ public class ESP extends Module {
             return 0xFF000000 | (r << 16) | (g << 8) | 0xFF;
         }
 
-        if (entity instanceof PlayerEntity player && FriendsManager.isFriend(player.getGameProfile().name())) {
+        if(entity instanceof PlayerEntity player && FriendsManager.isFriend(player))
             return friendColor.value();
-        }
+
         if (entity instanceof PlayerEntity) return playersColor.value();
         if (entity instanceof AnimalEntity) return animalsColor.value();
         if (entity instanceof WaterCreatureEntity) return waterColor.value();

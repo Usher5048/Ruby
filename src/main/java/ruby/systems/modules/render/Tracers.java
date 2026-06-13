@@ -8,7 +8,6 @@ import net.minecraft.entity.mob.WaterCreatureEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
 import ruby.RubyClient;
 import ruby.helpers.render.RenderShapes;
 import ruby.helpers.render.Renderer;
@@ -114,8 +113,7 @@ public class Tracers extends Module {
         if ((freecam == null || !freecam.enabled()) && entity == RubyClient.client.player) return true;
         if (!entities.value().contains(entity.getType())) return true;
         if (ignoreSelf.value() && entity == RubyClient.client.player) return true;
-        if (ignoreFriends.value() && entity instanceof PlayerEntity player
-                && FriendsManager.isFriend(player.getGameProfile().name())) return true;
+        if (ignoreFriends.value() && entity instanceof PlayerEntity player && FriendsManager.isFriend(player)) return true;
         if (!showInvis.value() && entity.isInvisible()) return true;
 
         double max = maxDistance.value();
@@ -124,10 +122,9 @@ public class Tracers extends Module {
 
     private int colorFor(Entity entity) {
         if (distanceColors.value()) {
-            if (friendOverride.value() && entity instanceof PlayerEntity player
-                    && FriendsManager.isFriend(player.getGameProfile().name())) {
+            if (friendOverride.value() && entity instanceof PlayerEntity player && FriendsManager.isFriend(player))
                 return friendColor.value();
-            }
+
             double dist = Math.sqrt(RubyClient.client.player.squaredDistanceTo(entity));
             float ratio = (float) Math.min(dist / maxDistance.value(), 1.0);
             int r = (int) (255 * ratio);
@@ -135,9 +132,9 @@ public class Tracers extends Module {
             return 0xFF000000 | (r << 16) | (g << 8) | 0xFF;
         }
 
-        if (entity instanceof PlayerEntity player && FriendsManager.isFriend(player.getGameProfile().name())) {
+        if (entity instanceof PlayerEntity player && FriendsManager.isFriend(player))
             return friendColor.value();
-        }
+
         if (entity instanceof PlayerEntity) return playersColor.value();
         if (entity instanceof AnimalEntity) return animalsColor.value();
         if (entity instanceof WaterCreatureEntity) return waterColor.value();

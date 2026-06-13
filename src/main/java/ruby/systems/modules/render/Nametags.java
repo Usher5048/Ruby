@@ -110,8 +110,7 @@ public class Nametags extends Module {
 
     private RubyNametagRenderer.TagData buildTag(Entity entity) {
         String name = entity.getName().getString();
-        boolean friend = entity instanceof PlayerEntity player
-                && FriendsManager.isFriend(player.getGameProfile().name());
+        boolean friend = entity instanceof PlayerEntity player && FriendsManager.isFriend(player);
 
         Integer health = null;
         if (displayHealth.value() && entity instanceof PlayerEntity player) {
@@ -142,8 +141,7 @@ public class Nametags extends Module {
         boolean firstPerson = RubyClient.client.options.getPerspective().isFirstPerson();
 
         if (ignoreSelf.value() && entity == RubyClient.client.player && !freecamActive && firstPerson) return false;
-        if (ignoreFriends.value() && entity instanceof PlayerEntity player
-                && FriendsManager.isFriend(player.getGameProfile().name())) return false;
+        if (ignoreFriends.value() && entity instanceof PlayerEntity player && FriendsManager.isFriend(player)) return false;
         if (ignoreBots.value() && entity instanceof PlayerEntity player && botFilter.shouldHide(player)) return false;
         return true;
     }

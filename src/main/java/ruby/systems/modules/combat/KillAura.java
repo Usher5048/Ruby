@@ -83,11 +83,6 @@ public class KillAura extends Module {
             .defaultValue(false)
             .build());
 
-    public final EnumValue<RaycastMode> raycast = this.config.create(new EnumValue.Builder<RaycastMode>("Raycast")
-            .description("Which entity raycast validation to use.")
-            .defaultValue(RaycastMode.All)
-            .build());
-
     public final EntityTypeListValue targets = this.config.create(new EntityTypeListValue.Builder("Targets")
             .description("Which types of entities to target.")
             .defaultValue(EntityType.PLAYER)
