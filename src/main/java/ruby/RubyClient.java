@@ -15,9 +15,6 @@ import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ruby.plugins.ModelModifierPlugin;
-import ruby.helpers.RotationManager;
-import ruby.helpers.blink.BlinkManager;
-import ruby.helpers.inventory.InventoryManager;
 import ruby.systems.bypasses.Bypasses;
 import ruby.systems.accounts.AccountsManager;
 import ruby.systems.commands.Commands;
@@ -78,6 +75,7 @@ public class RubyClient implements ModInitializer {
 	public static void notifyUser(String message, boolean actionBar) {
 		RubyClient.notifyUser(Text.of(message), actionBar);
 	}
+
 	public static void notifyUser(Text message, boolean actionBar) {
 		if(RubyClient.client.player == null) return;
 		RubyClient.client.player.sendMessage(
@@ -94,7 +92,6 @@ public class RubyClient implements ModInitializer {
 	public static Identifier identifier(String value) {
 		return Identifier.of(RubyClient.MOD_ID, value);
 	}
-
 	public static void loadClient(LoadingOverlay overlay) {
 		overlay.log("Loaded " + Modules.getModules().size() + " modules");
 		overlay.log("Loaded " + Commands.getCommands().size() + " commands");
@@ -110,9 +107,6 @@ public class RubyClient implements ModInitializer {
 		overlay.log("Attached shutdown hook to runtime");
 
 		Bypasses.get().init();
-		BlinkManager.class.getName();
-		InventoryManager.init();
-		RotationManager.reset();
 		Events.TICK.register(TickEvents.BEGIN, event -> {
 			Bypasses.get().tick();
 			if(RubyClient.openGUIKey.wasPressed())

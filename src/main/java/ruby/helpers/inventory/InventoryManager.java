@@ -29,7 +29,7 @@ public final class InventoryManager {
 
     private InventoryManager() {}
 
-    public static void init() {
+    static {
         Events.TICK.register(TickEvents.END, event -> InventoryManager.tick());
         Events.PACKET.register(PacketEvents.SEND, InventoryManager::onSend);
         Events.PACKET.register(PacketEvents.RECEIVE, InventoryManager::onReceive);

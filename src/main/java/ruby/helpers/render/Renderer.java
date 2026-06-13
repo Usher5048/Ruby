@@ -91,7 +91,6 @@ public class Renderer {
     public static Matrix4f projection() {
         return Renderer.projection;
     }
-
     public static Matrix4f view() {
         return Renderer.position;
     }

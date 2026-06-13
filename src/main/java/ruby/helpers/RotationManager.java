@@ -9,11 +9,11 @@ import ruby.systems.modules.combat.Criticals;
 public final class RotationManager {
     private static final float TURN_SPEED = 180f;
 
-    private static Float currentYaw;
-    private static Float currentPitch;
-    private static Float targetYaw;
-    private static Float targetPitch;
-    private static Entity targetEntity;
+    private static Float currentYaw = null;
+    private static Float currentPitch = null;
+    private static Float targetYaw = null;
+    private static Float targetPitch = null;
+    private static Entity targetEntity = null;
 
     private RotationManager() {}
 
