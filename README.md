@@ -23,7 +23,7 @@ It is designed to avoid unnecessary plugin bloat and feature sprawl, keeping the
 
 # Releases
 
-[![Nightly](https://img.shields.io/github/v/release/Usher5048/Ruby/nightly?include_prereleases&label=nightly)](https://github.com/Usher5048/Ruby/releases/tag/nightly)
+[![Download Nightly](https://img.shields.io/badge/Nightly-Download-5865F2?style=flat-square&logo=github)](https://github.com/Usher5048/Ruby/releases/tag/nightly)
 
 Ruby publishes automated **nightly** builds from the latest `main` branch. Stable releases will be added when the client is ready for general use.
 
