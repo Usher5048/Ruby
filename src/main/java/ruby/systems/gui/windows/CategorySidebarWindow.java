@@ -80,7 +80,7 @@ public class CategorySidebarWindow extends Window {
         int logoY = (HEADER_H - style.logoFont().fontHeight) / 2;
         style.logoFont().draw(context, "Ruby", PAD, logoY, style.ruby());
 
-        String profile = FriendsManager.capitalizeProfileName(ProfileManager.getActiveProfile());
+        String profile = FriendsManager.capitalizeProfileName(ProfileManager.activeProfile());
         int profileW = style.profileFont().getWidth(profile);
         int profileY = (HEADER_H - style.profileFont().fontHeight) / 2;
         style.profileFont().draw(context, profile, w - PAD - profileW, profileY, style.textMuted());

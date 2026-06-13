@@ -1,6 +1,5 @@
 package ruby.systems.gui;
 
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
@@ -12,7 +11,7 @@ import ruby.systems.gui.windows.Window;
 import ruby.systems.gui.windows.WindowedScreen;
 
 public class ClickGUI extends WindowedScreen {
-
+    public static final String PANEL_ID = "ClickGUI";
     private static ClickGuiLayoutWindow sharedLayout;
 
     private float openProgress = 0f;
@@ -84,15 +83,13 @@ public class ClickGUI extends WindowedScreen {
             return true;
         }
         if (super.keyPressed(input)) return true;
-        if (ClickGUI.sharedLayout != null && ClickGUI.sharedLayout.handleSearchKey(input)) return true;
-        return false;
+        return ClickGUI.sharedLayout != null && ClickGUI.sharedLayout.handleSearchKey(input);
     }
 
     @Override
     public boolean charTyped(CharInput input) {
         if (super.charTyped(input)) return true;
-        if (ClickGUI.sharedLayout != null && ClickGUI.sharedLayout.handleSearchChar(input)) return true;
-        return false;
+        return ClickGUI.sharedLayout != null && ClickGUI.sharedLayout.handleSearchChar(input);
     }
 
     @Override

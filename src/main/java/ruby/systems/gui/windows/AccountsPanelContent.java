@@ -7,7 +7,6 @@ import net.minecraft.client.input.KeyInput;
 import net.minecraft.util.Util;
 import org.lwjgl.glfw.GLFW;
 import ruby.systems.accounts.Account;
-import ruby.systems.accounts.AccountType;
 import ruby.systems.accounts.AccountsManager;
 import ruby.systems.accounts.MicrosoftLogin;
 import ruby.systems.accounts.types.CrackedAccount;
@@ -286,7 +285,7 @@ public class AccountsPanelContent extends Window {
             Util.getMainWorkerExecutor().execute(() -> {
                 if (ok) {
                     AccountsManager.markLastUsed(account);
-                    AccountsManager.save();
+//                    AccountsManager.save();
                     this.statusMessage = "Logged in as " + account.getUsername();
                 } else {
                     this.statusMessage = "Login failed";

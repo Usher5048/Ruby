@@ -27,7 +27,6 @@ import ruby.systems.events.Events;
 import ruby.systems.events.Render2DEvent;
 import ruby.systems.events.TickEvents;
 import ruby.systems.gui.ClickGUI;
-import ruby.systems.gui.ThemeManager;
 import ruby.systems.gui.LoadingOverlay;
 import ruby.systems.modules.Modules;
 
@@ -100,13 +99,9 @@ public class RubyClient implements ModInitializer {
 		overlay.log("Loaded " + Commands.getCommands().size() + " commands");
 
 		int configVer = ConfigManager.loadState();
-		if(configVer != ConfigManager.VERSION_ERROR) overlay.log("Loaded client config (v" + configVer + ")");
+		if(configVer != ConfigManager.VERSION_ERROR) overlay.log("Loaded client configs (v" + configVer + ")");
 		else overlay.log("Failed to load client configs, using default!", 0xFF3333);
 
-		ThemeManager.get().load();
-		overlay.log("Loaded theme");
-
-		AccountsManager.load();
 		overlay.log("Loaded " + AccountsManager.getAccounts().size() + " accounts");
 		AccountsManager.loginLast();
 

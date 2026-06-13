@@ -51,7 +51,7 @@ public class ProfilesPanelContent extends Window {
 
     @Override
     public int getHeight() {
-        List<String> profiles = ProfileManager.getProfiles();
+        List<String> profiles = ProfileManager.profiles();
         int h = this.buttonSectionHeight() + profiles.size() * ROW_H;
         this.height = h;
         return h;
@@ -78,8 +78,8 @@ public class ProfilesPanelContent extends Window {
         GUIStyle style = GUIStyle.get();
         int innerR = this.getWidth() - INNER_L;
         int y = 0;
-        List<String> profiles = ProfileManager.getProfiles();
-        String active = ProfileManager.getActiveProfile();
+        List<String> profiles = ProfileManager.profiles();
+        String active = ProfileManager.activeProfile();
 
         if (this.showCreateInput) {
             y = this.drawCreateInput(context, style, innerR, y, mouseX, mouseY);
@@ -203,8 +203,8 @@ public class ProfilesPanelContent extends Window {
     private void submitInput() {
         if (this.inputText.isBlank()) return;
 
-        if (ProfileManager.addProfile(this.inputText)) {
-            ConfigManager.setActiveProfile(ProfileManager.getActiveProfile());
+        if (ProfileManager.importProfile(this.inputText)) {
+//            ConfigManager.setActiveProfile(ProfileManager.getActiveProfile());
             ConfigManager.saveState();
         }
 
@@ -223,7 +223,7 @@ public class ProfilesPanelContent extends Window {
         if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
 
         int innerR = this.getWidth() - INNER_L;
-        List<String> profiles = ProfileManager.getProfiles();
+        List<String> profiles = ProfileManager.profiles();
         int contentR = innerR - PAD;
 
         if (this.showCreateInput) {
@@ -246,7 +246,7 @@ public class ProfilesPanelContent extends Window {
                 return true;
             }
             if (click.x() >= PAD && click.x() < contentR && click.y() >= saveBtnY && click.y() < saveBtnY + BTN_H) {
-                ProfileManager.saveProfile(ProfileManager.getActiveProfile());
+                ProfileManager.saveProfile(ProfileManager.activeProfile());
                 ConfigManager.saveState();
                 this.savedFlash = 1f;
                 return true;
@@ -264,7 +264,7 @@ public class ProfilesPanelContent extends Window {
 
                 if (click.x() >= shareX && click.x() < shareX + SHARE_BTN_W
                         && click.y() >= shareY && click.y() < shareY + BTN_H) {
-                    String code = ProfileManager.exportShareCode(name);
+                    String code = ProfileManager.exportProfile(name);
                     if (code != null) {
                         RubyClient.client.keyboard.setClipboard(code);
                         this.copiedProfile = name;
@@ -277,8 +277,8 @@ public class ProfilesPanelContent extends Window {
                     ProfileManager.deleteProfile(name);
                     ConfigManager.saveState();
                 } else if (click.x() < shareX) {
-                    ProfileManager.switchProfile(name);
-                    ConfigManager.setActiveProfile(name);
+                    ProfileManager.setActiveProfile(name);
+//                    ConfigManager.setActiveProfile(name);
                     ConfigManager.saveState();
                 }
                 return true;

@@ -42,9 +42,10 @@ public class FontRenderer {
     }
 
     public void draw(DrawContext context, String text, int x, int y, int color) {
-        for (char c : text.toCharArray()) {
+        if(text == null) return;
+        for(char c : text.toCharArray()) {
             GlyphSheet.Glyph glyph = this.sheet.glyph(c);
-            if (glyph == null) continue;
+            if(glyph == null) continue;
 
             int drawX = x + glyph.bearingX();
             int drawY = y + glyph.bearingY();
@@ -70,9 +71,8 @@ public class FontRenderer {
     }
 
     public TextBounds measure(String text) {
-        if (text == null || text.isEmpty()) {
+        if(text == null || text.isEmpty())
             return new TextBounds(0, 0, 0, 0);
-        }
 
         int penX = 0;
         int minX = Integer.MAX_VALUE;
@@ -80,7 +80,7 @@ public class FontRenderer {
         int maxX = Integer.MIN_VALUE;
         int maxY = Integer.MIN_VALUE;
 
-        for (int i = 0; i < text.length(); i++) {
+        for(int i = 0; i < text.length(); i++) {
             GlyphSheet.Glyph glyph = this.sheet.glyph(text.charAt(i));
             if (glyph == null) continue;
 
@@ -93,9 +93,8 @@ public class FontRenderer {
             penX += glyph.advanceX();
         }
 
-        if (minX == Integer.MAX_VALUE) {
+        if(minX == Integer.MAX_VALUE)
             return new TextBounds(0, 0, 0, 0);
-        }
 
         return new TextBounds(minX, minY, maxX - minX, maxY - minY);
     }

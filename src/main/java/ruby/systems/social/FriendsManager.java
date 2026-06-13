@@ -23,6 +23,10 @@ public final class FriendsManager {
         }
     }
 
+    public static void clearFriends() {
+        FriendsManager.friends.clear();
+    }
+
     public static boolean addFriend(String name) {
         if (name == null || name.isBlank()) return false;
         String trimmed = name.trim();

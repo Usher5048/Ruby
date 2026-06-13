@@ -3,6 +3,11 @@ package ruby.systems.modules.combat;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+import ruby.RubyClient;
+import ruby.helpers.render.Renderer;
+import ruby.systems.bypasses.Bypasses;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EntityTypeListValue;
@@ -40,29 +45,53 @@ public class Hitboxes extends Module {
         return 0;
     }
 
+    // Testing don't remove
     @Override
     public void render3D() {
-        // Testing don't remove
-//        Renderer.color(0x330000FF);
-//        Renderer.setMode(Renderer.Mode.FILL_ALWAYS_ON_TOP);
-//        Renderer.cuboid(this.position().add(0, 0.9, 0), new Vec3d(0.6, 1.8, 0.6));
-//
-//        Renderer.color(0x0000FF);
-//        Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);
-//        Renderer.cuboid(this.position().add(0, 0.9, 0), new Vec3d(0.6, 1.8, 0.6));
-//
-//        float pitch = this.pitch();
-//        float yaw = this.yaw();
-//        float f = pitch * ((float)Math.PI / 180F);
-//        float g = -yaw * ((float)Math.PI / 180F);
-//        float h = MathHelper.cos(g);
-//        float i = MathHelper.sin(g);
-//        float j = MathHelper.cos(f);
-//        float k = MathHelper.sin(f);
-//        Vec3d dir = new Vec3d(i * j, -k, h * j);
-//
-//        Renderer.color(0xFF0000);
-//        Renderer.line(this.position().add(0, 1.62, 0), this.position().add(0, 1.62, 0)
-//                .add(dir.normalize().multiply(3)));
+        if(RubyClient.client.player == null) return;
+
+        Vec3d serverPos = Bypasses.get().position();
+        Vec3d serverVel = Bypasses.get().velocity();
+        boolean serverGround = Bypasses.get().onGround();
+
+        float pitch = Bypasses.get().pitch();
+        float yaw = Bypasses.get().yaw();
+        float f = pitch * ((float)Math.PI / 180F);
+        float g = -yaw * ((float)Math.PI / 180F);
+        float h = MathHelper.cos(g);
+        float i = MathHelper.sin(g);
+        float j = MathHelper.cos(f);
+        float k = MathHelper.sin(f);
+        Vec3d serverLook = new Vec3d(i * j, -k, h * j);
+
+        float width = RubyClient.client.player.getWidth();
+        float height = RubyClient.client.player.getHeight();
+        float eyeHeight = RubyClient.client.player.getEyeHeight(RubyClient.client.player.getPose());
+
+        Vec3d renderEye = serverPos.add(0, eyeHeight, 0);
+        Vec3d renderPos = serverPos.add(0, height / 2, 0);
+        Vec3d renderSize = new Vec3d(width, height, width);
+
+        Renderer.color(0x330000FF);
+        Renderer.setMode(Renderer.Mode.FILL_ALWAYS_ON_TOP);
+        Renderer.cuboid(renderPos, renderSize);
+
+        if(serverGround) {
+            Renderer.color(0x3300FF00);
+            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
+        }
+
+        Renderer.color(0x0000FF);
+        Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);
+        Renderer.cuboid(renderPos, renderSize);
+        Renderer.line(renderPos, renderPos.add(serverVel));
+
+        Renderer.color(0xFF0000);
+        Renderer.line(renderEye, renderEye.add(serverLook));
+
+        if(serverGround) {
+            Renderer.color(0x00FF00);
+            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
+        }
     }
 }

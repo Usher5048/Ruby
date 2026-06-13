@@ -1,6 +1,9 @@
 package ruby.systems.config;
 
 import ruby.RubyClient;
+import ruby.systems.accounts.AccountStorage;
+import ruby.systems.accounts.AccountsManager;
+import ruby.systems.gui.ThemeManager;
 import ruby.systems.social.FriendsManager;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.Modules;
@@ -13,19 +16,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 public class ConfigManager {
-    private interface ConfigLoader {
-        boolean load(ByteArrayInputStream stream);
-    }
-
     public static final int VERSION_ERROR = -1;
     private static final int VERSION = 3;
-    private static final HashMap<Integer, ConfigLoader> loaders = new HashMap<>();
+    private static final HashMap<Integer, Function<ByteArrayInputStream, Boolean>> loaders = new HashMap<>();
 
-    private static String activeProfile = "default";
+    private static final HashMap<String, int[]> panelPositions = new HashMap<>();
+    public static int[] getPanelPosition(String panelID) {
+        return ConfigManager.panelPositions.get(panelID);
+    }
+    public static void setPanelPosition(String panelID, int x, int y) {
+        ConfigManager.panelPositions.put(panelID, new int[] {x, y});
+    }
 
     static {
         ConfigManager.loaders.put(1, ConfigManager::loadV1);
@@ -33,92 +39,45 @@ public class ConfigManager {
         ConfigManager.loaders.put(3, ConfigManager::loadV3);
     }
 
-    private static final Map<String, int[]> panelPositions = new HashMap<>();
-    private static final String CLICK_GUI_KEY = "clickgui";
-    private static final int[] DEFAULT_CLICK_GUI_POS = {20, 20};
-
-    public static Map<String, int[]> getPanelPositions() {
-        return ConfigManager.panelPositions;
-    }
-
-    public static int[] getClickGuiPosition() {
-        return ConfigManager.panelPositions.getOrDefault(
-                ConfigManager.CLICK_GUI_KEY,
-                ConfigManager.DEFAULT_CLICK_GUI_POS
-        );
-    }
-
-    public static void setClickGuiPosition(int x, int y) {
-        ConfigManager.panelPositions.put(ConfigManager.CLICK_GUI_KEY, new int[] {x, y});
-    }
-
     private static File configFile() {
-        File legacy = new File(RubyClient.client.runDirectory, "config/" + RubyClient.MOD_ID);
-        if (legacy.isFile()) return legacy;
-
-        File modern = new File(legacy, "client.cfg");
-        if (modern.isFile()) return modern;
-
-        if (legacy.isDirectory()) return modern;
-        return legacy;
+        return new File(RubyClient.client.runDirectory, "config/" + RubyClient.MOD_ID);
     }
 
-    private static void ensureConfigParent(File file) {
-        File parent = file.getParentFile();
-        if (parent != null) parent.mkdirs();
-    }
-
-    private static int readShort(ByteArrayInputStream s) {
+    public static int readShort(ByteArrayInputStream s) {
         return (s.read() << 8) | s.read();
     }
-
-    public static int readShortPublic(ByteArrayInputStream s) {
-        return ConfigManager.readShort(s);
-    }
-
-    private static void writeShort(ByteArrayOutputStream s, int v) {
+    public static void writeShort(ByteArrayOutputStream s, int v) {
         s.write((v >> 8) & 0xFF);
         s.write(v & 0xFF);
     }
 
-    public static void writeShortPublic(ByteArrayOutputStream s, int v) {
-        ConfigManager.writeShort(s, v);
-    }
-
-    private static int readInt(ByteArrayInputStream s) {
+    public static int readInt(ByteArrayInputStream s) {
         return (s.read() << 24) |
                 (s.read() << 16) |
                 (s.read() << 8) |
                 s.read();
     }
 
-    public static int readIntPublic(ByteArrayInputStream s) {
-        return ConfigManager.readInt(s);
-    }
-
-    private static void writeInt(ByteArrayOutputStream s, int v) {
+    public static void writeInt(ByteArrayOutputStream s, int v) {
         s.write((v >> 24) & 0xFF);
         s.write((v >> 16) & 0xFF);
         s.write((v >>  8) & 0xFF);
         s.write(v & 0xFF);
     }
 
-    public static void writeIntPublic(ByteArrayOutputStream s, int v) {
-        ConfigManager.writeInt(s, v);
-    }
+    public static void writeString(ByteArrayOutputStream s, String str) {
+        if(str == null) {
+            ConfigManager.writeShort(s, 0);
+            return;
+        }
 
-    private static void writeString(ByteArrayOutputStream s, String str) {
         byte[] bytes = str.getBytes();
 
         ConfigManager.writeShort(s, bytes.length);
         s.writeBytes(bytes);
     }
 
-    public static void writeStringPublic(ByteArrayOutputStream s, String str) {
-        ConfigManager.writeString(s, str);
-    }
-
-    private static String readString(ByteArrayInputStream s) {
+    public static String readString(ByteArrayInputStream s) {
         int len = ConfigManager.readShort(s);
         byte[] bytes = new byte[len];
 
@@ -126,11 +85,7 @@ public class ConfigManager {
         return new String(bytes);
     }
 
-    public static String readStringPublic(ByteArrayInputStream s) {
-        return ConfigManager.readString(s);
-    }
-
-    private static void configToBytes(ByteArrayOutputStream stream, Configuration config) {
+    public static void configToBytes(ByteArrayOutputStream stream, Configuration config) {
         ByteArrayOutputStream valueStream = new ByteArrayOutputStream();
 
         stream.write(config.getAll().size());
@@ -147,24 +102,7 @@ public class ConfigManager {
         }
     }
 
-    public static void configToBytesPublic(ByteArrayOutputStream stream, Configuration config) {
-        ConfigManager.configToBytes(stream, config);
-    }
-
-    public static void bytesToConfigPublic(ByteArrayInputStream stream, Configuration config) {
-        ConfigManager.bytesToConfig(stream, config);
-    }
-
-    public static String getActiveProfile() {
-        return ConfigManager.activeProfile;
-    }
-
-    public static void setActiveProfile(String profile) {
-        ProfileManager.setActiveProfile(profile);
-        ConfigManager.activeProfile = ProfileManager.getActiveProfile();
-    }
-
-    private static void bytesToConfig(ByteArrayInputStream stream, Configuration config) {
+    public static void bytesToConfig(ByteArrayInputStream stream, Configuration config) {
         int count = stream.read();
         for(int i = 0; i < count; i++) {
             String key = ConfigManager.readString(stream);
@@ -179,23 +117,86 @@ public class ConfigManager {
         }
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public static void moduleToBytes(ByteArrayOutputStream stream, Module module) {
+        ConfigManager.writeString(stream, module.name());
+        ConfigManager.writeInt(stream, module.keybind.serialize());
+        ConfigManager.configToBytes(stream, module.config);
+
+        int flags = 0;
+        if(module.enabled())     flags |= 0x01;
+        if(module.showsToasts()) flags |= 0x02;
+
+        stream.write(flags);
+    }
+
+    public static void bytesToModule(ByteArrayInputStream stream) {
+        String name = ConfigManager.readString(stream);
+        Module module = Modules.getByName(name);
+
+        if(module == null) {
+            ConfigManager.readInt(stream);
+            ConfigManager.bytesToConfig(stream, null);
+            int ignored = stream.read();
+            return;
+        }
+
+        module.keybind.deserialize(ConfigManager.readInt(stream));
+        ConfigManager.bytesToConfig(stream, module.config);
+
+        int flags = stream.read();
+        module.setEnabled((flags & 0x01) != 0);
+        module.showsToasts((flags & 0x02) != 0);
+    }
+
     public static void saveState() {
         try {
-            ProfileManager.saveProfile(ProfileManager.getActiveProfile());
-
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            ConfigManager.configToBytes(stream, RubyClient.config);
-            ConfigManager.writeString(stream, ProfileManager.getActiveProfile());
-            ConfigManager.writeShort(stream, FriendsManager.getFriends().size());
-            for (String friend : FriendsManager.getFriends()) {
-                ConfigManager.writeString(stream, friend);
+
+            // Last active account
+            ConfigManager.writeString(stream, AccountsManager.getLastAccount());
+
+            // All logged in accounts
+            List<AccountStorage> accounts = AccountsManager.getStoredAccounts();
+            ConfigManager.writeShort(stream, accounts.size());
+            for(AccountStorage stored : accounts) {
+                ConfigManager.writeString(stream, stored.name);
+                ConfigManager.writeString(stream, stored.type);
+                ConfigManager.writeString(stream, stored.username);
+                ConfigManager.writeString(stream, stored.uuid);
             }
 
-            int[] guiPos = ConfigManager.getClickGuiPosition();
-            ConfigManager.writeInt(stream, guiPos[0]);
-            ConfigManager.writeInt(stream, guiPos[1]);
+            // Friends
+            List<String> friends = FriendsManager.getFriends();
+            ConfigManager.writeShort(stream, friends.size());
+            for(String friend : friends) ConfigManager.writeString(stream, friend);
 
+            // Panel positions
+            ConfigManager.writeShort(stream, ConfigManager.panelPositions.size());
+            for(Map.Entry<String, int[]> entry : ConfigManager.panelPositions.entrySet()) {
+                ConfigManager.writeString(stream, entry.getKey());
+                ConfigManager.writeInt(stream, entry.getValue()[0]);
+                ConfigManager.writeInt(stream, entry.getValue()[1]);
+            }
+
+            // Profiles
+            List<String> profiles = ProfileManager.profiles();
+            ConfigManager.writeShort(stream, profiles.size());
+            for(String name : profiles) {
+                ConfigManager.writeString(stream, name);
+                stream.writeBytes(ProfileManager.profile(name));
+            }
+
+            // Main client configs
+            ConfigManager.configToBytes(stream, RubyClient.config);
+
+            // Current active modules and module keybinds / configs
+            ConfigManager.writeShort(stream, Modules.getModules().size());
+            for(Module module : Modules.getModules()) ConfigManager.moduleToBytes(stream, module);
+
+            // Current active theme
+            ThemeManager.get().writeToProfile(stream);
+
+            // Compress it all
             Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
             deflater.setInput(stream.toByteArray());
             deflater.finish();
@@ -210,15 +211,18 @@ public class ConfigManager {
 
             deflater.end();
 
+            // Prepend the version
             ByteArrayOutputStream finalStream = new ByteArrayOutputStream();
             finalStream.write(ConfigManager.VERSION);
             compressedStream.writeTo(finalStream);
 
+            // Write to file
             File configFile = ConfigManager.configFile();
-            ConfigManager.ensureConfigParent(configFile);
+            Files.createDirectories(configFile.toPath().getParent());
             Files.write(configFile.toPath(), finalStream.toByteArray());
-        } catch (Exception e) {
-            RubyClient.LOGGER.error("Failed to save client config", e);
+        } catch(Exception e) {
+            e.printStackTrace();
+            RubyClient.log("Failed to load client configs! " + e.getMessage());
         }
     }
 
@@ -244,11 +248,11 @@ public class ConfigManager {
 
         int panelCount = ConfigManager.readShort(stream);
         for(int i = 0; i < panelCount; i++) {
-            String panelName = ConfigManager.readString(stream);
+            String panelID = ConfigManager.readString(stream);
             int x = ConfigManager.readInt(stream);
             int y = ConfigManager.readInt(stream);
 
-            ConfigManager.panelPositions.put(panelName, new int[] {x, y});
+            ConfigManager.setPanelPosition(panelID, x, y);
         }
 
         return true;
@@ -275,6 +279,7 @@ public class ConfigManager {
     }
 
     public static boolean loadV3(ByteArrayInputStream stream) {
+        // Decompress
         Inflater inflater = new Inflater();
         inflater.setInput(stream.readAllBytes());
 
@@ -291,27 +296,59 @@ public class ConfigManager {
         inflater.end();
 
         ByteArrayInputStream inner = new ByteArrayInputStream(decompressedStream.toByteArray());
+
+        // Last active account
+        AccountsManager.setLastAccount(ConfigManager.readString(inner));
+        ArrayList<AccountStorage> accounts = new ArrayList<>();
+
+        // All logged in accounts
+        int accountCount = ConfigManager.readShort(inner);
+        for(int i = 0; i < accountCount; i++) {
+            AccountStorage s = new AccountStorage();
+
+            s.name = ConfigManager.readString(inner);
+            s.type = ConfigManager.readString(inner);
+            s.username = ConfigManager.readString(inner);
+            s.uuid = ConfigManager.readString(inner);
+
+            accounts.add(s);
+        }
+
+        AccountsManager.loadStoredAccounts(accounts);
+
+        // Friends
+        FriendsManager.clearFriends();
+        int friendCount = ConfigManager.readShort(inner);
+        for(int i = 0; i < friendCount; i++) FriendsManager.addFriend(ConfigManager.readString(inner));
+
+        ConfigManager.panelPositions.clear();
+
+        // Panel positions
+        int panelCount = ConfigManager.readShort(inner);
+        for(int i = 0; i < panelCount; i++) {
+            String panelID = ConfigManager.readString(inner);
+            int x = ConfigManager.readInt(inner);
+            int y = ConfigManager.readInt(inner);
+
+            ConfigManager.setPanelPosition(panelID, x, y);
+        }
+
+        // Profiles
+        int profileCount = ConfigManager.readShort(inner);
+        for(int i = 0; i < profileCount; i++) {
+            String name = ConfigManager.readString(inner);
+            ProfileManager.loadProfile(inner, name);
+        }
+
+        // Main client configs
         ConfigManager.bytesToConfig(inner, RubyClient.config);
 
-        if (inner.available() <= 0) {
-            ProfileManager.loadProfile("default");
-            return true;
-        }
+        // Current active modules and module keybinds / configs
+        int moduleCount = ConfigManager.readShort(inner);
+        for(int i = 0; i < moduleCount; i++) ConfigManager.bytesToModule(inner);
 
-        ConfigManager.activeProfile = ConfigManager.readString(inner);
-        int friendCount = ConfigManager.readShort(inner);
-        List<String> friends = new ArrayList<>();
-        for (int i = 0; i < friendCount; i++) {
-            friends.add(ConfigManager.readString(inner));
-        }
-        FriendsManager.setFriends(friends);
-        ProfileManager.setActiveProfile(ConfigManager.activeProfile);
-        ProfileManager.refreshProfileList();
-        ProfileManager.loadProfile(ConfigManager.activeProfile);
-
-        if (inner.available() >= 8) {
-            ConfigManager.setClickGuiPosition(ConfigManager.readInt(inner), ConfigManager.readInt(inner));
-        }
+        // Current active theme
+        ThemeManager.get().readFromProfile(inner);
 
         return true;
     }
@@ -319,27 +356,18 @@ public class ConfigManager {
     public static int loadState() {
         try {
             File configFile = ConfigManager.configFile();
-            if (!configFile.exists()) {
-                ProfileManager.refreshProfileList();
-                ProfileManager.loadProfile("default");
-                return ConfigManager.VERSION;
-            }
+            if(!configFile.exists()) return ConfigManager.VERSION_ERROR;
 
             byte[] data = Files.readAllBytes(configFile.toPath());
             ByteArrayInputStream stream = new ByteArrayInputStream(data);
 
             int version = stream.read();
             if(!ConfigManager.loaders.containsKey(version)) return ConfigManager.VERSION_ERROR;
-            if(!ConfigManager.loaders.get(version).load(stream)) return ConfigManager.VERSION_ERROR;
+            if(!ConfigManager.loaders.get(version).apply(stream)) return ConfigManager.VERSION_ERROR;
 
-            if (version <= 2) {
-                ProfileManager.saveProfile("default");
-                ProfileManager.loadProfile("default");
-            }
-
-            ProfileManager.refreshProfileList();
             return version;
         } catch(Exception e) {
+            e.printStackTrace();
             return ConfigManager.VERSION_ERROR;
         }
     }

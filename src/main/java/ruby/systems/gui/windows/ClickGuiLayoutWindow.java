@@ -6,6 +6,7 @@ import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 import org.lwjgl.glfw.GLFW;
 import ruby.systems.config.ConfigManager;
+import ruby.systems.gui.ClickGUI;
 import ruby.systems.gui.ClickGuiSelection;
 import ruby.systems.modules.ModuleType;
 import ruby.systems.modules.Modules;
@@ -30,8 +31,10 @@ public class ClickGuiLayoutWindow extends Window {
         super(0, 0, SIDEBAR_WIDTH + PANEL_GAP + MODULE_PANEL_WIDTH, 400);
         this.draggableBounds = new int[] {0, 0, 0, 0};
 
-        int[] pos = ConfigManager.getClickGuiPosition();
-        this.setPosition(pos[0], pos[1]);
+        this.setPosition(256, 256);
+
+        int[] pos = ConfigManager.getPanelPosition(ClickGUI.PANEL_ID);
+        if(pos != null) this.setPosition(pos[0], pos[1]);
 
         List<ModuleType> categories = new ArrayList<>();
         for (ModuleType type : ModuleType.values()) {
@@ -140,7 +143,7 @@ public class ClickGuiLayoutWindow extends Window {
     }
 
     public void persistPosition() {
-        ConfigManager.setClickGuiPosition(this.getX(), this.getY());
+        ConfigManager.setPanelPosition(ClickGUI.PANEL_ID, this.getX(), this.getY());
     }
 
     @Override

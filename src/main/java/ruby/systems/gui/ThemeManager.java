@@ -1,7 +1,5 @@
 package ruby.systems.gui;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 import ruby.RubyClient;
 import ruby.systems.config.ConfigManager;
@@ -9,16 +7,12 @@ import ruby.systems.config.ConfigManager;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
 public final class ThemeManager {
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-
     private static final int DEFAULT_RUBY = 0xFFA82938;
     private static final int DEFAULT_RUBY_HOVER = 0xFFC23344;
 
@@ -90,45 +84,45 @@ public final class ThemeManager {
     }
 
     public void writeToProfile(ByteArrayOutputStream stream) {
-        ConfigManager.writeIntPublic(stream, this.ruby);
-        ConfigManager.writeIntPublic(stream, this.rubyHover);
-        ConfigManager.writeIntPublic(stream, this.rubyBg);
-        ConfigManager.writeIntPublic(stream, this.rubyActive);
-        ConfigManager.writeIntPublic(stream, this.bgPanel);
-        ConfigManager.writeIntPublic(stream, this.bgBase);
-        ConfigManager.writeIntPublic(stream, this.bgHover);
-        ConfigManager.writeIntPublic(stream, this.bgElevated);
-        ConfigManager.writeIntPublic(stream, this.text);
-        ConfigManager.writeIntPublic(stream, this.textBright);
-        ConfigManager.writeIntPublic(stream, this.textMuted);
-        ConfigManager.writeIntPublic(stream, this.catInactive);
-        ConfigManager.writeIntPublic(stream, this.arrowInactive);
-        ConfigManager.writeIntPublic(stream, this.borderPanel);
-        ConfigManager.writeIntPublic(stream, this.borderSubtle);
-        ConfigManager.writeIntPublic(stream, this.border);
-        ConfigManager.writeIntPublic(stream, this.trackOff);
-        ConfigManager.writeIntPublic(stream, this.overlayDim);
+        ConfigManager.writeInt(stream, this.ruby);
+        ConfigManager.writeInt(stream, this.rubyHover);
+        ConfigManager.writeInt(stream, this.rubyBg);
+        ConfigManager.writeInt(stream, this.rubyActive);
+        ConfigManager.writeInt(stream, this.bgPanel);
+        ConfigManager.writeInt(stream, this.bgBase);
+        ConfigManager.writeInt(stream, this.bgHover);
+        ConfigManager.writeInt(stream, this.bgElevated);
+        ConfigManager.writeInt(stream, this.text);
+        ConfigManager.writeInt(stream, this.textBright);
+        ConfigManager.writeInt(stream, this.textMuted);
+        ConfigManager.writeInt(stream, this.catInactive);
+        ConfigManager.writeInt(stream, this.arrowInactive);
+        ConfigManager.writeInt(stream, this.borderPanel);
+        ConfigManager.writeInt(stream, this.borderSubtle);
+        ConfigManager.writeInt(stream, this.border);
+        ConfigManager.writeInt(stream, this.trackOff);
+        ConfigManager.writeInt(stream, this.overlayDim);
     }
 
     public void readFromProfile(ByteArrayInputStream stream) {
-        this.ruby = ConfigManager.readIntPublic(stream);
-        this.rubyHover = ConfigManager.readIntPublic(stream);
-        this.rubyBg = ConfigManager.readIntPublic(stream);
-        this.rubyActive = ConfigManager.readIntPublic(stream);
-        this.bgPanel = ConfigManager.readIntPublic(stream);
-        this.bgBase = ConfigManager.readIntPublic(stream);
-        this.bgHover = ConfigManager.readIntPublic(stream);
-        this.bgElevated = ConfigManager.readIntPublic(stream);
-        this.text = ConfigManager.readIntPublic(stream);
-        this.textBright = ConfigManager.readIntPublic(stream);
-        this.textMuted = ConfigManager.readIntPublic(stream);
-        this.catInactive = ConfigManager.readIntPublic(stream);
-        this.arrowInactive = ConfigManager.readIntPublic(stream);
-        this.borderPanel = ConfigManager.readIntPublic(stream);
-        this.borderSubtle = ConfigManager.readIntPublic(stream);
-        this.border = ConfigManager.readIntPublic(stream);
-        this.trackOff = ConfigManager.readIntPublic(stream);
-        this.overlayDim = ConfigManager.readIntPublic(stream);
+        this.ruby = ConfigManager.readInt(stream);
+        this.rubyHover = ConfigManager.readInt(stream);
+        this.rubyBg = ConfigManager.readInt(stream);
+        this.rubyActive = ConfigManager.readInt(stream);
+        this.bgPanel = ConfigManager.readInt(stream);
+        this.bgBase = ConfigManager.readInt(stream);
+        this.bgHover = ConfigManager.readInt(stream);
+        this.bgElevated = ConfigManager.readInt(stream);
+        this.text = ConfigManager.readInt(stream);
+        this.textBright = ConfigManager.readInt(stream);
+        this.textMuted = ConfigManager.readInt(stream);
+        this.catInactive = ConfigManager.readInt(stream);
+        this.arrowInactive = ConfigManager.readInt(stream);
+        this.borderPanel = ConfigManager.readInt(stream);
+        this.borderSubtle = ConfigManager.readInt(stream);
+        this.border = ConfigManager.readInt(stream);
+        this.trackOff = ConfigManager.readInt(stream);
+        this.overlayDim = ConfigManager.readInt(stream);
         this.pendingApply = true;
     }
 
@@ -153,76 +147,6 @@ public final class ThemeManager {
         this.trackOff = defaults.trackOff();
         this.overlayDim = defaults.overlayDim();
         this.apply();
-        this.save();
-    }
-
-    public void load() {
-        File file = this.themeFile();
-        if (!file.isFile()) {
-            this.pendingApply = true;
-            return;
-        }
-
-        try (FileReader reader = new FileReader(file)) {
-            ThemeData data = ThemeManager.GSON.fromJson(reader, ThemeData.class);
-            if (data == null) {
-                this.pendingApply = true;
-                return;
-            }
-            if (data.ruby != null) this.ruby = data.ruby;
-            if (data.rubyHover != null) this.rubyHover = data.rubyHover;
-            if (data.rubyBg != null) this.rubyBg = data.rubyBg;
-            if (data.rubyActive != null) this.rubyActive = data.rubyActive;
-            if (data.bgPanel != null) this.bgPanel = data.bgPanel;
-            if (data.bgBase != null) this.bgBase = data.bgBase;
-            if (data.bgHover != null) this.bgHover = data.bgHover;
-            if (data.bgElevated != null) this.bgElevated = data.bgElevated;
-            if (data.text != null) this.text = data.text;
-            if (data.textBright != null) this.textBright = data.textBright;
-            if (data.textMuted != null) this.textMuted = data.textMuted;
-            if (data.catInactive != null) this.catInactive = data.catInactive;
-            if (data.arrowInactive != null) this.arrowInactive = data.arrowInactive;
-            if (data.borderPanel != null) this.borderPanel = data.borderPanel;
-            if (data.borderSubtle != null) this.borderSubtle = data.borderSubtle;
-            if (data.border != null) this.border = data.border;
-            if (data.trackOff != null) this.trackOff = data.trackOff;
-            if (data.overlayDim != null) this.overlayDim = data.overlayDim;
-        } catch (Exception e) {
-            RubyClient.LOGGER.error("Failed to load theme", e);
-        }
-
-        this.pendingApply = true;
-    }
-
-    public void save() {
-        File file = this.themeFile();
-        file.getParentFile().mkdirs();
-
-        ThemeData data = new ThemeData();
-        data.ruby = this.ruby;
-        data.rubyHover = this.rubyHover;
-        data.rubyBg = this.rubyBg;
-        data.rubyActive = this.rubyActive;
-        data.bgPanel = this.bgPanel;
-        data.bgBase = this.bgBase;
-        data.bgHover = this.bgHover;
-        data.bgElevated = this.bgElevated;
-        data.text = this.text;
-        data.textBright = this.textBright;
-        data.textMuted = this.textMuted;
-        data.catInactive = this.catInactive;
-        data.arrowInactive = this.arrowInactive;
-        data.borderPanel = this.borderPanel;
-        data.borderSubtle = this.borderSubtle;
-        data.border = this.border;
-        data.trackOff = this.trackOff;
-        data.overlayDim = this.overlayDim;
-
-        try (FileWriter writer = new FileWriter(file)) {
-            ThemeManager.GSON.toJson(data, writer);
-        } catch (Exception e) {
-            RubyClient.LOGGER.error("Failed to save theme", e);
-        }
     }
 
     private File themeFile() {
@@ -232,7 +156,6 @@ public final class ThemeManager {
     public void setColor(ThemeColor color, int value) {
         color.setter().accept(value);
         this.apply();
-        this.save();
     }
 
     public record ThemeColor(String name, IntSupplier getter, IntConsumer setter, int defaultValue) {
