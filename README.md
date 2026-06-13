@@ -21,9 +21,23 @@
 Ruby is a streamlined Minecraft utility client focused on clean architecture and practical functionality.
 It is designed to avoid unnecessary plugin bloat and feature sprawl, keeping the core tight and efficient.
 
-## Releases
+# Releases
 
-Releases will be published and available when Ruby is in a consumer-able state, as of now there will be no builds publicly available on the repository. If you wish to contribute or toy with Ruby as of now you will have to build from source.
+[![Nightly](https://img.shields.io/github/v/release/Usher5048/Ruby/nightly?include_prereleases&label=nightly)](https://github.com/Usher5048/Ruby/releases/tag/nightly)
+
+Ruby publishes automated **nightly** builds from the latest `main` branch. Stable releases will be added when the client is ready for general use.
+
+## Nightly builds
+
+Nightlies are bleeding-edge builds intended for testing and early feedback. They may be unstable, incomplete, or change without notice.
+
+| | |
+|---|---|
+| **Download** | [github.com/Usher5048/Ruby/releases/tag/nightly](https://github.com/Usher5048/Ruby/releases/tag/nightly) |
+| **Minecraft** | 1.21.11 |
+| **Loader** | Fabric 0.18.4 |
+| **Schedule** | Daily at 06:00 UTC |
+| **Tag** | `nightly` (updated in place, always points to the latest nightly) |
 
 ## Building
 
