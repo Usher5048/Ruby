@@ -124,7 +124,7 @@ public class ProfileManager {
             try {
                 int count = inflater.inflate(buf);
                 decompressed.write(buf, 0, count);
-            } catch(Exception ignored) { return false; }
+            } catch(Exception ignored) { return true; }
         }
 
         inflater.end();

@@ -203,10 +203,8 @@ public class ProfilesPanelContent extends Window {
     private void submitInput() {
         if (this.inputText.isBlank()) return;
 
-        if (ProfileManager.importProfile(this.inputText)) {
-//            ConfigManager.setActiveProfile(ProfileManager.getActiveProfile());
-            ConfigManager.saveState();
-        }
+        if(!ProfileManager.importProfile(this.inputText))
+            ProfileManager.createProfile(this.inputText);
 
         this.inputText = "";
         this.showCreateInput = false;
