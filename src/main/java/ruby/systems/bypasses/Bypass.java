@@ -75,6 +75,7 @@ public class Bypass {
                             move.getZ(0)
                     );
 
+                    if(this.lastServerPosition == null) this.lastServerPosition = this.serverPosition;
                     this.serverVelocity = this.serverPosition.subtract(this.lastServerPosition);
                 }
             }
