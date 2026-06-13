@@ -17,6 +17,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ruby.helpers.render.Renderer;
 import ruby.systems.events.Events;
+import ruby.systems.modules.Modules;
+import ruby.systems.modules.render.Freecam;
 
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
@@ -58,5 +60,13 @@ public abstract class GameRendererMixin {
         Events.RENDER3D.fire(Events.GenericEvent.get());
         Renderer.end(matrixStack);
         RenderSystem.getModelViewStack().popMatrix();
+    }
+
+    @Inject(method = "renderHand", at = @At("HEAD"), cancellable = true)
+    private void ruby$freecamHands(float tickDelta, boolean sleeping, org.joml.Matrix4f matrix, CallbackInfo ci) {
+        Freecam freecam = Modules.getByClass(Freecam.class);
+        if (freecam != null && freecam.enabled() && !freecam.renderHands()) {
+            ci.cancel();
+        }
     }
 }

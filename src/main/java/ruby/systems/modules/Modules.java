@@ -30,10 +30,12 @@ public class Modules {
         Modules.modules.add(new AutoPot());
         Modules.modules.add(new AutoTotem());
         Modules.modules.add(new Criticals());
+        Modules.modules.add(new FakeLag());
         Modules.modules.add(new Hitboxes());
         Modules.modules.add(new KillAura());
         Modules.modules.add(new Reach());
         Modules.modules.add(new ShieldBreaker());
+        Modules.modules.add(new Velocity());
 
         // Exploit
         Modules.modules.add(new ClickTP());
@@ -58,6 +60,8 @@ public class Modules {
         Modules.modules.add(new Jesus());
         Modules.modules.add(new LongJump());
         Modules.modules.add(new NoFall());
+        Modules.modules.add(new NoJumpDelay());
+        Modules.modules.add(new NoPush());
         Modules.modules.add(new NoSlow());
         Modules.modules.add(new Parkour());
         Modules.modules.add(new SafeWalk());
@@ -67,29 +71,41 @@ public class Modules {
         Modules.modules.add(new Sprint());
         Modules.modules.add(new Step());
         Modules.modules.add(new TridentBoost());
-        Modules.modules.add(new Velocity());
 
         // Player
         Modules.modules.add(new AutoEat());
         Modules.modules.add(new AutoRespawn());
         Modules.modules.add(new AutoTool());
+        Modules.modules.add(new BreakDelay());
         Modules.modules.add(new ChestSwap());
+        Modules.modules.add(new ExpThrower());
         Modules.modules.add(new FastPlace());
         Modules.modules.add(new InventoryTweaks());
         Modules.modules.add(new Portals());
+        Modules.modules.add(new SpeedMine());
 
         // Render
         Modules.modules.add(new ActiveModules());
+        Modules.modules.add(new BlockESP());
+        Modules.modules.add(new ESP());
+        Modules.modules.add(new Freecam());
+        Modules.modules.add(new FreeLook());
         Modules.modules.add(new Fullbright());
         Modules.modules.add(new Hud());
+        Modules.modules.add(new LogoutSpots());
+        Modules.modules.add(new Nametags());
+        Modules.modules.add(new StorageESP());
         Modules.modules.add(new TextureTweaks());
+        Modules.modules.add(new Trajectories());
+        Modules.modules.add(new Tracers());
+        Modules.modules.add(new Xray());
         Modules.modules.add(new Zoom());
 
         // World
+        Modules.modules.add(new AirPlace());
         Modules.modules.add(new Nuker());
         Modules.modules.add(new Extinguish());
         Modules.modules.add(new Scaffold());
-        Modules.modules.add(new SpeedMine());
         Modules.modules.add(new Timer());
     }
 

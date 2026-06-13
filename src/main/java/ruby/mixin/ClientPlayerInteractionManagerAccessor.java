@@ -25,4 +25,10 @@ public interface ClientPlayerInteractionManagerAccessor {
 
     @Accessor("currentBreakingPos")
     BlockPos ruby$getBreakingPos();
+
+    @Accessor("blockBreakingCooldown")
+    int ruby$getBlockBreakingCooldown();
+
+    @Accessor("blockBreakingCooldown")
+    void ruby$setBlockBreakingCooldown(int cooldown);
 }

@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ruby.plugins.ModelModifierPlugin;
 import ruby.helpers.RotationManager;
+import ruby.helpers.blink.BlinkManager;
 import ruby.helpers.inventory.InventoryManager;
 import ruby.systems.bypasses.Bypasses;
 import ruby.systems.accounts.AccountsManager;
@@ -109,6 +110,7 @@ public class RubyClient implements ModInitializer {
 		overlay.log("Attached shutdown hook to runtime");
 
 		Bypasses.get().init();
+		BlinkManager.class.getName();
 		InventoryManager.init();
 		RotationManager.reset();
 		Events.TICK.register(TickEvents.BEGIN, event -> {
@@ -126,8 +128,6 @@ public class RubyClient implements ModInitializer {
 		);
 
 		overlay.log("Registered 2D rendering event");
-
-//		try { Thread.sleep(5000); } catch(Exception ignored) {}
 	}
 
 	@Override
@@ -135,4 +135,3 @@ public class RubyClient implements ModInitializer {
 		ModelLoadingPlugin.register(new ModelModifierPlugin());
 	}
 }
-

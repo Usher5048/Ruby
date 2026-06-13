@@ -1,0 +1,68 @@
+# Builds the latest main branch once per day and publishes a pre-release
+# under the moving "nightly" tag on GitHub Releases.
+
+name: nightly
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+jobs:
+  nightly:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup jdk
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: setup gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: build nightly jar
+        env:
+          BASE_VERSION: 1.0+1.21.11-fabric
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          NIGHTLY_VERSION="${BASE_VERSION}-nightly.${GITHUB_RUN_NUMBER}.${SHORT_SHA}"
+          echo "NIGHTLY_VERSION=${NIGHTLY_VERSION}" >> "${GITHUB_ENV}"
+          ./gradlew build --no-daemon -Pmod_version="${NIGHTLY_VERSION}"
+
+      - name: resolve release jar
+        run: |
+          JAR_PATH="$(find build/libs -maxdepth 1 -name 'ruby-*.jar' ! -name '*-sources.jar' -print -quit)"
+          if [ -z "${JAR_PATH}" ]; then
+            echo "No remapped jar found in build/libs"
+            exit 1
+          fi
+          echo "RELEASE_JAR=${JAR_PATH}" >> "${GITHUB_ENV}"
+
+      - name: publish nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly (${{ env.NIGHTLY_VERSION }})
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          generate_release_notes: true
+          body: |
+            Automated nightly build from [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}).
+
+            **Version:** `${{ env.NIGHTLY_VERSION }}`
+            **Workflow run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          files: ${{ env.RELEASE_JAR }}

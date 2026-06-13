@@ -34,13 +34,22 @@ public record GUIStyle(
 ) {
     public static final int RUBY = 0xFFA82938;
     public static final int RUBY_HOVER = 0xFFC23344;
+    public static final int TEXT_BRIGHT = 0xFFD4D0D1;
+    public static final int BG_ELEVATED = 0xFF0E0C0D;
 
     public static final int RADIUS_PANEL = 8;
     public static final int RADIUS_ROW = 6;
     public static final int RADIUS_BADGE = 3;
     public static final int RADIUS_PILL = 7;
 
-    public static GUIStyle DEFAULT = createDefault();
+    private static final class DefaultHolder {
+        static final GUIStyle VALUE = createDefault();
+    }
+
+    /** Lazily loaded; avoids font IO during module static init. */
+    public static GUIStyle defaultStyle() {
+        return DefaultHolder.VALUE;
+    }
 
     private static GUIStyle createDefault() {
         FontRenderer logo = FontRenderer.create(
@@ -78,11 +87,12 @@ public record GUIStyle(
         );
     }
 
-    private static GUIStyle current = GUIStyle.DEFAULT;
+    private static GUIStyle current;
 
     public static GUIStyle get() {
         ThemeManager.get().applyIfNeeded();
-        return GUIStyle.current;
+        if (current == null) current = defaultStyle();
+        return current;
     }
 
     public static GUIStyle set(GUIStyle style) {

@@ -5,12 +5,7 @@ import org.joml.Matrix3x2fStack;
 import ruby.systems.gui.text.FontRenderer;
 
 /**
- * HUD draw helpers modeled on Meteor Client's {@code HudRenderer} text/quad API.
- * <p>
- * Meteor batches colored quads before text so outlines and backgrounds sit behind labels.
- * This class draws quads before text per call site to match that visual result on {@link DrawContext}.
- *
- * @see <a href="https://github.com/MeteorDevelopment/meteor-client/blob/master/src/main/java/meteordevelopment/meteorclient/systems/hud/HudRenderer.java">HudRenderer.java</a>
+ * HUD draw helpers for quads, lines, and 2D ESP boxes on {@link DrawContext}.
  */
 public final class HudRenderer {
     public static final HudRenderer INSTANCE = new HudRenderer();
@@ -23,6 +18,10 @@ public final class HudRenderer {
 
     private HudRenderer() {}
 
+    public void begin(DrawContext context) {
+        this.context = context;
+    }
+
     public void begin(DrawContext context, FontRenderer font, double delta) {
         this.context = context;
         this.font = font;
@@ -31,6 +30,65 @@ public final class HudRenderer {
 
     public void quad(double x, double y, double width, double height, int color) {
         this.quad(x, y, width, height, color, color, color, color);
+    }
+
+    public void line(double x1, double y1, double x2, double y2, int color) {
+        if (Math.abs(y1 - y2) < 0.001) {
+            this.hLine(x1, x2, y1, color);
+        } else if (Math.abs(x1 - x2) < 0.001) {
+            this.vLine(x1, y1, y2, color);
+        } else {
+            this.hLine(x1, x2, y1, color);
+            this.hLine(x1, x2, y2, color);
+            this.vLine(x1, y1, y2, color);
+            this.vLine(x2, y1, y2, color);
+        }
+    }
+
+    public void hLine(double x1, double x2, double y, int color) {
+        if (x2 < x1) {
+            double t = x1;
+            x1 = x2;
+            x2 = t;
+        }
+        int iy = (int) Math.floor(y);
+        this.context.fill((int) Math.floor(x1), iy, (int) Math.ceil(x2), iy + 1, color);
+    }
+
+    public void vLine(double x, double y1, double y2, int color) {
+        if (y2 < y1) {
+            double t = y1;
+            y1 = y2;
+            y2 = t;
+        }
+        int ix = (int) Math.floor(x);
+        this.context.fill(ix, (int) Math.floor(y1), ix + 1, (int) Math.ceil(y2), color);
+    }
+
+    public void boxOutline(double x1, double y1, double x2, double y2, int color) {
+        this.line(x1, y1, x2, y1, color);
+        this.line(x2, y1, x2, y2, color);
+        this.line(x2, y2, x1, y2, color);
+        this.line(x1, y2, x1, y1, color);
+    }
+
+    /** Corner-bracket box (maximize-window style). */
+    public void cornerBox(double x1, double y1, double x2, double y2, int color, double cornerScale) {
+        double w = x2 - x1;
+        double h = y2 - y1;
+        if (w <= 0 || h <= 0) return;
+
+        double cx = Math.max(2, w * cornerScale);
+        double cy = Math.max(2, h * cornerScale);
+
+        this.line(x1, y1, x1 + cx, y1, color);
+        this.line(x1, y1, x1, y1 + cy, color);
+        this.line(x2, y1, x2 - cx, y1, color);
+        this.line(x2, y1, x2, y1 + cy, color);
+        this.line(x1, y2, x1 + cx, y2, color);
+        this.line(x1, y2, x1, y2 - cy, color);
+        this.line(x2, y2, x2 - cx, y2, color);
+        this.line(x2, y2, x2, y2 - cy, color);
     }
 
     /**

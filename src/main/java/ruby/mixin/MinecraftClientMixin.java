@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ruby.helpers.RotationManager;
 import ruby.systems.events.Events;
 import ruby.systems.events.TickEvents;
+import ruby.systems.events.client.UseCooldownEvent;
 import ruby.systems.modules.Modules;
 import ruby.systems.modules.combat.KillAura;
 
@@ -30,5 +31,13 @@ public class MinecraftClientMixin {
         KillAura killAura = Modules.getByClass(KillAura.class);
         if(breaking && killAura != null && killAura.enabled() && RotationManager.hasRotation())
             ci.cancel();
+    }
+
+    @Inject(method = "doItemUse", at = @At("TAIL"))
+    private void ruby$useCooldownEvent(CallbackInfo ci) {
+        MinecraftClient client = (MinecraftClient) (Object) this;
+        UseCooldownEvent event = new UseCooldownEvent(((MinecraftClientAccessor) client).ruby$getItemUseCooldown());
+        Events.USE_COOLDOWN.fire(event);
+        ((MinecraftClientAccessor) client).ruby$setItemUseCooldown(event.cooldown());
     }
 }

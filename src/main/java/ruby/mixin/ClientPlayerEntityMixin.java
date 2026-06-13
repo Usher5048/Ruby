@@ -11,6 +11,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ruby.helpers.RotationManager;
 import ruby.systems.modules.combat.Criticals;
 import ruby.systems.modules.combat.KillAura;
+import ruby.systems.modules.movement.NoPush;
+import ruby.systems.modules.render.Freecam;
 
 @Mixin(ClientPlayerEntity.class)
 public abstract class ClientPlayerEntityMixin {
@@ -113,5 +115,21 @@ public abstract class ClientPlayerEntityMixin {
         ClientPlayerEntity player = (ClientPlayerEntity) (Object) this;
         if(!RotationManager.shouldSprint(player.input.playerInput))
             cir.setReturnValue(true);
+    }
+
+    @Inject(method = "pushOutOfBlocks", at = @At("HEAD"), cancellable = true)
+    private void ruby$noBlockPush(double x, double z, CallbackInfo ci) {
+        if (!NoPush.canPush(NoPush.PushBy.Blocks)) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "tickMovement", at = @At("HEAD"))
+    private void ruby$freecamSneak(CallbackInfo ci) {
+        Freecam freecam = ruby.systems.modules.Modules.getByClass(Freecam.class);
+        if (freecam != null && freecam.staySneaking()) {
+            ClientPlayerEntity player = (ClientPlayerEntity) (Object) this;
+            player.setSneaking(true);
+        }
     }
 }

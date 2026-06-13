@@ -5,13 +5,24 @@ import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.item.MaceItem;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.Vec3d;
 import ruby.mixin.ClientPlayerInteractionManagerAccessor;
 import ruby.systems.config.BooleanValue;
+import ruby.systems.config.EnumValue;
+import ruby.systems.config.IntegerValue;
+import ruby.systems.events.Events;
+import ruby.systems.events.entity.EntityEvents;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -20,6 +31,8 @@ import ruby.systems.modules.ModuleType;
  * Uses the best hotbar tool for mining while rendering the player's chosen slot.
  */
 public class AutoTool extends Module {
+    public enum PreferredWeapon { Sword, Axe, Mace, Any }
+
     public static AutoTool INSTANCE;
 
     private static final int SLOT_SPACING = 20;
@@ -52,6 +65,14 @@ public class AutoTool extends Module {
     }
 
     private final BooleanValue antiBreak;
+    private final BooleanValue autoWeapon;
+    private final EnumValue<PreferredWeapon> preferredWeapon;
+    private final BooleanValue autoShieldBreak;
+    private final BooleanValue autoMace;
+    private final IntegerValue switchBack;
+
+    private int weaponRestoreSlot = -1;
+    private int weaponRestoreTicks;
 
     /** Real hotbar slot used for mining and server packets. */
     public static int miningSlot = -1;
@@ -68,6 +89,34 @@ public class AutoTool extends Module {
                 .description("Stops using tools that are about to break.")
                 .defaultValue(true)
                 .build());
+        autoWeapon = config.create(new BooleanValue.Builder("Auto Weapon")
+                .description("Automatically selects the best weapon when attacking.")
+                .defaultValue(true)
+                .build());
+        preferredWeapon = config.create(new EnumValue.Builder<PreferredWeapon>("Preferred")
+                .description("Preferred weapon type when no special case applies.")
+                .defaultValue(PreferredWeapon.Sword)
+                .build());
+        autoShieldBreak = config.create(new BooleanValue.Builder("Auto Shield Break")
+                .description("Prefer an axe against blocking shields.")
+                .defaultValue(true)
+                .build());
+        autoMace = config.create(new BooleanValue.Builder("Auto Mace")
+                .description("Prefer a mace when a smash attack is available.")
+                .defaultValue(true)
+                .build());
+        switchBack = config.create(new IntegerValue.Builder("Switch Back")
+                .description("Ticks until the previous slot is restored after attacking.")
+                .range(1, 300)
+                .defaultValue(10)
+                .build());
+
+        Events.ENTITY.register(EntityEvents.BEFORE_ATTACK, event -> {
+            if (!this.enabled() || !this.autoWeapon.value()) return;
+            if (!(event.entity() instanceof LivingEntity target)) return;
+            if (isWeaponBusy()) return;
+            this.selectWeaponOnAttack(target);
+        });
     }
 
     public static boolean shouldUseMiningSlot() {
@@ -98,11 +147,113 @@ public class AutoTool extends Module {
         }
     }
 
+    private boolean isWeaponBusy() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        ClientPlayerEntity player = mc.player;
+        if (player == null) return true;
+        return player.isUsingItem() && !player.getActiveItem().isEmpty();
+    }
+
+    private void selectWeaponOnAttack(LivingEntity target) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        ClientPlayerEntity player = mc.player;
+        if (player == null) return;
+
+        int weaponSlot = determineWeaponSlot(target);
+        if (weaponSlot < 0) return;
+
+        int currentSlot = player.getInventory().getSelectedSlot();
+        if (currentSlot == weaponSlot) return;
+
+        if (weaponRestoreSlot < 0) {
+            weaponRestoreSlot = currentSlot;
+        }
+
+        weaponRestoreTicks = switchBack.value();
+        AutoToolServerSlot.applyMiningSlot(player, weaponSlot);
+    }
+
+    private int determineWeaponSlot(LivingEntity target) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        ClientPlayerEntity player = mc.player;
+        if (player == null) return -1;
+
+        boolean requiresShield = autoShieldBreak.value() && wouldBlockHit(target);
+        boolean requiresMace = autoMace.value() && canMaceSmash(player);
+
+        int preferredSlot = -1;
+
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = player.getInventory().getStack(i);
+            if (stack.isEmpty()) continue;
+
+            if (requiresMace && stack.getItem() instanceof MaceItem) return i;
+            if (requiresShield && stack.isIn(ItemTags.AXES)) return i;
+
+            if (matchesPreferred(stack)) preferredSlot = i;
+        }
+
+        return preferredSlot;
+    }
+
+    private boolean matchesPreferred(ItemStack stack) {
+        return switch (preferredWeapon.value()) {
+            case Sword -> stack.isIn(ItemTags.SWORDS);
+            case Axe -> stack.isIn(ItemTags.AXES);
+            case Mace -> stack.isOf(Items.MACE);
+            case Any -> stack.isIn(ItemTags.SWORDS) || stack.isIn(ItemTags.AXES) || stack.isOf(Items.MACE);
+        };
+    }
+
+    private static boolean canMaceSmash(ClientPlayerEntity player) {
+        return MaceItem.shouldDealAdditionalDamage(player);
+    }
+
+    private static boolean wouldBlockHit(LivingEntity target) {
+        if (!(target instanceof PlayerEntity player)) return false;
+        if (!player.isUsingItem() || !player.getActiveItem().isOf(Items.SHIELD)) return false;
+
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null) return false;
+
+        Vec3d look = player.getRotationVector(player.getPitch(), player.getBodyYaw());
+        Vec3d distVec = mc.player.getEntityPos().subtract(player.getEntityPos()).normalize();
+        return look.dotProduct(distVec) > 0;
+    }
+
+    private void tickWeaponRestore() {
+        if (weaponRestoreTicks <= 0 || weaponRestoreSlot < 0) return;
+
+        weaponRestoreTicks--;
+        if (weaponRestoreTicks > 0) return;
+
+        MinecraftClient mc = MinecraftClient.getInstance();
+        ClientPlayerEntity player = mc.player;
+        if (player != null) {
+            AutoToolServerSlot.restoreVisualSlot(player, weaponRestoreSlot);
+        }
+        weaponRestoreSlot = -1;
+    }
+
+    private void clearWeaponState() {
+        if (weaponRestoreSlot >= 0) {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            ClientPlayerEntity player = mc.player;
+            if (player != null) {
+                AutoToolServerSlot.restoreVisualSlot(player, weaponRestoreSlot);
+            }
+        }
+        weaponRestoreSlot = -1;
+        weaponRestoreTicks = 0;
+    }
+
     @Override
     public void tick() {
         MinecraftClient mc = MinecraftClient.getInstance();
         ClientPlayerEntity player = mc.player;
         if (player == null || mc.world == null) return;
+
+        tickWeaponRestore();
         if (mc.currentScreen != null) return;
 
         if (!silentSwapped) {
@@ -173,6 +324,7 @@ public class AutoTool extends Module {
     @Override
     public void onDisable() {
         clearMiningState();
+        clearWeaponState();
     }
 
     public static final class AutoToolServerSlot {
