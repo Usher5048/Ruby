@@ -3,8 +3,7 @@ package ruby.systems.modules;
 import net.minecraft.text.Text;
 import ruby.RubyClient;
 import ruby.systems.config.Configuration;
-import ruby.systems.events.render.Render2DEvent;
-import ruby.systems.events.render.Render3DEvent;
+import ruby.systems.events.Render2DEvent;
 
 public abstract class Module {
     private final String name;
@@ -96,5 +95,5 @@ public abstract class Module {
     public void onEnable() {}
     public void onDisable() {}
     public void render2D(Render2DEvent event) {}
-    public void render3D(Render3DEvent event) {}
+    public void render3D() {}
 }

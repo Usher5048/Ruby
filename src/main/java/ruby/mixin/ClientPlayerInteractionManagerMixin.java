@@ -15,7 +15,13 @@ import ruby.systems.events.entity.EntityEvents;
 public abstract class ClientPlayerInteractionManagerMixin {
     @Inject(method = "attackEntity", at = @At("HEAD"), cancellable = true)
     private void ruby$onBeforeAttack(PlayerEntity player, Entity target, CallbackInfo info) {
-        if(Events.ENTITY.fire(EntityEvents.ATTACK, new EntityEvent(target)))
+        if(Events.ENTITY.fire(EntityEvents.BEFORE_ATTACK, new EntityEvent(target)))
+            info.cancel();
+    }
+
+    @Inject(method = "attackEntity", at = @At("TAIL"), cancellable = true)
+    private void ruby$onAfterAttack(PlayerEntity player, Entity target, CallbackInfo info) {
+        if(Events.ENTITY.fire(EntityEvents.AFTER_ATTACK, new EntityEvent(target)))
             info.cancel();
     }
 }

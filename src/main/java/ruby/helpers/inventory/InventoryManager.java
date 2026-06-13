@@ -12,7 +12,7 @@ import ruby.helpers.InventoryHelper;
 import ruby.systems.events.Events;
 import ruby.systems.events.packet.PacketEvent;
 import ruby.systems.events.packet.PacketEvents;
-import ruby.systems.events.tick.TickEvents;
+import ruby.systems.events.TickEvents;
 
 import java.util.ArrayList;
 import java.util.Comparator;

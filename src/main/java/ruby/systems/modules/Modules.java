@@ -2,9 +2,8 @@ package ruby.systems.modules;
 
 import ruby.RubyClient;
 import ruby.systems.events.Events;
-import ruby.systems.events.render.Render2DEvent;
-import ruby.systems.events.render.Render3DEvent;
-import ruby.systems.events.tick.TickEvents;
+import ruby.systems.events.Render2DEvent;
+import ruby.systems.events.TickEvents;
 import ruby.systems.modules.combat.*;
 import ruby.systems.modules.exploit.*;
 import ruby.systems.modules.misc.*;
@@ -188,7 +187,7 @@ public class Modules {
         else Modules.disableSilently(module);
     }
 
-    public static void tick(Events.GenericEvent event) {
+    public static void tick(Events.GenericEvent e) {
         for(Module module : modules) {
             if(module.keybind.isUnbound()) continue;
             if(module.keybind.isPressed()) Modules.toggle(module);
@@ -213,9 +212,9 @@ public class Modules {
         event.getContext().getMatrices().popMatrix();
     }
 
-    public static void render3D(Render3DEvent event) {
+    public static void render3D(Events.GenericEvent e) {
         for(Module module : Modules.activeModules)
-            module.render3D(event);
+            module.render3D();
     }
 }
 

@@ -9,6 +9,7 @@ import net.minecraft.network.packet.s2c.play.PlayerRotationS2CPacket;
 import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.util.math.Vec3d;
 import ruby.RubyClient;
+
 public class Bypass {
     protected ClientConnection connection;
     private boolean serverOnGround;
@@ -28,46 +29,34 @@ public class Bypass {
 
     public void tick() {}
 
-    protected Vec3d position() {
+    public Vec3d position() {
         return this.serverPosition != null ? this.serverPosition : Vec3d.ZERO;
     }
-
-    protected Vec3d lastPosition() {
+    public Vec3d lastPosition() {
         return this.lastServerPosition != null ? this.lastServerPosition : this.position();
     }
 
-    protected Vec3d velocity() {
+    public Vec3d velocity() {
         return this.serverVelocity;
     }
-
-    protected boolean onGround() {
+    public boolean onGround() {
         return this.serverOnGround;
     }
-
-    protected float yaw() {
+    public float yaw() {
         if(Float.isNaN(this.serverYaw) && RubyClient.client.player != null)
             return RubyClient.client.player.getYaw();
         return this.serverYaw;
     }
 
-    protected float pitch() {
+    public float pitch() {
         if(Float.isNaN(this.serverPitch) && RubyClient.client.player != null)
             return RubyClient.client.player.getPitch();
         return this.serverPitch;
     }
 
-    public float serverYaw() {
-        return this.yaw();
-    }
-
-    public float serverPitch() {
-        return this.pitch();
-    }
-
     public void resetConnection(ClientConnection connection) {
         this.connection = connection;
     }
-
     public void updateServer(Packet<?> packet) {
         switch(packet) {
             case PlayerMoveC2SPacket move -> {

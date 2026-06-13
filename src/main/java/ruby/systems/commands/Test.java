@@ -1,5 +1,6 @@
 package ruby.systems.commands;
 
+import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import ruby.RubyClient;
 
 public class Test extends Command {
@@ -13,11 +14,11 @@ public class Test extends Command {
         if(RubyClient.client.getNetworkHandler() == null) return;
 
         RubyClient.client.player.setYaw(0);
-//        RubyClient.client.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.LookAndOnGround(
-//                RubyClient.client.player.getYaw(),
-//                100,
-//                RubyClient.client.player.isOnGround(),
-//                RubyClient.client.player.horizontalCollision
-//        ));
+        RubyClient.client.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.LookAndOnGround(
+                RubyClient.client.player.getYaw(),
+                100,
+                RubyClient.client.player.isOnGround(),
+                RubyClient.client.player.horizontalCollision
+        ));
     }
 }

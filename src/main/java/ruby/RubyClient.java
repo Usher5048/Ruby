@@ -5,7 +5,6 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
@@ -25,9 +24,8 @@ import ruby.systems.config.ConfigManager;
 import ruby.systems.config.Configuration;
 import ruby.systems.config.StringValue;
 import ruby.systems.events.Events;
-import ruby.systems.events.render.Render2DEvent;
-import ruby.systems.events.render.Render3DEvent;
-import ruby.systems.events.tick.TickEvents;
+import ruby.systems.events.Render2DEvent;
+import ruby.systems.events.TickEvents;
 import ruby.systems.gui.ClickGUI;
 import ruby.systems.gui.ThemeManager;
 import ruby.systems.gui.LoadingOverlay;
@@ -93,6 +91,10 @@ public class RubyClient implements ModInitializer {
 		);
 	}
 
+	public static Identifier identifier(String value) {
+		return Identifier.of(RubyClient.MOD_ID, value);
+	}
+
 	public static void loadClient(LoadingOverlay overlay) {
 		overlay.log("Loaded " + Modules.getModules().size() + " modules");
 		overlay.log("Loaded " + Commands.getCommands().size() + " commands");
@@ -129,16 +131,6 @@ public class RubyClient implements ModInitializer {
 		);
 
 		overlay.log("Registered 2D rendering event");
-
-		WorldRenderEvents.END_MAIN.register(context -> Events.RENDER3D.fire(new Render3DEvent(
-				0,
-				context.gameRenderer().getBasicProjectionMatrix(RubyClient.client.options.getFov().getValue()),
-				context.matrices().peek().getPositionMatrix(),
-				context.matrices(),
-				context.consumers()
-		)));
-
-		overlay.log("Registered 3D rendering event");
 
 //		try { Thread.sleep(5000); } catch(Exception ignored) {}
 	}

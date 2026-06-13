@@ -1,5 +1,6 @@
 package ruby.systems.events.entity;
 
 public enum EntityEvents {
-    ATTACK
+    BEFORE_ATTACK,
+    AFTER_ATTACK
 }

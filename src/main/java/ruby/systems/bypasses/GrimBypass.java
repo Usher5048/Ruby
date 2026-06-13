@@ -28,19 +28,20 @@ public class GrimBypass extends Bypass {
         boolean horizC = from.horizontalCollision();
         if(from.changesPosition() && from.changesLook())
             return new PlayerMoveC2SPacket.Full(x, y, z, yaw, pitch, ground, horizC);
-        if(from.changesPosition())
-            return new PlayerMoveC2SPacket.PositionAndOnGround(x, y, z, ground, horizC);
+
+        if(from.changesPosition()) return new PlayerMoveC2SPacket.PositionAndOnGround(x, y, z, ground, horizC);
         return new PlayerMoveC2SPacket.LookAndOnGround(yaw, pitch, ground, horizC);
     }
 
     private Packet<?> aimModulo360(Packet<?> packet) {
         if(!(packet instanceof PlayerMoveC2SPacket move) || !move.changesLook()) return packet;
 
+        // Grim only checks the range (-360, 360) for yaw so we just force outsize that range
         float yaw = move.getYaw(this.yaw()) % 360;
         if(yaw < 0) yaw += 360;
         yaw += 360;
 
-        return copyMove(
+        return GrimBypass.copyMove(
                 move,
                 move.getX(this.position().getX()),
                 move.getY(this.position().getY()),
@@ -61,13 +62,14 @@ public class GrimBypass extends Bypass {
             return packet;
 
         // Duplicate rotation: strip look but keep position. Never drop ground-only updates.
-        if(move.changesPosition())
+        if(move.changesPosition()) {
             return new PlayerMoveC2SPacket.PositionAndOnGround(
                     move.getX(this.position().getX()),
                     move.getY(this.position().getY()),
                     move.getZ(this.position().getZ()),
                     move.isOnGround(), move.horizontalCollision()
             );
+        }
 
         if(move.isOnGround() != this.onGround())
             return packet;
@@ -76,24 +78,29 @@ public class GrimBypass extends Bypass {
     }
 
     private Packet<?> badPacketsA(Packet<?> packet) {
-        if(packet instanceof UpdateSelectedSlotC2SPacket slot && slot.getSelectedSlot() == this.lastSlot)
-            return null;
+        if(!(packet instanceof UpdateSelectedSlotC2SPacket slot)) return packet;
+        if(slot.getSelectedSlot() != this.lastSlot) return packet;
+        return null;
+    }
+
+    private Packet<?> badPacketsB(Packet<?> packet) {
+//        if(!(packet instanceof PlayerMoveC2SPacket move))
         return packet;
     }
 
     private Packet<?> badPacketsC(Packet<?> packet) {
         if(RubyClient.client == null || RubyClient.client.player == null) return packet;
         if(!RubyClient.client.player.isSleeping()) return packet;
-        if(packet instanceof ClientCommandC2SPacket cmd
-                && cmd.getMode() == ClientCommandC2SPacket.Mode.STOP_SLEEPING)
-            return null;
-        return packet;
+        if(!(packet instanceof ClientCommandC2SPacket cmd)) return packet;
+        if(cmd.getMode() != ClientCommandC2SPacket.Mode.STOP_SLEEPING) return packet;
+        return null;
     }
 
     private Packet<?> badPacketsD(Packet<?> packet) {
         if(!(packet instanceof PlayerMoveC2SPacket move) || !move.changesLook()) return packet;
 
-        return copyMove(
+        // lock pitch so grim doesnt whine
+        return GrimBypass.copyMove(
                 move,
                 move.getX(this.position().getX()),
                 move.getY(this.position().getY()),
@@ -157,16 +164,17 @@ public class GrimBypass extends Bypass {
 
     @Override
     public Packet<?> modifyPacket(Packet<?> packet) {
-        Packet<?> out = this.aimModulo360(packet);
-        out = this.badPacketsD(out);
-        out = this.aimDuplicateLook(out);
-        if(out == null) return null;
+        Packet<?> modified = packet;
 
-        out = this.packetOrderO(out);
-        out = this.badPacketsA(out);
-        if(out == null) return null;
+        modified = this.aimModulo360(modified);
+        modified = this.badPacketsD(modified);
+        modified = this.packetOrderO(modified);
 
-        return this.badPacketsC(out);
+        modified = this.aimDuplicateLook(modified);
+        modified = this.badPacketsA(modified);
+        modified = this.badPacketsC(modified);
+
+        return modified;
     }
 
     @Override

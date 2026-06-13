@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ruby.helpers.RotationManager;
 import ruby.systems.events.Events;
-import ruby.systems.events.tick.TickEvents;
+import ruby.systems.events.TickEvents;
 import ruby.systems.modules.Modules;
 import ruby.systems.modules.combat.KillAura;
 
@@ -15,13 +15,13 @@ import ruby.systems.modules.combat.KillAura;
 public class MinecraftClientMixin {
     @Inject(at = @At("HEAD"), method = "tick", cancellable = true)
     private void tickBegin(CallbackInfo info) {
-        if(Events.TICK.fire(TickEvents.BEGIN, new Events.GenericEvent()))
+        if(Events.TICK.fire(TickEvents.BEGIN, Events.GenericEvent.get()))
             info.cancel();
     }
 
     @Inject(at = @At("TAIL"), method = "tick", cancellable = true)
     private void tickEnd(CallbackInfo info) {
-        if(Events.TICK.fire(TickEvents.END, new Events.GenericEvent()))
+        if(Events.TICK.fire(TickEvents.END, Events.GenericEvent.get()))
             info.cancel();
     }
 

@@ -1,4 +1,4 @@
-package ruby.systems.events.tick;
+package ruby.systems.events;
 
 public enum TickEvents {
     BEGIN,

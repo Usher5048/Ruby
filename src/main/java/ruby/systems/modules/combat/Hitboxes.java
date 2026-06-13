@@ -39,4 +39,30 @@ public class Hitboxes extends Module {
         if(this.targets.value().contains(entity.getType())) return this.expand.value();
         return 0;
     }
+
+    @Override
+    public void render3D() {
+        // Testing don't remove
+//        Renderer.color(0x330000FF);
+//        Renderer.setMode(Renderer.Mode.FILL_ALWAYS_ON_TOP);
+//        Renderer.cuboid(this.position().add(0, 0.9, 0), new Vec3d(0.6, 1.8, 0.6));
+//
+//        Renderer.color(0x0000FF);
+//        Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);
+//        Renderer.cuboid(this.position().add(0, 0.9, 0), new Vec3d(0.6, 1.8, 0.6));
+//
+//        float pitch = this.pitch();
+//        float yaw = this.yaw();
+//        float f = pitch * ((float)Math.PI / 180F);
+//        float g = -yaw * ((float)Math.PI / 180F);
+//        float h = MathHelper.cos(g);
+//        float i = MathHelper.sin(g);
+//        float j = MathHelper.cos(f);
+//        float k = MathHelper.sin(f);
+//        Vec3d dir = new Vec3d(i * j, -k, h * j);
+//
+//        Renderer.color(0xFF0000);
+//        Renderer.line(this.position().add(0, 1.62, 0), this.position().add(0, 1.62, 0)
+//                .add(dir.normalize().multiply(3)));
+    }
 }

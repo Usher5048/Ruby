@@ -9,7 +9,7 @@ import ruby.RubyClient;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.events.Events;
 import ruby.systems.events.packet.PacketEvents;
-import ruby.systems.events.render.Render2DEvent;
+import ruby.systems.events.Render2DEvent;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.gui.text.FontRenderer;
 import ruby.systems.modules.Module;

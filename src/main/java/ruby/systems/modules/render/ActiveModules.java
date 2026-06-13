@@ -5,7 +5,7 @@ import ruby.systems.config.BooleanValue;
 import ruby.systems.config.ColorValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.config.StringListValue;
-import ruby.systems.events.render.Render2DEvent;
+import ruby.systems.events.Render2DEvent;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.hud.HudAlignment;
 import ruby.systems.hud.HudBox;
