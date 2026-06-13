@@ -55,8 +55,8 @@ public class Modules {
         Modules.modules.add(new ElytraBoost());
         Modules.modules.add(new FastClimb());
         Modules.modules.add(new Flight());
-        Modules.modules.add(new GUIMove());
         Modules.modules.add(new HighJump());
+        Modules.modules.add(new InventoryMove());
         Modules.modules.add(new Jesus());
         Modules.modules.add(new LongJump());
         Modules.modules.add(new NoFall());

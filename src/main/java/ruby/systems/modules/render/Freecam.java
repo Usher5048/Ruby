@@ -4,7 +4,6 @@ import net.minecraft.client.option.Perspective;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import ruby.RubyClient;
-import ruby.helpers.input.KeybindUtil;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
@@ -83,7 +82,7 @@ public class Freecam extends Module {
             pitch *= -1;
         }
 
-        isSneaking = KeybindUtil.isBindingDown(RubyClient.client.options.sneakKey);
+        isSneaking = RubyClient.client.options.sneakKey.isPressed();
         readKeys();
         unpressKeys();
     }
@@ -113,7 +112,7 @@ public class Freecam extends Module {
         Vec3d rightVec = Vec3d.fromPolar(0, yaw + 90);
 
         double velX = 0, velY = 0, velZ = 0;
-        double s = KeybindUtil.isBindingDown(RubyClient.client.options.sprintKey) ? 1.0 : 0.5;
+        double s = RubyClient.client.options.sprintKey.isPressed() ? 1.0 : 0.5;
 
         if (forward) { velX += forwardVec.x * s * speedValue; velZ += forwardVec.z * s * speedValue; }
         if (backward) { velX -= forwardVec.x * s * speedValue; velZ -= forwardVec.z * s * speedValue; }
@@ -127,12 +126,12 @@ public class Freecam extends Module {
     }
 
     private void readKeys() {
-        forward = KeybindUtil.isBindingDown(RubyClient.client.options.forwardKey);
-        backward = KeybindUtil.isBindingDown(RubyClient.client.options.backKey);
-        right = KeybindUtil.isBindingDown(RubyClient.client.options.rightKey);
-        left = KeybindUtil.isBindingDown(RubyClient.client.options.leftKey);
-        up = KeybindUtil.isBindingDown(RubyClient.client.options.jumpKey);
-        down = KeybindUtil.isBindingDown(RubyClient.client.options.sneakKey);
+        forward = RubyClient.client.options.forwardKey.isPressed();
+        backward = RubyClient.client.options.backKey.isPressed();
+        right = RubyClient.client.options.rightKey.isPressed();
+        left = RubyClient.client.options.leftKey.isPressed();
+        up = RubyClient.client.options.jumpKey.isPressed();
+        down = RubyClient.client.options.sneakKey.isPressed();
     }
 
     private void unpressKeys() {

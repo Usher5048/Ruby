@@ -23,6 +23,7 @@
     "HandledScreenMixin",
     "HeldItemRendererMixin",
     "InGameHudMixin",
+    "KeyBindingAccessor",
     "KeyboardInputMixin",
     "LivingEntityAccessor",
     "LivingEntityMixin",

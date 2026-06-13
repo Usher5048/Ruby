@@ -106,7 +106,7 @@ public class ProfileManager {
     public static void deleteProfile(String name) {
         ProfileManager.profiles.remove(name);
     }
-    public static boolean importProfile(String data) {
+    public static boolean importProfile(String data) { // returns true on sig match, not if valid
         ByteArrayInputStream stream = new ByteArrayInputStream(Base64.getDecoder().decode(data));
         try {
             byte[] sig = stream.readNBytes(12);
