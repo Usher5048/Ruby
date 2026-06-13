@@ -3,6 +3,7 @@ package ruby.systems.bypasses;
 import net.minecraft.entity.EntityPosition;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.c2s.play.ClientTickEndC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerRotationS2CPacket;
@@ -59,24 +60,22 @@ public class Bypass {
     }
     public void updateServer(Packet<?> packet) {
         switch(packet) {
+            case ClientTickEndC2SPacket tick -> this.lastServerPosition = this.serverPosition;
             case PlayerMoveC2SPacket move -> {
-                if(RubyClient.client.player == null) return;
-
-                if(move.changesLook()) {
-                    this.serverYaw = move.getYaw(RubyClient.client.player.getYaw());
-                    this.serverPitch = move.getPitch(RubyClient.client.player.getPitch());
-                }
                 this.serverOnGround = move.isOnGround();
+                if(move.changesLook()) {
+                    this.serverYaw = move.getYaw(0);
+                    this.serverPitch = move.getPitch(0);
+                }
 
                 if(move.changesPosition()) {
-                    Vec3d next = new Vec3d(
-                            move.getX(RubyClient.client.player.getX()),
-                            move.getY(RubyClient.client.player.getY()),
-                            move.getZ(RubyClient.client.player.getZ())
+                    this.serverPosition = new Vec3d(
+                            move.getX(0),
+                            move.getY(0),
+                            move.getZ(0)
                     );
-                    if(this.serverPosition != null) this.serverVelocity = next.subtract(this.serverPosition);
-                    this.lastServerPosition = this.serverPosition;
-                    this.serverPosition = next;
+
+                    this.serverVelocity = this.serverPosition.subtract(this.lastServerPosition);
                 }
             }
 
@@ -87,7 +86,6 @@ public class Bypass {
                 EntityPosition next = EntityPosition.apply(current, teleport.change(), teleport.relatives());
                 this.serverYaw = next.yaw();
                 this.serverPitch = next.pitch();
-                this.lastServerPosition = this.serverPosition;
                 this.serverPosition = next.position();
                 this.serverVelocity = next.deltaMovement();
             }
