@@ -1,39 +1,92 @@
 package ruby.systems.modules.player;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import ruby.mixin.MinecraftClientAccessor;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
+import net.minecraft.item.ProjectileItem;
+import ruby.RubyClient;
+import ruby.helpers.RandomUtils;
 import ruby.systems.config.IntegerValue;
+import ruby.systems.config.StringListValue;
+import ruby.systems.events.Events;
+import ruby.systems.events.client.UseCooldownEvent;
 import ruby.systems.modules.Module;
+import ruby.systems.modules.Modules;
 import ruby.systems.modules.ModuleType;
 
 /**
- * Ported from <a href="https://github.com/MeteorDevelopment/meteor-client">Meteor Client</a>
- * Licensed under GPL-3.0
- * <p>
- * Allows you to use/place items faster by reducing the item use cooldown.
- * Each tick forces the client's item use cooldown to 0 (or a low value),
- * effectively letting you place blocks at maximum speed.
+ * LiquidBounce {@code FastPlace} port.
  */
 public class FastPlace extends Module {
+    public enum ApplyTo {
+        Blocks,
+        Projectiles;
 
-    private final IntegerValue cooldown;
+        static boolean matches(String tag, Item item) {
+            ApplyTo type = fromTag(tag);
+            if (type == null) return false;
+            return switch (type) {
+                case Blocks -> item instanceof BlockItem;
+                case Projectiles -> item instanceof ProjectileItem;
+            };
+        }
 
-    public FastPlace() {
-        super("Fast Place", "Allows you to place items faster.", ModuleType.PLAYER);
-
-        cooldown = config.create(new IntegerValue.Builder("Cooldown")
-                .description("Item use cooldown in ticks (0 = fastest).")
-                .defaultValue(0).min(0).max(4)
-                .build());
+        static ApplyTo fromTag(String tag) {
+            for (ApplyTo value : values()) {
+                if (value.name().equalsIgnoreCase(tag.replace(" ", ""))) return value;
+            }
+            return null;
+        }
     }
 
-    @Override
-    public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+    private final IntegerValue cooldownMin;
+    private final IntegerValue cooldownMax;
+    private final StringListValue applyTo;
+    private final IntegerValue startDelay;
+
+    public FastPlace() {
+        super("Fast Place", "Allows you to place blocks faster.", ModuleType.PLAYER);
+
+        cooldownMin = config.create(new IntegerValue.Builder("Cooldown Min")
+                .description("Minimum item use cooldown in ticks.")
+                .range(0, 4)
+                .defaultValue(0)
+                .build());
+        cooldownMax = config.create(new IntegerValue.Builder("Cooldown Max")
+                .description("Maximum item use cooldown in ticks.")
+                .range(0, 4)
+                .defaultValue(0)
+                .build());
+        applyTo = config.create(new StringListValue.Builder("Apply To")
+                .description("Item types affected by fast place.")
+                .defaultValue("Blocks")
+                .build());
+        startDelay = config.create(new IntegerValue.Builder("Start Delay")
+                .description("Milliseconds since use key was pressed before activating.")
+                .range(0, 1000)
+                .defaultValue(0)
+                .build());
+
+        Events.USE_COOLDOWN.register(FastPlace::onUseCooldown);
+    }
+
+    private static void onUseCooldown(UseCooldownEvent event) {
+        FastPlace fastPlace = Modules.getByClass(FastPlace.class);
+        if (fastPlace == null || !fastPlace.enabled()) return;
+        fastPlace.applyCooldown(event);
+    }
+
+    private void applyCooldown(UseCooldownEvent event) {
+        var player = RubyClient.client.player;
         if (player == null) return;
 
-        ((MinecraftClientAccessor) mc).ruby$setItemUseCooldown(cooldown.value());
+        Item mainHand = player.getMainHandStack().getItem();
+        Item offHand = player.getOffHandStack().getItem();
+        boolean matches = applyTo.value().stream()
+                .anyMatch(tag -> ApplyTo.matches(tag, mainHand) || ApplyTo.matches(tag, offHand));
+        if (!matches) return;
+
+        if (startDelay.value() > 0 && !RubyClient.client.options.useKey.isPressed()) return;
+
+        event.setCooldown(RandomUtils.randomInt(cooldownMin.value(), cooldownMax.value()));
     }
 }

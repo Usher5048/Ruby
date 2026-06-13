@@ -78,7 +78,7 @@ public final class ThemeManager {
     }
 
     public void apply() {
-        GUIStyle base = GUIStyle.DEFAULT;
+        GUIStyle base = GUIStyle.defaultStyle();
         GUIStyle.set(new GUIStyle(
                 this.ruby, this.rubyHover, this.rubyBg, this.rubyActive,
                 this.bgPanel, this.bgBase, this.bgHover, this.bgElevated,
@@ -133,7 +133,7 @@ public final class ThemeManager {
     }
 
     public void resetDefaults() {
-        GUIStyle defaults = GUIStyle.DEFAULT;
+        GUIStyle defaults = GUIStyle.defaultStyle();
         this.ruby = defaults.ruby();
         this.rubyHover = defaults.rubyHover();
         this.rubyBg = defaults.rubyBg();

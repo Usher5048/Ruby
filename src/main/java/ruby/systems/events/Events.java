@@ -1,8 +1,10 @@
 package ruby.systems.events;
 
 import ruby.helpers.inventory.ScheduleInventoryActionEvent;
+import ruby.systems.events.blink.BlinkPacketEvent;
 import ruby.systems.events.chat.ChatEvent;
 import ruby.systems.events.chat.ChatEvents;
+import ruby.systems.events.client.UseCooldownEvent;
 import ruby.systems.events.entity.EntityEvent;
 import ruby.systems.events.entity.EntityEvents;
 import ruby.systems.events.packet.PacketEvent;
@@ -26,4 +28,6 @@ public final class Events {
     public static final EventBuses.Single<Render2DEvent> RENDER2D = new EventBuses.Single<>();
     public static final EventBuses.Single<GenericEvent> RENDER3D = new EventBuses.Single<>();
     public static final EventBuses.Single<ScheduleInventoryActionEvent> INVENTORY_SCHEDULE = new EventBuses.Single<>();
+    public static final EventBuses.Single<BlinkPacketEvent> BLINK = new EventBuses.Single<>();
+    public static final EventBuses.Single<UseCooldownEvent> USE_COOLDOWN = new EventBuses.Single<>();
 }
