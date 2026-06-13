@@ -6,23 +6,31 @@
 name: build
 on: [pull_request, push]
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-      - name: validate gradle wrapper
-        uses: gradle/actions/wrapper-validation@v4
+        with:
+          persist-credentials: false
+
       - name: setup jdk
         uses: actions/setup-java@v4
         with:
-          java-version: '25'
-          distribution: 'microsoft'
-      - name: make gradle wrapper executable
-        run: chmod +x ./gradlew
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: setup gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: build
-        run: ./gradlew build
+        run: ./gradlew build --no-daemon
+
       - name: capture build artifacts
         uses: actions/upload-artifact@v4
         with:
