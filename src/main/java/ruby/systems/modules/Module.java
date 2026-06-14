@@ -59,9 +59,6 @@ public abstract class Module {
     public boolean enabled() {
         return this.enabled;
     }
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
 
     public boolean showsToasts() {
         return this.showToasts;

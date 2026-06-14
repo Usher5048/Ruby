@@ -144,7 +144,7 @@ public class ConfigManager {
         ConfigManager.bytesToConfig(stream, module.config);
 
         int flags = stream.read();
-        module.setEnabled((flags & 0x01) != 0);
+        Modules.setEnabledSilently(module, (flags & 0x01) != 0);
         module.showsToasts((flags & 0x02) != 0);
     }
 
