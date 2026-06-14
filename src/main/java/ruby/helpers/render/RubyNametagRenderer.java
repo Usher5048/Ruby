@@ -80,7 +80,7 @@ public final class RubyNametagRenderer {
         }
 
         int contentW = cursorX;
-        int panelW = s(contentW + PAD_X * 2, scale);
+        int panelW = s(contentW + PAD_X, scale);
 
         double itemSize = 16 * scale;
         double itemGap = heldItem != null && !heldItem.isEmpty() ? 3 * scale : 0;
@@ -99,36 +99,33 @@ public final class RubyNametagRenderer {
 
         ModuleTypeWindow.fillSmoothRoundedRect(ctx, px1 + s(1, scale), py1 + s(2, scale),
                 px2 + s(1, scale), py2 + s(2, scale), radius, shadowColor);
-        ModuleTypeWindow.drawRoundedPanel(ctx, px1, py1, px2, py2, radius, panelBg, panelBorder);
 
-        int accentTop = py1 + s(PAD_Y, scale);
-        int accentBottom = py2 - s(PAD_Y, scale);
-        int accentX1 = px1 + s(PAD_X, scale);
-        ctx.fill(accentX1, accentTop, accentX1 + s(ACCENT_W, scale), accentBottom,
-                data.friend() ? style.ruby() : GUIStyle.withAlpha(style.ruby(), 0.65f));
+        int accentW = s(ACCENT_W, scale);
+        int accentColor = data.friend() ? style.ruby() : GUIStyle.withAlpha(style.ruby(), 0.65f);
+        ModuleTypeWindow.drawNametagPanel(ctx, px1, py1, px2, py2, radius, panelBg, panelBorder, accentColor, accentW);
 
         double textY = panelTop + s(PAD_Y, scale) + (s(contentH, scale) - s(nameH, scale)) / 2.0;
-        double textX = panelLeft + s(PAD_X + ACCENT_W + ACCENT_GAP, scale);
+        double textX = panelLeft + s(ACCENT_W + ACCENT_GAP, scale);
         int resolvedNameColor = data.friend() ? style.ruby() : nameColor;
         drawText(ctx, nameFont, data.name(), textX, textY, resolvedNameColor, shadow, scale);
 
-        double badgeX = panelLeft + s(PAD_X + ACCENT_W + ACCENT_GAP + nameW, scale);
+        double badgeX = panelLeft + s(ACCENT_W + ACCENT_GAP + nameW, scale);
         if (healthW > 0) {
             badgeX += s(INNER_GAP, scale);
             badgeX = drawBadge(ctx, style, badgeFont, healthText, badgeX, panelTop, panelH, contentH,
-                    style.rubyBg(), style.ruby(), panelBorder, shadow, scale);
+                    style.rubyBg(), style.ruby(), shadow, scale);
             badgeX += s(BADGE_GAP, scale);
         }
         if (pingW > 0) {
             if (healthW == 0) badgeX += s(INNER_GAP, scale);
             badgeX = drawBadge(ctx, style, badgeFont, pingText, badgeX, panelTop, panelH, contentH,
-                    style.bgHover(), style.textMuted(), panelBorder, shadow, scale);
+                    style.bgHover(), style.textMuted(), shadow, scale);
             badgeX += s(BADGE_GAP, scale);
         }
         if (distW > 0) {
             if (healthW == 0 && pingW == 0) badgeX += s(INNER_GAP, scale);
             drawBadge(ctx, style, badgeFont, distText, badgeX, panelTop, panelH, contentH,
-                    style.bgHover(), style.textMuted(), panelBorder, shadow, scale);
+                    style.bgHover(), style.textMuted(), shadow, scale);
         }
 
         if (heldItem != null && !heldItem.isEmpty()) {
@@ -154,7 +151,6 @@ public final class RubyNametagRenderer {
             int contentH,
             int bg,
             int textColor,
-            int border,
             boolean shadow,
             double scale
     ) {
@@ -165,7 +161,8 @@ public final class RubyNametagRenderer {
         int bx2 = bx1 + badgeW;
         int by2 = by1 + badgeH;
 
-        ModuleTypeWindow.drawRoundedBadge(ctx, bx1, by1, bx2, by2, bg, border);
+        int badgeRadius = Math.max(1, s(GUIStyle.RADIUS_BADGE, scale));
+        ModuleTypeWindow.fillSmoothRoundedRect(ctx, bx1, by1, bx2, by2, badgeRadius, bg);
 
         double textX = bx1 + s(BADGE_PAD_X, scale);
         double textY = panelTop + s(PAD_Y, scale) + (s(contentH, scale) - s(font.fontHeight, scale)) / 2.0;

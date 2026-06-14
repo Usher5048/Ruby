@@ -33,6 +33,13 @@ public class SessionAccount extends Account {
     }
 
     @Override
+    public boolean prepareAutoLogin() {
+        if (this.accessToken == null || this.accessToken.isBlank()) return false;
+        if (this.hasCachedProfile()) return true;
+        return this.fetchInfo();
+    }
+
+    @Override
     public boolean login() {
         if (this.accessToken == null || this.accessToken.isBlank()) return false;
         if (!super.login()) return false;

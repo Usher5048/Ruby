@@ -35,6 +35,15 @@ public abstract class Account {
 
     public abstract boolean fetchInfo();
 
+    /** Prepares credentials for auto-login; may skip redundant network calls when cache is valid. */
+    public boolean prepareAutoLogin() {
+        return this.fetchInfo();
+    }
+
+    public boolean hasCachedProfile() {
+        return !this.cache.username.isEmpty() && !this.cache.uuid.isEmpty();
+    }
+
     public boolean login() {
         YggdrasilAuthenticationService authService =
                 new YggdrasilAuthenticationService(RubyClient.client.getNetworkProxy());

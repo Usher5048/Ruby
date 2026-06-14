@@ -107,8 +107,8 @@ public class RubyClient implements ModInitializer {
 		if(configVer != ConfigManager.VERSION_ERROR) overlay.log("Loaded client configs (v" + configVer + ")");
 		else overlay.log("Failed to load client configs, using default!", 0xFF3333);
 
-		overlay.log("Loaded " + AccountsManager.getAccounts().size() + " accounts");
 		AccountsManager.loginLast();
+		overlay.log("Loaded " + AccountsManager.getAccounts().size() + " accounts");
 
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::saveState));
 		overlay.log("Attached shutdown hook to runtime");
