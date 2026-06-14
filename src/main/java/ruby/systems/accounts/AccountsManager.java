@@ -57,11 +57,31 @@ public final class AccountsManager implements Iterable<Account> {
         if(target == null || AccountsManager.isActive(target)) return;
 
         final Account account = target;
-        Util.getIoWorkerExecutor().execute(() -> {
-            if(account.fetchInfo() && account.login())
+        Runnable apply = () -> {
+            if(account.login())
                 RubyClient.LOGGER.info("Auto-logged in as {}", account.getUsername());
             else
                 RubyClient.LOGGER.warn("Failed to auto-login as {}", account.getName());
+        };
+
+        if(account.getType() == AccountType.Cracked) {
+            if(account.prepareAutoLogin()) apply.run();
+            else RubyClient.LOGGER.warn("Failed to auto-login as {}", account.getName());
+            return;
+        }
+
+        if(account.getType() == AccountType.Session && account.hasCachedProfile()) {
+            if(account.prepareAutoLogin()) apply.run();
+            else RubyClient.LOGGER.warn("Failed to auto-login as {}", account.getName());
+            return;
+        }
+
+        Util.getIoWorkerExecutor().execute(() -> {
+            if(!account.prepareAutoLogin()) {
+                RubyClient.LOGGER.warn("Failed to auto-login as {}", account.getName());
+                return;
+            }
+            Util.getMainWorkerExecutor().execute(apply);
         });
     }
 

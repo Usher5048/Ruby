@@ -44,6 +44,10 @@ public final class MicrosoftLogin {
     }
 
     public static LoginData login(String refreshToken) {
+        return MicrosoftLogin.login(refreshToken, false);
+    }
+
+    public static LoginData login(String refreshToken, boolean fast) {
         AuthTokenResponse token = Http.post("https://login.live.com/oauth20_token.srf")
                 .bodyForm("client_id=" + CLIENT_ID
                         + "&refresh_token=" + refreshToken
@@ -72,6 +76,13 @@ public final class MicrosoftLogin {
                 .bodyJson("{\"identityToken\":\"XBL3.0 x=" + xbl.DisplayClaims.xui[0].uhs + ";" + xsts.Token + "\"}")
                 .sendJson(McResponse.class);
         if (mc == null) return new LoginData();
+
+        if (fast) {
+            LoginData data = new LoginData();
+            data.mcToken = mc.access_token;
+            data.newRefreshToken = refreshToken;
+            return data;
+        }
 
         GameOwnershipResponse ownership = Http.get("https://api.minecraftservices.com/entitlements/mcstore")
                 .bearer(mc.access_token)

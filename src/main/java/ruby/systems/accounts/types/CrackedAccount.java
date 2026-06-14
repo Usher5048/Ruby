@@ -20,6 +20,12 @@ public class CrackedAccount extends Account {
     }
 
     @Override
+    public boolean prepareAutoLogin() {
+        this.cache.username = this.name;
+        return true;
+    }
+
+    @Override
     public boolean login() {
         if (!super.login()) return false;
 

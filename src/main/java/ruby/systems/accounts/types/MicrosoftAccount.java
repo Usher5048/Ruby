@@ -17,7 +17,13 @@ public class MicrosoftAccount extends Account {
 
     @Override
     public boolean fetchInfo() {
-        this.accessToken = this.authenticate();
+        this.accessToken = this.authenticate(false);
+        return this.accessToken != null;
+    }
+
+    @Override
+    public boolean prepareAutoLogin() {
+        this.accessToken = this.authenticate(this.hasCachedProfile());
         return this.accessToken != null;
     }
 
@@ -36,13 +42,15 @@ public class MicrosoftAccount extends Account {
         return true;
     }
 
-    private String authenticate() {
-        MicrosoftLogin.LoginData data = MicrosoftLogin.login(this.name);
+    private String authenticate(boolean fast) {
+        MicrosoftLogin.LoginData data = MicrosoftLogin.login(this.name, fast);
         if (!data.isGood()) return null;
 
         this.name = data.newRefreshToken;
-        this.cache.username = data.username;
-        this.cache.uuid = data.uuid;
+        if (!fast || !this.hasCachedProfile()) {
+            this.cache.username = data.username;
+            this.cache.uuid = data.uuid;
+        }
         return data.mcToken;
     }
 

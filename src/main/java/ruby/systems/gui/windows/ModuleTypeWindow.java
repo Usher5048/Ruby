@@ -232,6 +232,106 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     }
 
     /**
+     * Left accent strip flush with the panel's rounded left edge.
+     */
+    public static void fillLeftAccentStrip(
+            DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int accentW, int color
+    ) {
+        if (accentW <= 0 || x2 <= x1 || y2 <= y1) return;
+
+        int accentRight = Math.min(x1 + accentW, x2);
+        int h = y2 - y1;
+        int r = Math.min(radius, h / 2);
+        int baseAlpha = (color >> 24) & 0xFF;
+        int rgb = color & 0x00FFFFFF;
+
+        if (r <= 0) {
+            ctx.fill(x1, y1, accentRight, y2, color);
+            return;
+        }
+
+        ctx.fill(x1, y1 + r, accentRight, y2 - r, color);
+
+        for (int y = 0; y < r; y++) {
+            double dy = r - y - 0.5;
+            double dx = Math.sqrt((double) r * r - dy * dy);
+            double edgeX = r - dx;
+            int fullInset = (int) Math.ceil(edgeX);
+            double coverage = fullInset - edgeX;
+            int edgeAlpha = (int) (baseAlpha * coverage);
+            int edgeColor = rgb | (edgeAlpha << 24);
+
+            int top = y1 + y;
+            int bottom = y2 - y - 1;
+
+            if (accentRight > x1 + fullInset) {
+                ctx.fill(x1 + fullInset, top, accentRight, top + 1, color);
+                ctx.fill(x1 + fullInset, bottom, accentRight, bottom + 1, color);
+            }
+
+            if (edgeAlpha > 0 && fullInset > 0 && x1 + fullInset - 1 < accentRight) {
+                ctx.fill(x1 + fullInset - 1, top, x1 + fullInset, top + 1, edgeColor);
+                ctx.fill(x1 + fullInset - 1, bottom, x1 + fullInset, bottom + 1, edgeColor);
+            }
+        }
+    }
+
+    /** Soft 1px inset outline with anti-aliased edges. */
+    public static void strokeSmoothRoundedRect(
+            DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int color
+    ) {
+        if (x2 <= x1 || y2 <= y1) return;
+
+        float cx = (x1 + x2) * 0.5f;
+        float cy = (y1 + y2) * 0.5f;
+        float halfW = (x2 - x1) * 0.5f;
+        float halfH = (y2 - y1) * 0.5f;
+        float r = Math.min(radius, Math.min(halfW, halfH));
+        int baseAlpha = (color >> 24) & 0xFF;
+        int rgb = color & 0x00FFFFFF;
+
+        for (int y = y1 - 1; y < y2 + 1; y++) {
+            for (int x = x1 - 1; x < x2 + 1; x++) {
+                float d = sdRoundedBox(x + 0.5f, y + 0.5f, cx, cy, halfW, halfH, r);
+                if (d > 0f || d < -1f) continue;
+
+                int alpha = (int) (baseAlpha * (1f + d));
+                if (alpha <= 0) continue;
+                ctx.fill(x, y, x + 1, y + 1, rgb | (alpha << 24));
+            }
+        }
+    }
+
+    /** Nametag panel: smooth fill, left accent, soft outline (no inset double-fill). */
+    public static void drawNametagPanel(
+            DrawContext ctx,
+            int x1,
+            int y1,
+            int x2,
+            int y2,
+            int radius,
+            int bg,
+            int border,
+            int accentColor,
+            int accentW
+    ) {
+        fillSmoothRoundedRect(ctx, x1, y1, x2, y2, radius, bg);
+        strokeSmoothRoundedRect(ctx, x1, y1, x2, y2, radius, border);
+        fillLeftAccentStrip(ctx, x1, y1, x2, y2, radius, accentW, accentColor);
+    }
+
+    private static float sdRoundedBox(
+            float px, float py, float cx, float cy, float halfW, float halfH, float radius
+    ) {
+        float r = Math.min(radius, Math.min(halfW, halfH));
+        float qx = Math.abs(px - cx) - halfW + r;
+        float qy = Math.abs(py - cy) - halfH + r;
+        float ox = Math.max(qx, 0f);
+        float oy = Math.max(qy, 0f);
+        return (float) (Math.hypot(ox, oy) + Math.min(Math.max(qx, qy), 0f) - r);
+    }
+
+    /**
      * Draws a filled rectangle with flat top corners and rounded bottom corners.
      */
     public static void fillBottomRoundedRect(DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int color) {
