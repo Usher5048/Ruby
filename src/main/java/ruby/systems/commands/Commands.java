@@ -8,6 +8,7 @@ public class Commands {
     static {
         Commands.commands.add(new Help());
         Commands.commands.add(new Test());
+        Commands.commands.add(new VClip());
     }
 
     public static ArrayList<Command> getCommands() {
