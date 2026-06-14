@@ -9,6 +9,8 @@
     "BlockRenderManagerMixin",
     "CameraMixin",
     "ChatHudMixin",
+    "ChatInputSuggestorMixin",
+    "ChatScreenMixin",
     "ChunkOcclusionDataBuilderMixin",
     "ClientCommonNetworkHandlerMixin",
     "ClientConnectionMixin",

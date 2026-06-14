@@ -26,10 +26,7 @@ public class ClientPlayNetworkHandlerMixin {
 		args = Arrays.copyOfRange(args, 1, args.length);
 
 		Command cmd = Commands.getByName(command);
-		if(cmd == null) RubyClient.notifyUser("Unknown command!");
-		else {
-			RubyClient.notifyUser(command);
-			cmd.execute(args);
-		}
+		if(cmd == null) RubyClient.notifyUser("Unknown command: " + command);
+		else cmd.execute(args);
 	}
 }

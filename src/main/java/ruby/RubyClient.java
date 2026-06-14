@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -46,10 +47,16 @@ public class RubyClient implements ModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(RubyClient.MOD_NAME);
 	public static final MinecraftClient client = MinecraftClient.getInstance();
 	public static final Configuration config = new Configuration();
+	private static final KeyBinding.Category KEY_CATEGORY = KeyBinding.Category.create(Identifier.of(RubyClient.MOD_ID, "ruby"));
 	public static final KeyBinding openGUIKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 			"key.ruby.open_gui",
 			GLFW.GLFW_KEY_RIGHT_SHIFT,
-			KeyBinding.Category.create(Identifier.of(RubyClient.MOD_ID,  "ruby"))
+			RubyClient.KEY_CATEGORY
+	));
+	public static final KeyBinding openCommandKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+			"key.ruby.command",
+			GLFW.GLFW_KEY_PERIOD,
+			RubyClient.KEY_CATEGORY
 	));
 
 	public static final StringValue chatPrefix = RubyClient.config.create(new StringValue.Builder("Chat Prefix")
@@ -111,6 +118,8 @@ public class RubyClient implements ModInitializer {
 			Bypasses.get().tick();
 			if(RubyClient.openGUIKey.wasPressed())
 				RubyClient.client.setScreen(new ClickGUI());
+			if(RubyClient.openCommandKey.wasPressed())
+				RubyClient.client.setScreen(new ChatScreen(RubyClient.chatPrefix.value(), false));
 		});
 
 		overlay.log("Attached keybind listener to GUI");

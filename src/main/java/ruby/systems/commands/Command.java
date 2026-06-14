@@ -2,6 +2,8 @@ package ruby.systems.commands;
 
 import ruby.RubyClient;
 
+import java.util.List;
+
 public abstract class Command {
     private final String name;
     private final String description;
@@ -22,4 +24,8 @@ public abstract class Command {
     }
 
     public abstract void execute(String[] args);
+
+    public List<String> suggest(String[] args, int argIndex) {
+        return List.of();
+    }
 }
