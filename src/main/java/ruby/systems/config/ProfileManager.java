@@ -20,7 +20,7 @@ public class ProfileManager {
     private static final HashMap<String, byte[]> profiles = new HashMap<>();
     private static String activeProfile = null;
 
-    static { ProfileManager.importProfile(ProfileManager.DEFAULT_PROFILE); }
+    static { ProfileManager.createProfile(ProfileManager.DEFAULT_PROFILE); }
 
     public static List<String> profiles() {
         return ProfileManager.profiles.keySet().stream().toList();
@@ -34,7 +34,6 @@ public class ProfileManager {
     }
     public static void setActiveProfile(String name) {
         if(!ProfileManager.profiles.containsKey(name)) return;
-        if(name.equals(ProfileManager.activeProfile)) return;
         ProfileManager.activeProfile = name;
 
         ByteArrayInputStream stream = new ByteArrayInputStream(ProfileManager.profile(name));
@@ -67,11 +66,11 @@ public class ProfileManager {
         int len = ConfigManager.readInt(stream);
         ConfigManager.writeInt(out, len);
 
-        try {
-            byte[] data = stream.readNBytes(len);
-            out.writeBytes(data);
-            ProfileManager.profiles.put(name, out.toByteArray());
-        } catch(Exception ignored) {}
+        byte[] data = new byte[len];
+        stream.readNBytes(data, 0, len);
+
+        out.writeBytes(data);
+        ProfileManager.profiles.put(name, out.toByteArray());
     }
 
     public static String exportProfile(String name) {

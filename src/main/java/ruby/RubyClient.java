@@ -21,6 +21,7 @@ import ruby.systems.accounts.AccountsManager;
 import ruby.systems.commands.Commands;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.config.Configuration;
+import ruby.systems.config.ProfileManager;
 import ruby.systems.config.StringValue;
 import ruby.systems.events.Events;
 import ruby.systems.events.Render2DEvent;
@@ -109,6 +110,7 @@ public class RubyClient implements ModInitializer {
 
 		AccountsManager.loginLast();
 		overlay.log("Loaded " + AccountsManager.getAccounts().size() + " accounts");
+		overlay.log("Loaded profile: '" + ProfileManager.activeProfile() + "'");
 
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::saveState));
 		overlay.log("Attached shutdown hook to runtime");

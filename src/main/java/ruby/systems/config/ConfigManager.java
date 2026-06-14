@@ -3,7 +3,6 @@ package ruby.systems.config;
 import ruby.RubyClient;
 import ruby.systems.accounts.AccountStorage;
 import ruby.systems.accounts.AccountsManager;
-import ruby.systems.gui.ThemeManager;
 import ruby.systems.social.FriendsManager;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.Modules;
@@ -199,12 +198,8 @@ public class ConfigManager {
             // Main client configs
             ConfigManager.configToBytes(stream, RubyClient.config);
 
-            // Current active modules and module keybinds / configs
-            ConfigManager.writeShort(stream, Modules.getModules().size());
-            for(Module module : Modules.getModules()) ConfigManager.moduleToBytes(stream, module);
-
-            // Current active theme
-            ThemeManager.get().writeToProfile(stream);
+            // Current active profile
+            ConfigManager.writeString(stream, ProfileManager.activeProfile());
 
             // Compress it all
             Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
@@ -353,12 +348,8 @@ public class ConfigManager {
         // Main client configs
         ConfigManager.bytesToConfig(inner, RubyClient.config);
 
-        // Current active modules and module keybinds / configs
-        int moduleCount = ConfigManager.readShort(inner);
-        for(int i = 0; i < moduleCount; i++) ConfigManager.bytesToModule(inner);
-
-        // Current active theme
-        ThemeManager.get().readFromProfile(inner);
+        // Current active profile
+        ProfileManager.setActiveProfile(ConfigManager.readString(inner));
 
         return true;
     }
