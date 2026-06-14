@@ -14,7 +14,7 @@ public abstract class ListValue<T> extends Value<List<T>> {
             Consumer<List<T>> changed, Callable<Boolean> visible,
             List<T> defaultValue
     ) {
-        super(name, description, changed, visible, defaultValue);
+        super(name, description, changed, visible, new ArrayList<>(defaultValue));
     }
 
     protected abstract String toStringElement(T value);
@@ -64,17 +64,18 @@ public abstract class ListValue<T> extends Value<List<T>> {
         int lo = stream.read();
 
         if (hi < 0 || lo < 0) {
-            this.value().clear();
+            this.setValueSilent(new ArrayList<>());
             return;
         }
 
         int size = (hi << 8) | lo;
 
-        this.value().clear();
+        ArrayList<T> next = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             T element = this.deserializeElement(stream);
-            if (element != null) this.value().add(element);
+            if (element != null) next.add(element);
         }
+        this.setValueSilent(next);
     }
 
     protected static abstract class Builder<T, B extends Builder<T, B>> extends Value.Builder<List<T>, B> {

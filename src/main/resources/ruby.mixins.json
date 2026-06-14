@@ -5,6 +5,7 @@
   "plugin": "ruby.plugins.MixinPlugin",
   "client": [
     "BlockMixin",
+    "AbstractBlockMixin",
     "BlockModelRendererMixin",
     "BlockRenderManagerMixin",
     "CameraMixin",

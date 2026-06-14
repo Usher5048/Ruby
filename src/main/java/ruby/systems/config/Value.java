@@ -53,6 +53,10 @@ public abstract class Value<T> {
         this.changed.accept(value);
     }
 
+    protected void setValueSilent(T value) {
+        this.value = value;
+    }
+
     @Override
     public abstract String toString();
     public abstract boolean fromString(String str); // returns false if string is invalid

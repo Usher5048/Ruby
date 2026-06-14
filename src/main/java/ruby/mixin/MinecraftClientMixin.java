@@ -1,6 +1,7 @@
 package ruby.mixin;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.Screen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -11,6 +12,7 @@ import ruby.systems.events.TickEvents;
 import ruby.systems.events.client.UseCooldownEvent;
 import ruby.systems.modules.Modules;
 import ruby.systems.modules.combat.KillAura;
+import ruby.systems.modules.render.Freecam;
 
 @Mixin(MinecraftClient.class)
 public class MinecraftClientMixin {
@@ -31,6 +33,12 @@ public class MinecraftClientMixin {
         KillAura killAura = Modules.getByClass(KillAura.class);
         if(breaking && killAura != null && killAura.enabled() && RotationManager.hasRotation())
             ci.cancel();
+    }
+
+    @Inject(method = "setScreen", at = @At("HEAD"))
+    private void ruby$freecamScreen(Screen screen, CallbackInfo ci) {
+        Freecam freecam = Modules.getByClass(Freecam.class);
+        if (freecam != null && freecam.enabled()) freecam.onScreenOpen();
     }
 
     @Inject(method = "doItemUse", at = @At("TAIL"))

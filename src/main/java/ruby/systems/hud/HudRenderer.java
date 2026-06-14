@@ -1,5 +1,6 @@
 package ruby.systems.hud;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import org.joml.Matrix3x2fStack;
 import ruby.systems.gui.text.FontRenderer;
@@ -139,11 +140,18 @@ public final class HudRenderer {
 
     public double textWidth(String text, boolean shadow, double scale) {
         if (text.isEmpty()) return 0;
-        return (this.font.getWidth(text) + (shadow ? 1 : 0)) * scale + (shadow ? 1 : 0);
+        if (this.font != null) {
+            return (this.font.getWidth(text) + (shadow ? 1 : 0)) * scale + (shadow ? 1 : 0);
+        }
+        var vanilla = MinecraftClient.getInstance().textRenderer;
+        return (vanilla.getWidth(text) + (shadow ? 1 : 0)) * scale + (shadow ? 1 : 0);
     }
 
     public double textHeight(boolean shadow, double scale) {
-        return (this.font.fontHeight + (shadow ? 1 : 0)) * scale;
+        if (this.font != null) {
+            return (this.font.fontHeight + (shadow ? 1 : 0)) * scale;
+        }
+        return (MinecraftClient.getInstance().textRenderer.fontHeight + (shadow ? 1 : 0)) * scale;
     }
 
     private void drawHorizontalGradient(int x1, int y1, int x2, int y2, int leftColor, int rightColor) {

@@ -6,8 +6,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import ruby.helpers.RotationManager;
+import ruby.systems.modules.Modules;
 import ruby.systems.modules.combat.Criticals;
 import ruby.systems.modules.combat.Velocity;
+import ruby.systems.modules.combat.WTap;
 
 @Mixin(KeyboardInput.class)
 public abstract class KeyboardInputMixin {
@@ -19,9 +21,20 @@ public abstract class KeyboardInputMixin {
             boolean forward, boolean backward, boolean left, boolean right,
             boolean jump, boolean sneak, boolean sprint
     ) {
+        WTap wTap = Modules.getByClass(WTap.class);
+        if (wTap != null && wTap.blocksMovement()) {
+            forward = false;
+            backward = false;
+            left = false;
+            right = false;
+            jump = false;
+            sneak = false;
+            sprint = false;
+        }
+
         if(Criticals.shouldForceJump()) jump = true;
 
-        Velocity velocity = ruby.systems.modules.Modules.getByClass(Velocity.class);
+        Velocity velocity = Modules.getByClass(Velocity.class);
         if (velocity != null && velocity.shouldJumpReset()) jump = true;
 
         PlayerInput raw = new PlayerInput(forward, backward, left, right, jump, sneak, sprint);

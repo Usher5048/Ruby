@@ -1,7 +1,7 @@
 package ruby.systems.modules.render;
 
 import net.minecraft.block.Blocks;
-import ruby.RubyClient;
+import ruby.helpers.world.ChunkReloadHelper;
 import ruby.systems.config.BlockListValue;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.EnumValue;
@@ -17,7 +17,7 @@ public class TextureTweaks extends Module {
 
     public final BooleanValue wrapEnabled = this.config.create(new BooleanValue.Builder("Texture Wrapping")
             .description("Whether or not to wrap side textures of some blocks, similar to OptiFine's better grass")
-            .changed(v -> RubyClient.client.worldRenderer.reload())
+            .changed(v -> ChunkReloadHelper.schedule())
             .defaultValue(true)
             .build());
 
@@ -25,7 +25,7 @@ public class TextureTweaks extends Module {
             .description("How to wrap the textures on blocks")
             .defaultValue(WrapMode.SINGLE_SIDE)
             .visible(this.wrapEnabled::value)
-            .changed(v -> RubyClient.client.worldRenderer.reload())
+            .changed(v -> ChunkReloadHelper.schedule())
             .build());
 
     public final BlockListValue wrappedBlocks = this.config.create(new BlockListValue.Builder("Wrapped Blocks")
@@ -38,14 +38,14 @@ public class TextureTweaks extends Module {
 
     public final BooleanValue connectedEnabled = this.config.create(new BooleanValue.Builder("Connected Textures")
             .description("Whether or not to connect adjacent block's textures")
-            .changed(v -> RubyClient.client.worldRenderer.reload())
+            .changed(v -> ChunkReloadHelper.schedule())
             .defaultValue(true)
             .build());
 
     public final BlockListValue connectedBlocks = this.config.create(new BlockListValue.Builder("Connected Blocks")
             .description("Which blocks to connect adjacent textures of")
             .visible(this.connectedEnabled::value)
-            .changed(v -> RubyClient.client.worldRenderer.reload())
+            .changed(v -> ChunkReloadHelper.schedule())
             .defaultValue(Blocks.GLASS, Blocks.TINTED_GLASS, Blocks.BOOKSHELF)
             .build());
 
@@ -54,9 +54,9 @@ public class TextureTweaks extends Module {
     }
 
     @Override public void onEnable() {
-        RubyClient.client.worldRenderer.reload();
+        ChunkReloadHelper.schedule();
     }
     @Override public void onDisable() {
-        RubyClient.client.worldRenderer.reload();
+        ChunkReloadHelper.schedule();
     }
 }

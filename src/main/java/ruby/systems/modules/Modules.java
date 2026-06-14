@@ -36,6 +36,7 @@ public class Modules {
         Modules.modules.add(new Reach());
         Modules.modules.add(new ShieldBreaker());
         Modules.modules.add(new Velocity());
+        Modules.modules.add(new WTap());
 
         // Exploit
         Modules.modules.add(new ClickTP());
@@ -187,14 +188,19 @@ public class Modules {
         if (module == null || !module.enabled()) return;
         Modules.activeModules.remove(module);
         module.enabled = false;
-        module.onDisable();
+        Modules.runOnRenderThread(module::onDisable);
     }
 
     public static void enableSilently(Module module) {
         if (module == null || module.enabled()) return;
         Modules.activeModules.add(module);
         module.enabled = true;
-        module.onEnable();
+        Modules.runOnRenderThread(module::onEnable);
+    }
+
+    private static void runOnRenderThread(Runnable action) {
+        if (RubyClient.client.isOnThread()) action.run();
+        else RubyClient.client.execute(action);
     }
 
     public static void setEnabledSilently(Module module, boolean isEnabled) {

@@ -1,9 +1,14 @@
 package ruby.systems.modules.render;
 
+import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.option.Perspective;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import org.lwjgl.glfw.GLFW;
 import ruby.RubyClient;
+import ruby.helpers.input.InputUtils;
+import ruby.helpers.world.ChunkReloadHelper;
+import ruby.mixin.KeyBindingAccessor;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
@@ -35,6 +40,9 @@ public class Freecam extends Module {
 
     private boolean forward, backward, right, left, up, down;
 
+    private double savedFovScale;
+    private boolean savedBobView;
+
     public Freecam() {
         super("Freecam", "Allows the camera to move away from the player.", ModuleType.RENDER);
 
@@ -65,6 +73,13 @@ public class Freecam extends Module {
     public void onEnable() {
         if (RubyClient.client.player == null) return;
 
+        if (staticView.value()) {
+            savedFovScale = RubyClient.client.options.getFovEffectScale().getValue();
+            savedBobView = RubyClient.client.options.getBobView().getValue();
+            RubyClient.client.options.getFovEffectScale().setValue(0.0);
+            RubyClient.client.options.getBobView().setValue(false);
+        }
+
         speedValue = speed.value();
         yaw = RubyClient.client.player.getYaw();
         pitch = RubyClient.client.player.getPitch();
@@ -82,19 +97,29 @@ public class Freecam extends Module {
             pitch *= -1;
         }
 
-        isSneaking = RubyClient.client.options.sneakKey.isPressed();
-        readKeys();
+        isSneaking = InputUtils.isKeyPressed(RubyClient.client.options.sneakKey);
+        syncKeysFromInput();
         unpressKeys();
+
+        if (reloadChunks.value()) {
+            ChunkReloadHelper.schedule();
+        }
     }
 
     @Override
     public void onDisable() {
-        if (reloadChunks.value() && RubyClient.client.worldRenderer != null) {
-            RubyClient.client.execute(() -> RubyClient.client.worldRenderer.reload());
+        if (reloadChunks.value()) {
+            ChunkReloadHelper.schedule();
+        }
+
+        if (staticView.value()) {
+            RubyClient.client.options.getFovEffectScale().setValue(savedFovScale);
+            RubyClient.client.options.getBobView().setValue(savedBobView);
         }
 
         if (perspective != null) RubyClient.client.options.setPerspective(perspective);
         isSneaking = false;
+        forward = backward = right = left = up = down = false;
     }
 
     @Override
@@ -105,33 +130,114 @@ public class Freecam extends Module {
             RubyClient.client.options.setPerspective(Perspective.FIRST_PERSON);
         }
 
-        readKeys();
         unpressKeys();
 
         Vec3d forwardVec = Vec3d.fromPolar(0, yaw);
         Vec3d rightVec = Vec3d.fromPolar(0, yaw + 90);
 
         double velX = 0, velY = 0, velZ = 0;
-        double s = RubyClient.client.options.sprintKey.isPressed() ? 1.0 : 0.5;
+        double s = InputUtils.isKeyPressed(RubyClient.client.options.sprintKey) ? 1.0 : 0.5;
 
-        if (forward) { velX += forwardVec.x * s * speedValue; velZ += forwardVec.z * s * speedValue; }
-        if (backward) { velX -= forwardVec.x * s * speedValue; velZ -= forwardVec.z * s * speedValue; }
-        if (right) { velX += rightVec.x * s * speedValue; velZ += rightVec.z * s * speedValue; }
-        if (left) { velX -= rightVec.x * s * speedValue; velZ -= rightVec.z * s * speedValue; }
+        boolean movingForward = false;
+        if (forward) {
+            velX += forwardVec.x * s * speedValue;
+            velZ += forwardVec.z * s * speedValue;
+            movingForward = true;
+        }
+        if (backward) {
+            velX -= forwardVec.x * s * speedValue;
+            velZ -= forwardVec.z * s * speedValue;
+            movingForward = true;
+        }
+
+        boolean movingSideways = false;
+        if (right) {
+            velX += rightVec.x * s * speedValue;
+            velZ += rightVec.z * s * speedValue;
+            movingSideways = true;
+        }
+        if (left) {
+            velX -= rightVec.x * s * speedValue;
+            velZ -= rightVec.z * s * speedValue;
+            movingSideways = true;
+        }
+
+        if (movingForward && movingSideways) {
+            double diagonal = 1 / Math.sqrt(2);
+            velX *= diagonal;
+            velZ *= diagonal;
+        }
+
         if (up) velY += s * speedValue;
         if (down) velY -= s * speedValue;
 
-        prevX = x; prevY = y; prevZ = z;
-        x += velX; y += velY; z += velZ;
+        prevX = x;
+        prevY = y;
+        prevZ = z;
+        x += velX;
+        y += velY;
+        z += velZ;
     }
 
-    private void readKeys() {
-        forward = RubyClient.client.options.forwardKey.isPressed();
-        backward = RubyClient.client.options.backKey.isPressed();
-        right = RubyClient.client.options.rightKey.isPressed();
-        left = RubyClient.client.options.leftKey.isPressed();
-        up = RubyClient.client.options.jumpKey.isPressed();
-        down = RubyClient.client.options.sneakKey.isPressed();
+    public void onScreenOpen() {
+        unpressKeys();
+        prevX = x;
+        prevY = y;
+        prevZ = z;
+        lastYaw = yaw;
+        lastPitch = pitch;
+    }
+
+    public boolean onKey(int key, int action) {
+        if (RubyClient.client.currentScreen != null) return false;
+        if (InputUtils.isKeyPressed(GLFW.GLFW_KEY_F3)) return false;
+
+        var options = RubyClient.client.options;
+        if (key == bindingCode(options.forwardKey)) {
+            forward = action != GLFW.GLFW_RELEASE;
+            options.forwardKey.setPressed(false);
+            return true;
+        }
+        if (key == bindingCode(options.backKey)) {
+            backward = action != GLFW.GLFW_RELEASE;
+            options.backKey.setPressed(false);
+            return true;
+        }
+        if (key == bindingCode(options.rightKey)) {
+            right = action != GLFW.GLFW_RELEASE;
+            options.rightKey.setPressed(false);
+            return true;
+        }
+        if (key == bindingCode(options.leftKey)) {
+            left = action != GLFW.GLFW_RELEASE;
+            options.leftKey.setPressed(false);
+            return true;
+        }
+        if (key == bindingCode(options.jumpKey)) {
+            up = action != GLFW.GLFW_RELEASE;
+            options.jumpKey.setPressed(false);
+            return true;
+        }
+        if (key == bindingCode(options.sneakKey)) {
+            down = action != GLFW.GLFW_RELEASE;
+            options.sneakKey.setPressed(false);
+            return true;
+        }
+        return false;
+    }
+
+    private void syncKeysFromInput() {
+        var options = RubyClient.client.options;
+        forward = InputUtils.isKeyPressed(options.forwardKey);
+        backward = InputUtils.isKeyPressed(options.backKey);
+        right = InputUtils.isKeyPressed(options.rightKey);
+        left = InputUtils.isKeyPressed(options.leftKey);
+        up = InputUtils.isKeyPressed(options.jumpKey);
+        down = InputUtils.isKeyPressed(options.sneakKey);
+    }
+
+    private static int bindingCode(KeyBinding binding) {
+        return ((KeyBindingAccessor) binding).getBoundKey().getCode();
     }
 
     private void unpressKeys() {
