@@ -1,6 +1,8 @@
 package ruby.systems.modules.render;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.network.ServerInfo;
 import net.minecraft.entity.player.PlayerEntity;
 import ruby.RubyClient;
 import ruby.helpers.render.NametagUtils;
@@ -18,6 +20,7 @@ import ruby.systems.modules.ModuleType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -36,6 +39,7 @@ public class LogoutSpots extends Module {
     private final List<Entry> players = new ArrayList<>();
     private final List<PlayerListEntry> lastPlayerList = new ArrayList<>();
     private final List<PlayerEntity> lastPlayers = new ArrayList<>();
+    private String serverKey;
     private int timer;
 
     public LogoutSpots() {
@@ -53,19 +57,15 @@ public class LogoutSpots extends Module {
 
     @Override
     public void onEnable() {
-        players.clear();
-        lastPlayerList.clear();
-        if (RubyClient.client.getNetworkHandler() != null) {
-            lastPlayerList.addAll(RubyClient.client.getNetworkHandler().getPlayerList());
-        }
-        updateLastPlayers();
-        timer = 10;
+        syncServerSession();
     }
 
     @Override
     public void onDisable() {
+        serverKey = null;
         players.clear();
         lastPlayerList.clear();
+        lastPlayers.clear();
     }
 
     @Override
@@ -75,9 +75,20 @@ public class LogoutSpots extends Module {
 
     @Override
     public void tick() {
-        if (RubyClient.client.world == null || RubyClient.client.getNetworkHandler() == null) return;
+        MinecraftClient client = RubyClient.client;
+        if (client.world == null || client.getNetworkHandler() == null) {
+            if (serverKey != null) {
+                serverKey = null;
+                players.clear();
+                lastPlayerList.clear();
+                lastPlayers.clear();
+            }
+            return;
+        }
 
-        Collection<PlayerListEntry> online = RubyClient.client.getNetworkHandler().getPlayerList();
+        syncServerSession();
+
+        Collection<PlayerListEntry> online = client.getNetworkHandler().getPlayerList();
         if (online.size() != lastPlayerList.size()) {
             for (PlayerListEntry entry : lastPlayerList) {
                 boolean stillOnline = online.stream()
@@ -101,9 +112,36 @@ public class LogoutSpots extends Module {
             timer = 10;
         }
 
-        for (PlayerEntity player : RubyClient.client.world.getPlayers()) {
+        for (PlayerEntity player : client.world.getPlayers()) {
             players.removeIf(entry -> entry.uuid.equals(player.getUuid()));
         }
+    }
+
+    private String resolveServerKey() {
+        MinecraftClient client = RubyClient.client;
+        if (client.isInSingleplayer()) {
+            if (client.world == null) return null;
+            return "sp:" + client.world.getRegistryKey().getValue();
+        }
+
+        ServerInfo entry = client.getCurrentServerEntry();
+        return entry != null ? entry.address : null;
+    }
+
+    private void syncServerSession() {
+        String key = resolveServerKey();
+        if (Objects.equals(key, serverKey)) return;
+
+        serverKey = key;
+        players.clear();
+        lastPlayerList.clear();
+        lastPlayers.clear();
+
+        if (key != null && RubyClient.client.getNetworkHandler() != null) {
+            lastPlayerList.addAll(RubyClient.client.getNetworkHandler().getPlayerList());
+        }
+        updateLastPlayers();
+        timer = 10;
     }
 
     private void updateLastPlayers() {
