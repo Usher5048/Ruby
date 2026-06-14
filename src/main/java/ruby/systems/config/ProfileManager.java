@@ -108,11 +108,11 @@ public class ProfileManager {
     }
     public static boolean importProfile(String data) { // returns true on sig match, not if valid
         ByteArrayInputStream stream = new ByteArrayInputStream(Base64.getDecoder().decode(data));
-        try {
-            byte[] sig = stream.readNBytes(12);
-            if(!(new String(sig, StandardCharsets.US_ASCII).equals("RUBY_PROFILE")))
-                return false;
-        } catch(Exception ignored) { return false; }
+
+        byte[] sig = new byte[12];
+        stream.readNBytes(sig, 0, sig.length);
+        if(!(new String(sig, StandardCharsets.US_ASCII).equals("RUBY_PROFILE")))
+            return false;
 
         Inflater inflater = new Inflater();
         inflater.setInput(stream.readAllBytes());

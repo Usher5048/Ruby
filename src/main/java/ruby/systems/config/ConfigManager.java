@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
@@ -88,9 +89,16 @@ public class ConfigManager {
     public static void configToBytes(ByteArrayOutputStream stream, Configuration config) {
         ByteArrayOutputStream valueStream = new ByteArrayOutputStream();
 
-        stream.write(config.getAll().size());
+        int modifiedCount = (int) config.getAll()
+                .stream()
+                .map(config::get)
+                .filter(Predicate.not(Value::isDefault))
+                .count();
+
+        stream.write(modifiedCount);
         for(String key : config.getAll()) {
             Value<?> value = config.get(key);
+            if(value.isDefault()) continue;
 
             ConfigManager.writeString(stream, key);
 
@@ -103,6 +111,8 @@ public class ConfigManager {
     }
 
     public static void bytesToConfig(ByteArrayInputStream stream, Configuration config) {
+        if(config != null) config.resetToDefaults();
+
         int count = stream.read();
         for(int i = 0; i < count; i++) {
             String key = ConfigManager.readString(stream);

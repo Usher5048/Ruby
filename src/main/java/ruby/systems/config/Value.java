@@ -41,6 +41,9 @@ public abstract class Value<T> {
     public T defaultValue() {
         return this.defaultValue;
     }
+    public boolean isDefault() {
+        return this.defaultValue.equals(this.value);
+    }
 
     public T value() {
         return this.value;
