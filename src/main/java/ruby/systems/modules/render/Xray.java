@@ -5,9 +5,11 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 import ruby.RubyClient;
 import ruby.helpers.world.BlockUtils;
+import ruby.helpers.world.ChunkReloadHelper;
 import ruby.systems.config.BlockListValue;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.IntegerValue;
@@ -17,7 +19,7 @@ import ruby.systems.modules.ModuleType;
 import java.util.List;
 
 /**
- * Ported from Meteor Client xray.
+ * Xray — based on Meteor Client 1.21.11.
  */
 public class Xray extends Module {
 
@@ -44,16 +46,17 @@ public class Xray extends Module {
         blocks = config.create(new BlockListValue.Builder("Whitelist")
                 .description("Which blocks to show x-rayed.")
                 .defaultValue(DEFAULT_ORES)
+                .changed(v -> { if (this.enabled()) reload(); })
                 .build());
         opacity = config.create(new IntegerValue.Builder("Opacity")
                 .description("Opacity for all other blocks.")
                 .range(0, 255).defaultValue(25)
-                .changed(v -> reload())
+                .changed(v -> { if (this.enabled()) reload(); })
                 .build());
         exposedOnly = config.create(new BooleanValue.Builder("Exposed Only")
                 .description("Show only exposed ores.")
                 .defaultValue(false)
-                .changed(v -> reload())
+                .changed(v -> { if (this.enabled()) reload(); })
                 .build());
     }
 
@@ -68,32 +71,43 @@ public class Xray extends Module {
     }
 
     private void reload() {
-        if (RubyClient.client.worldRenderer != null) {
-            RubyClient.client.worldRenderer.reload();
-        }
+        ChunkReloadHelper.schedule();
     }
 
     public boolean isBlocked(Block block, BlockPos pos) {
         if (!blocks.value().contains(block)) return true;
         if (!exposedOnly.value()) return false;
-        return pos == null || !BlockUtils.isExposed(pos);
+        if (pos == null || RubyClient.client.world == null) return false;
+        return !BlockUtils.isExposed(pos, RubyClient.client.world);
+    }
+
+    public boolean isBlocked(Block block, BlockPos pos, BlockView view) {
+        if (!blocks.value().contains(block)) return true;
+        if (!exposedOnly.value()) return false;
+        if (pos == null || view == null) return false;
+        return !BlockUtils.isExposed(pos, view);
     }
 
     public boolean modifyDrawSide(BlockState state, BlockView view, BlockPos pos, Direction facing, boolean original) {
-        if (original || isBlocked(state.getBlock(), pos)) return original;
+        if (original || isBlocked(state.getBlock(), pos, view)) return original;
 
         BlockPos adjPos = pos.offset(facing);
         BlockState adjState = view.getBlockState(adjPos);
-        return !adjState.isOpaqueFullCube()
+        return adjState.getCullingFace(facing.getOpposite()) != VoxelShapes.fullCube()
                 || adjState.getBlock() != state.getBlock()
-                || isBlocked(adjState.getBlock(), adjPos);
+                || !adjState.isOpaqueFullCube()
+                || isBlocked(adjState.getBlock(), adjPos, view);
     }
 
     public static int getAlpha(BlockState state, BlockPos pos) {
+        return getAlpha(state, pos, null);
+    }
+
+    public static int getAlpha(BlockState state, BlockPos pos, BlockView view) {
         Xray xray = ruby.systems.modules.Modules.getByClass(Xray.class);
         if (xray == null || !xray.enabled()) return -1;
 
-        if (!xray.isBlocked(state.getBlock(), pos)) return -1;
+        if (!xray.isBlocked(state.getBlock(), pos, view)) return -1;
         return xray.opacity.value();
     }
 }

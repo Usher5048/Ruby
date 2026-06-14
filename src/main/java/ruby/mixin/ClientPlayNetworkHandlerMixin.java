@@ -6,8 +6,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ruby.RubyClient;
+import ruby.helpers.world.ChunkReloadHelper;
 import ruby.systems.commands.Command;
 import ruby.systems.commands.Commands;
+import ruby.systems.modules.Modules;
+import ruby.systems.modules.render.Xray;
 
 import java.util.Arrays;
 
@@ -28,5 +31,13 @@ public class ClientPlayNetworkHandlerMixin {
 		Command cmd = Commands.getByName(command);
 		if(cmd == null) RubyClient.notifyUser("Unknown command: " + command);
 		else cmd.execute(args);
+	}
+
+	@Inject(method = "onGameJoin", at = @At("TAIL"))
+	private void ruby$reloadXrayOnJoin(CallbackInfo ci) {
+		Xray xray = Modules.getByClass(Xray.class);
+		if (xray != null && xray.enabled()) {
+			ChunkReloadHelper.schedule();
+		}
 	}
 }

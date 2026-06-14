@@ -1,0 +1,16 @@
+{
+  "required": false,
+  "package": "ruby.mixin.sodium",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "ruby.plugins.MixinPlugin",
+  "client": [
+    "SodiumBlockOcclusionCacheMixin",
+    "SodiumBlockRendererMixin",
+    "SodiumDefaultFluidRendererMixin",
+    "SodiumInnerPartitionBSPNodeMixin",
+    "SodiumLightDataAccessMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
