@@ -1,9 +1,14 @@
 package ruby.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
+import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.BlockView;
@@ -15,6 +20,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ruby.RubyClient;
+import ruby.helpers.PlayerInteractEntity;
 import ruby.systems.events.Events;
 import ruby.systems.events.entity.EntityEvent;
 import ruby.systems.events.entity.EntityEvents;
@@ -25,16 +31,77 @@ import ruby.systems.modules.player.SpeedMine;
 
 @Mixin(ClientPlayerInteractionManager.class)
 public abstract class ClientPlayerInteractionManagerMixin {
-    @Inject(method = "attackEntity", at = @At("HEAD"), cancellable = true)
-    private void ruby$onBeforeAttack(PlayerEntity player, Entity target, CallbackInfo info) {
-        if(Events.ENTITY.fire(EntityEvents.BEFORE_ATTACK, new EntityEvent(target)))
-            info.cancel();
+    @WrapMethod(method = "attackEntity")
+    private void ruby$onBeforeAttack(PlayerEntity player, Entity target, Operation<Void> original) {
+        EntityEvent event = new EntityEvent(
+                PlayerInteractEntity.Type.ATTACK,
+                target, null, Hand.MAIN_HAND
+        );
+
+        if(Events.ENTITY.fire(EntityEvents.BEFORE_INTERACT, event)) return;
+        original.call(player, event.entity());
     }
 
     @Inject(method = "attackEntity", at = @At("TAIL"), cancellable = true)
     private void ruby$onAfterAttack(PlayerEntity player, Entity target, CallbackInfo info) {
-        if(Events.ENTITY.fire(EntityEvents.AFTER_ATTACK, new EntityEvent(target)))
-            info.cancel();
+        Events.ENTITY.fire(EntityEvents.AFTER_INTERACT, new EntityEvent(
+                PlayerInteractEntity.Type.ATTACK,
+                target, null, Hand.MAIN_HAND
+        ));
+    }
+
+    @WrapMethod(method = "interactEntity")
+    private ActionResult ruby$onBeforeInteract(
+            PlayerEntity player,
+            Entity entity, Hand hand,
+            Operation<ActionResult> original
+    ) {
+        EntityEvent event = new EntityEvent(
+                PlayerInteractEntity.Type.INTERACT,
+                entity, null, hand
+        );
+
+        if(Events.ENTITY.fire(EntityEvents.BEFORE_INTERACT, event)) return ActionResult.PASS;
+        return original.call(player, event.entity(), event.hand());
+    }
+
+    @Inject(method = "interactEntity", at = @At("TAIL"), cancellable = true)
+    private void ruby$onAfterInteract(
+            PlayerEntity player,
+            Entity entity, Hand hand,
+            CallbackInfoReturnable<ActionResult> info
+    ) {
+        Events.ENTITY.fire(EntityEvents.AFTER_INTERACT, new EntityEvent(
+                PlayerInteractEntity.Type.INTERACT,
+                entity, null, hand
+        ));
+    }
+
+    @WrapMethod(method = "interactEntityAtLocation")
+    private ActionResult ruby$onBeforeInteractAt(
+            PlayerEntity player, Entity entity,
+            EntityHitResult hitResult, Hand hand,
+            Operation<ActionResult> original
+    ) {
+        EntityEvent event = new EntityEvent(
+                PlayerInteractEntity.Type.INTERACT_AT,
+                entity, hitResult, hand
+        );
+
+        if(Events.ENTITY.fire(EntityEvents.BEFORE_INTERACT, event)) return ActionResult.PASS;
+        return original.call(player, event.entity(), event.hitResult(), event.hand());
+    }
+
+    @Inject(method = "interactEntityAtLocation", at = @At("TAIL"), cancellable = true)
+    private void ruby$onAfterInteractAt(
+            PlayerEntity player, Entity entity,
+            EntityHitResult hitResult, Hand hand,
+            CallbackInfoReturnable<ActionResult> info
+    ) {
+        Events.ENTITY.fire(EntityEvents.AFTER_INTERACT, new EntityEvent(
+                PlayerInteractEntity.Type.INTERACT_AT,
+                entity, hitResult, hand
+        ));
     }
 
     @Redirect(

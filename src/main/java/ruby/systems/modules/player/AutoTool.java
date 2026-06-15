@@ -5,7 +5,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -17,6 +16,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
+import ruby.helpers.PlayerInteractEntity;
 import ruby.mixin.ClientPlayerInteractionManagerAccessor;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.EnumValue;
@@ -111,8 +111,9 @@ public class AutoTool extends Module {
                 .defaultValue(10)
                 .build());
 
-        Events.ENTITY.register(EntityEvents.BEFORE_ATTACK, event -> {
+        Events.ENTITY.register(EntityEvents.BEFORE_INTERACT, event -> {
             if (!this.enabled() || !this.autoWeapon.value()) return;
+            if(event.type() != PlayerInteractEntity.Type.ATTACK) return;
             if (!(event.entity() instanceof LivingEntity target)) return;
             if (isWeaponBusy()) return;
             this.selectWeaponOnAttack(target);

@@ -1,17 +1,17 @@
 package ruby.systems.bypasses;
 
 import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.c2s.common.CommonPongC2SPacket;
 import net.minecraft.network.packet.c2s.common.KeepAliveC2SPacket;
 import net.minecraft.network.packet.c2s.common.ResourcePackStatusC2SPacket;
-import net.minecraft.network.packet.c2s.play.AcknowledgeChunksC2SPacket;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.network.packet.c2s.play.ClientTickEndC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.network.packet.c2s.play.VehicleMoveC2SPacket;
+import net.minecraft.network.packet.c2s.play.*;
 import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
 import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
+import net.minecraft.util.Hand;
 import ruby.RubyClient;
+import ruby.helpers.PlayerInteractEntity;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 public class GrimBypass extends Bypass {
     private boolean teleportExempt;
@@ -32,6 +32,22 @@ public class GrimBypass extends Bypass {
         if(from.changesPosition()) return new PlayerMoveC2SPacket.PositionAndOnGround(x, y, z, ground, horizC);
         return new PlayerMoveC2SPacket.LookAndOnGround(yaw, pitch, ground, horizC);
     }
+
+    private boolean isAsync(Packet<?> packet) {
+        return packet instanceof KeepAliveC2SPacket ||
+                packet instanceof ResourcePackStatusC2SPacket ||
+                packet instanceof AcknowledgeChunksC2SPacket;
+    }
+
+    private boolean isTransaction(Packet<?> packet) {
+        return packet instanceof CommonPongC2SPacket;
+    }
+
+    private boolean isFlying(Packet<?> packet) {
+        return packet instanceof PlayerMoveC2SPacket move &&
+                (move.changesPosition() || move.changesLook());
+    }
+
 
     private Packet<?> aimModulo360(Packet<?> packet) {
         if(!(packet instanceof PlayerMoveC2SPacket move) || !move.changesLook()) return packet;
@@ -83,11 +99,6 @@ public class GrimBypass extends Bypass {
         return null;
     }
 
-    private Packet<?> badPacketsB(Packet<?> packet) {
-//        if(!(packet instanceof PlayerMoveC2SPacket move))
-        return packet;
-    }
-
     private Packet<?> badPacketsC(Packet<?> packet) {
         if(RubyClient.client == null || RubyClient.client.player == null) return packet;
         if(!RubyClient.client.player.isSleeping()) return packet;
@@ -110,12 +121,6 @@ public class GrimBypass extends Bypass {
         );
     }
 
-    private boolean isAsync(Packet<?> packet) {
-        return packet instanceof KeepAliveC2SPacket
-                || packet instanceof ResourcePackStatusC2SPacket
-                || packet instanceof AcknowledgeChunksC2SPacket;
-    }
-
     private boolean isVehicleSprint(Packet<?> packet) {
         if(RubyClient.client == null || RubyClient.client.player == null || !RubyClient.client.player.hasVehicle())
             return false;
@@ -135,6 +140,38 @@ public class GrimBypass extends Bypass {
         } finally {
             this.injectingTickEnd = false;
         }
+    }
+
+    private boolean sentAttack = false;
+    private boolean sentSwingSinceLastAttack = true;
+    private Packet<?> packetOrderB(Packet<?> packet) {
+        if(packet instanceof HandSwingC2SPacket) {
+            this.sentSwingSinceLastAttack = true;
+            this.sentAttack = false;
+            return packet;
+        }
+
+        if(packet instanceof PlayerInteractEntityC2SPacket interact) {
+            AtomicReference<PlayerInteractEntity.Type> type = new AtomicReference<>(null);
+            interact.handle(new PlayerInteractEntity(type));
+            if(type.get() != PlayerInteractEntity.Type.ATTACK) return packet;
+
+            this.sentAttack = true;
+            if(!this.sentSwingSinceLastAttack) {
+                this.connection.send(new HandSwingC2SPacket(Hand.MAIN_HAND)); // flag
+                this.sentAttack = false;
+            }
+
+            this.sentSwingSinceLastAttack = false;
+            return packet;
+        }
+
+        if(!this.isAsync(packet) && this.sentAttack) {
+            this.connection.send(new HandSwingC2SPacket(Hand.MAIN_HAND)); // flag
+            this.sentAttack = false;
+        }
+
+        return packet;
     }
 
     private Packet<?> packetOrderO(Packet<?> packet) {
@@ -168,6 +205,7 @@ public class GrimBypass extends Bypass {
 
         modified = this.aimModulo360(modified);
         modified = this.badPacketsD(modified);
+        modified = this.packetOrderB(modified);
         modified = this.packetOrderO(modified);
 
         modified = this.aimDuplicateLook(modified);

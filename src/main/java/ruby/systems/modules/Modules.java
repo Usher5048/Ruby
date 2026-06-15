@@ -35,7 +35,6 @@ public class Modules {
         Modules.modules.add(new Hitboxes());
         Modules.modules.add(new KillAura());
         Modules.modules.add(new Reach());
-        Modules.modules.add(new ShieldBreaker());
         Modules.modules.add(new Velocity());
         Modules.modules.add(new WTap());
 
@@ -175,39 +174,46 @@ public class Modules {
     }
 
     public static void setEnabled(Module module, boolean isEnabled) {
-        if (module == null) return;
-        if (module.enabled != isEnabled) Modules.toggle(module);
+        if(module == null) return;
+        if(module.enabled != isEnabled) Modules.toggle(module);
     }
 
     public static void disableAllSilently() {
-        for (Module module : Modules.modules) {
+        for(Module module : Modules.modules)
             Modules.disableSilently(module);
-        }
     }
 
-    public static void disableSilently(Module module) {
-        if (module == null || !module.enabled()) return;
+    public static boolean disableSilently(Module module) {
+        if(module == null) return false;
+        if(!module.enabled()) return false;
+
         Modules.activeModules.remove(module);
         module.enabled = false;
         Modules.runOnRenderThread(module::onDisable);
+
+        return true;
     }
 
-    public static void enableSilently(Module module) {
-        if (module == null || module.enabled()) return;
+    public static boolean enableSilently(Module module) {
+        if(module == null) return false;
+        if(module.enabled()) return true;
+
         Modules.activeModules.add(module);
         module.enabled = true;
         Modules.runOnRenderThread(module::onEnable);
+
+        return false;
     }
 
     private static void runOnRenderThread(Runnable action) {
-        if (RubyClient.client.isOnThread()) action.run();
+        if(RubyClient.client.isOnThread()) action.run();
         else RubyClient.client.execute(action);
     }
 
-    public static void setEnabledSilently(Module module, boolean isEnabled) {
-        if (module == null) return;
-        if (isEnabled) Modules.enableSilently(module);
-        else Modules.disableSilently(module);
+    public static boolean setEnabledSilently(Module module, boolean isEnabled) {
+        if(module == null) return false;
+        if(isEnabled) return Modules.enableSilently(module);
+        else return Modules.disableSilently(module);
     }
 
     public static void tick(Events.GenericEvent e) {
@@ -218,12 +224,12 @@ public class Modules {
                 Modules.toggle(module);
         }
 
-        for(Module module : Modules.activeModules)
+        for(Module module : Modules.activeModules.toArray(new Module[0]))
             module.tick();
     }
 
     public static void tickEnd(Events.GenericEvent e) {
-        for(Module module : Modules.activeModules)
+        for(Module module : Modules.activeModules.toArray(new Module[0]))
             module.tickEnd();
     }
 
@@ -234,14 +240,14 @@ public class Modules {
                 1f / RubyClient.client.getWindow().getScaleFactor()
         );
 
-        for(Module module : Modules.activeModules)
+        for(Module module : Modules.activeModules.toArray(new Module[0]))
             module.render2D(event);
 
         event.getContext().getMatrices().popMatrix();
     }
 
     public static void render3D(Events.GenericEvent e) {
-        for(Module module : Modules.activeModules)
+        for(Module module : Modules.activeModules.toArray(new Module[0]))
             module.render3D();
     }
 }

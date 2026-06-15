@@ -13,6 +13,7 @@ import ruby.RubyClient;
 
 public class Bypass {
     protected ClientConnection connection;
+    private boolean movementTick;
     private boolean serverOnGround;
     private Vec3d serverPosition;
     private Vec3d lastServerPosition;
@@ -53,6 +54,13 @@ public class Bypass {
         if(Float.isNaN(this.serverPitch) && RubyClient.client.player != null)
             return RubyClient.client.player.getPitch();
         return this.serverPitch;
+    }
+
+    public boolean sentMovementThisTick() {
+        return this.movementTick;
+    }
+    public void setMovementTick(boolean val) {
+        this.movementTick = val;
     }
 
     public void resetConnection(ClientConnection connection) {

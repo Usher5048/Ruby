@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ruby.helpers.RotationManager;
+import ruby.systems.bypasses.Bypasses;
 import ruby.systems.modules.combat.Criticals;
 import ruby.systems.modules.combat.KillAura;
 import ruby.systems.modules.movement.NoPush;
@@ -18,6 +19,7 @@ import ruby.systems.modules.render.Freecam;
 public abstract class ClientPlayerEntityMixin {
     @Inject(method = "tick", at = @At("HEAD"))
     private void ruby$updateRotations(CallbackInfo ci) {
+        Bypasses.get().setMovementTick(false);
         KillAura.updateRotations();
         RotationManager.update();
         KillAura.tryAttack();
@@ -131,5 +133,16 @@ public abstract class ClientPlayerEntityMixin {
             ClientPlayerEntity player = (ClientPlayerEntity) (Object) this;
             player.setSneaking(true);
         }
+    }
+
+    @Inject(
+            method = "sendMovementPackets",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/network/ClientPlayNetworkHandler;sendPacket(Lnet/minecraft/network/packet/Packet;)V"
+            )
+    )
+    private void updateLastSent(CallbackInfo info) {
+        Bypasses.get().setMovementTick(true);
     }
 }

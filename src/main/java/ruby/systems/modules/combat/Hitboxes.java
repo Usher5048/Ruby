@@ -7,17 +7,21 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
 import net.minecraft.util.Hand;
 import net.minecraft.util.PlayerInput;
+import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import ruby.RubyClient;
+import ruby.helpers.PlayerInteractEntity;
 import ruby.helpers.Rotations;
 import ruby.helpers.render.Renderer;
+import ruby.systems.bypasses.Bypasses;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.ColorValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EntityTypeListValue;
 import ruby.systems.events.Events;
+import ruby.systems.events.entity.EntityEvent;
 import ruby.systems.events.entity.EntityEvents;
 import ruby.systems.events.packet.PacketEvents;
 import ruby.systems.modules.Module;
@@ -54,12 +58,14 @@ public class Hitboxes extends Module {
             .defaultValue(0xFFFFFF)
             .build());
 
-    private PlayerInput lastInput = null;
+    private final Queue<EntityEvent> eventQueue = new ArrayDeque<>();
+    private boolean ignoreNextInteract = false;
     private boolean cancelNextSwing = false;
-    private boolean ignoreNextAttack = false;
+    private PlayerInput lastInput = null;
     private float prevPitch = Float.NaN;
+    private boolean subTicking = false;
     private float prevYaw = Float.NaN;
-    private final Queue<Entity> attackQueue = new ArrayDeque<>();
+
     public Hitboxes() {
         super("Hitboxes", "Expands an entity's hitboxes.", ModuleType.COMBAT);
 
@@ -72,16 +78,18 @@ public class Hitboxes extends Module {
             this.cancelNextSwing = false;
         });
 
-        Events.ENTITY.register(EntityEvents.BEFORE_ATTACK, event -> {
+        Events.ENTITY.register(EntityEvents.BEFORE_INTERACT, event -> {
             if(!this.enabled()) return;
-            if(this.ignoreNextAttack) {
-                this.ignoreNextAttack = false;
+            if(this.ignoreNextInteract) {
+                this.ignoreNextInteract = false;
                 return;
             }
 
-            this.attackQueue.add(event.entity());
-            this.cancelNextSwing = true;
+            if(event.type() == PlayerInteractEntity.Type.ATTACK)
+                this.cancelNextSwing = true;
+
             event.setCancelled(true);
+            this.eventQueue.add(event);
         });
     }
 
@@ -102,11 +110,15 @@ public class Hitboxes extends Module {
         if(RubyClient.client.interactionManager == null) return;
         if(RubyClient.client.getNetworkHandler() == null) return;
 
-        this.lastInput = null;
-        this.prevYaw = Float.NaN; this.prevPitch = Float.NaN;
-        if(this.attackQueue.isEmpty()) return;
+        if(!this.subTicking) {
+            this.lastInput = null;
+            this.prevYaw = Float.NaN; this.prevPitch = Float.NaN;
+        }
 
-        Entity entity = this.attackQueue.poll();
+        if(this.eventQueue.isEmpty()) return;
+
+        EntityEvent event = this.eventQueue.poll();
+        Entity entity = event.entity();
         if(entity == null) return;
 
         Box box = entity.getBoundingBox();
@@ -116,24 +128,50 @@ public class Hitboxes extends Module {
         double z = MathHelper.clamp(eye.getZ(), box.minZ, box.maxZ);
         if(RubyClient.client.player.getEyePos().squaredDistanceTo(x, y, z) > 9) return;
 
-        this.lastInput = RubyClient.client.player.input.playerInput;
-        RubyClient.client.player.input.playerInput = new PlayerInput(
-                false, false, false, false,
-                RubyClient.client.player.input.playerInput.jump(),
-                RubyClient.client.player.input.playerInput.sneak(),
-                false
-        );
+        if(!this.subTicking) {
+            this.lastInput = RubyClient.client.player.input.playerInput;
+            RubyClient.client.player.input.playerInput = new PlayerInput(
+                    false, false, false, false,
+                    RubyClient.client.player.input.playerInput.jump(),
+                    RubyClient.client.player.input.playerInput.sneak(),
+                    false
+            );
 
-        this.prevYaw = RubyClient.client.player.getYaw();
-        this.prevPitch = RubyClient.client.player.getPitch();
+            this.prevYaw = RubyClient.client.player.getYaw();
+            this.prevPitch = RubyClient.client.player.getPitch();
 
-        float[] angles = Rotations.rotationTo(EntityAnchorArgumentType.EntityAnchor.FEET, entity.getEntityPos());
-        RubyClient.client.player.setAngles(angles[0], angles[1]);
+            float[] angles = Rotations.rotationTo(EntityAnchorArgumentType.EntityAnchor.FEET, entity.getEntityPos());
+            RubyClient.client.player.setAngles(angles[0], angles[1]);
+        }
 
-        this.ignoreNextAttack = true;
+        this.ignoreNextInteract = true;
+        switch(event.type()) {
+            case ATTACK -> {
+                RubyClient.client.interactionManager.attackEntity(RubyClient.client.player, entity);
+                RubyClient.client.getNetworkHandler().sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
+            }
 
-        RubyClient.client.interactionManager.attackEntity(RubyClient.client.player, entity);
-        RubyClient.client.getNetworkHandler().sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
+            case INTERACT -> RubyClient.client.interactionManager.interactEntity(
+                    RubyClient.client.player,
+                    entity, event.hand()
+            );
+
+            case INTERACT_AT -> RubyClient.client.interactionManager.interactEntityAtLocation(
+                    RubyClient.client.player,
+                    entity,
+                    new EntityHitResult(entity, entity.getEyePos()),
+                    event.hand()
+            );
+        }
+
+        // Minecraft sends 4 packets per interact, interact + interact_at, one for each hand
+        // sent in this order: interact_at(main), interact(main), interact_at(off), interact(off)
+        // if we get the first one, just drain the other three
+        if(event.type() == PlayerInteractEntity.Type.INTERACT_AT && event.hand() == Hand.MAIN_HAND) {
+            this.subTicking = true;
+            this.tick(); this.tick(); this.tick();
+            this.subTicking = false;
+        }
     }
 
     @Override
@@ -154,14 +192,61 @@ public class Hitboxes extends Module {
     @Override
     public void onEnable() {
         this.prevYaw = -1; this.prevPitch = -1;
-        this.ignoreNextAttack = false;
+        this.ignoreNextInteract = false;
         this.cancelNextSwing = false;
-        this.attackQueue.clear();
+        this.eventQueue.clear();
+        this.subTicking = false;
         this.lastInput = null;
     }
 
     @Override
     public void render3D() {
+        if(RubyClient.client.player == null) return;
+
+        Vec3d serverPos = Bypasses.get().position();
+        Vec3d serverVel = Bypasses.get().velocity();
+        boolean serverGround = Bypasses.get().onGround();
+
+        float pitch = Bypasses.get().pitch();
+        float yaw = Bypasses.get().yaw();
+        float f = pitch * ((float)Math.PI / 180F);
+        float g = -yaw * ((float)Math.PI / 180F);
+        float h = MathHelper.cos(g);
+        float i = MathHelper.sin(g);
+        float j = MathHelper.cos(f);
+        float k = MathHelper.sin(f);
+        Vec3d serverLook = new Vec3d(i * j, -k, h * j);
+
+        float width = RubyClient.client.player.getWidth();
+        float height = RubyClient.client.player.getHeight();
+        float eyeHeight = RubyClient.client.player.getEyeHeight(RubyClient.client.player.getPose());
+
+        Vec3d renderEye = serverPos.add(0, eyeHeight, 0);
+        Vec3d renderPos = serverPos.add(0, height / 2, 0);
+        Vec3d renderSize = new Vec3d(width, height, width);
+
+        Renderer.color(0x330000FF);
+        Renderer.setMode(Renderer.Mode.FILL_ALWAYS_ON_TOP);
+        Renderer.cuboid(renderPos, renderSize);
+
+        if(serverGround) {
+            Renderer.color(0x3300FF00);
+            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
+        }
+
+        Renderer.color(0x0000FF);
+        Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);
+        Renderer.cuboid(renderPos, renderSize);
+        Renderer.line(renderPos, renderPos.add(serverVel));
+
+        Renderer.color(0xFF0000);
+        Renderer.line(renderEye, renderEye.add(serverLook));
+
+        if(serverGround) {
+            Renderer.color(0x00FF00);
+            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
+        }
+
         if(RubyClient.client.world == null) return;
         if(!this.renderHitboxes.value()) return;
 
