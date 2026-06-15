@@ -21,6 +21,7 @@ public class Modules {
 
     static {
         Events.TICK.register(TickEvents.BEGIN, Modules::tick);
+        Events.TICK.register(TickEvents.END, Modules::tickEnd);
         Events.RENDER2D.register(Modules::render2D);
         Events.RENDER3D.register(Modules::render3D);
 
@@ -219,6 +220,11 @@ public class Modules {
 
         for(Module module : Modules.activeModules)
             module.tick();
+    }
+
+    public static void tickEnd(Events.GenericEvent e) {
+        for(Module module : Modules.activeModules)
+            module.tickEnd();
     }
 
     public static void render2D(Render2DEvent event) {

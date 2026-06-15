@@ -92,6 +92,7 @@ public abstract class Module {
     }
 
     public void tick() {}
+    public void tickEnd() {}
     public void onEnable() {}
     public void onDisable() {}
     public void render2D(Render2DEvent event) {}
