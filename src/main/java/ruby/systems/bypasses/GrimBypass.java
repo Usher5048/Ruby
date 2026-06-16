@@ -142,8 +142,8 @@ public class GrimBypass extends Bypass {
         }
     }
 
-    private boolean sentAttack = false;
-    private boolean sentSwingSinceLastAttack = true;
+    private boolean sentAttack;
+    private boolean sentSwingSinceLastAttack;
     private Packet<?> packetOrderB(Packet<?> packet) {
         if(packet instanceof HandSwingC2SPacket) {
             this.sentSwingSinceLastAttack = true;
@@ -221,6 +221,8 @@ public class GrimBypass extends Bypass {
         this.flyingSinceTickEnd = false;
         this.injectingTickEnd = false;
         this.lastSlot = -1;
+        this.sentAttack = false;
+        this.sentSwingSinceLastAttack = true;
     }
 
     @Override

@@ -15,7 +15,6 @@ import ruby.RubyClient;
 import ruby.helpers.PlayerInteractEntity;
 import ruby.helpers.Rotations;
 import ruby.helpers.render.Renderer;
-import ruby.systems.bypasses.Bypasses;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.ColorValue;
 import ruby.systems.config.DoubleValue;
@@ -201,51 +200,51 @@ public class Hitboxes extends Module {
 
     @Override
     public void render3D() {
-        if(RubyClient.client.player == null) return;
-
-        Vec3d serverPos = Bypasses.get().position();
-        Vec3d serverVel = Bypasses.get().velocity();
-        boolean serverGround = Bypasses.get().onGround();
-
-        float pitch = Bypasses.get().pitch();
-        float yaw = Bypasses.get().yaw();
-        float f = pitch * ((float)Math.PI / 180F);
-        float g = -yaw * ((float)Math.PI / 180F);
-        float h = MathHelper.cos(g);
-        float i = MathHelper.sin(g);
-        float j = MathHelper.cos(f);
-        float k = MathHelper.sin(f);
-        Vec3d serverLook = new Vec3d(i * j, -k, h * j);
-
-        float width = RubyClient.client.player.getWidth();
-        float height = RubyClient.client.player.getHeight();
-        float eyeHeight = RubyClient.client.player.getEyeHeight(RubyClient.client.player.getPose());
-
-        Vec3d renderEye = serverPos.add(0, eyeHeight, 0);
-        Vec3d renderPos = serverPos.add(0, height / 2, 0);
-        Vec3d renderSize = new Vec3d(width, height, width);
-
-        Renderer.color(0x330000FF);
-        Renderer.setMode(Renderer.Mode.FILL_ALWAYS_ON_TOP);
-        Renderer.cuboid(renderPos, renderSize);
-
-        if(serverGround) {
-            Renderer.color(0x3300FF00);
-            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
-        }
-
-        Renderer.color(0x0000FF);
-        Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);
-        Renderer.cuboid(renderPos, renderSize);
-        Renderer.line(renderPos, renderPos.add(serverVel));
-
-        Renderer.color(0xFF0000);
-        Renderer.line(renderEye, renderEye.add(serverLook));
-
-        if(serverGround) {
-            Renderer.color(0x00FF00);
-            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
-        }
+//        if(RubyClient.client.player == null) return;
+//
+//        Vec3d serverPos = Bypasses.get().position();
+//        Vec3d serverVel = Bypasses.get().velocity();
+//        boolean serverGround = Bypasses.get().onGround();
+//
+//        float pitch = Bypasses.get().pitch();
+//        float yaw = Bypasses.get().yaw();
+//        float f = pitch * ((float)Math.PI / 180F);
+//        float g = -yaw * ((float)Math.PI / 180F);
+//        float h = MathHelper.cos(g);
+//        float i = MathHelper.sin(g);
+//        float j = MathHelper.cos(f);
+//        float k = MathHelper.sin(f);
+//        Vec3d serverLook = new Vec3d(i * j, -k, h * j);
+//
+//        float width = RubyClient.client.player.getWidth();
+//        float height = RubyClient.client.player.getHeight();
+//        float eyeHeight = RubyClient.client.player.getEyeHeight(RubyClient.client.player.getPose());
+//
+//        Vec3d renderEye = serverPos.add(0, eyeHeight, 0);
+//        Vec3d renderPos = serverPos.add(0, height / 2, 0);
+//        Vec3d renderSize = new Vec3d(width, height, width);
+//
+//        Renderer.color(0x330000FF);
+//        Renderer.setMode(Renderer.Mode.FILL_ALWAYS_ON_TOP);
+//        Renderer.cuboid(renderPos, renderSize);
+//
+//        if(serverGround) {
+//            Renderer.color(0x3300FF00);
+//            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
+//        }
+//
+//        Renderer.color(0x0000FF);
+//        Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);
+//        Renderer.cuboid(renderPos, renderSize);
+//        Renderer.line(renderPos, renderPos.add(serverVel));
+//
+//        Renderer.color(0xFF0000);
+//        Renderer.line(renderEye, renderEye.add(serverLook));
+//
+//        if(serverGround) {
+//            Renderer.color(0x00FF00);
+//            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
+//        }
 
         if(RubyClient.client.world == null) return;
         if(!this.renderHitboxes.value()) return;
