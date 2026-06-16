@@ -23,7 +23,7 @@ It is designed to avoid unnecessary plugin bloat and feature sprawl, keeping the
 
 # Releases
 
-[![Download Nightly](https://img.shields.io/badge/Nightly-Download-5865F2?style=flat-square&logo=github)](https://github.com/Usher5048/Ruby/releases/tag/nightly)
+[![Download Nightly](https://img.shields.io/badge/Nightly-Download-5865F2?style=flat-square&logo=github)](https://github.com/Usher5048/Ruby/releases?q=nightly&expanded=true)
 
 Ruby publishes automated **nightly** builds from the latest `main` branch. Stable releases will be added when the client is ready for general use.
 
@@ -31,13 +31,15 @@ Ruby publishes automated **nightly** builds from the latest `main` branch. Stabl
 
 Nightlies are bleeding-edge builds intended for testing and early feedback. They may be unstable, incomplete, or change without notice.
 
+Each workflow run creates a **new** pre-release (`nightly-<run>`) with a single jar — older nightlies stay listed on the releases page for reference.
+
 | | |
 |---|---|
-| **Download** | [github.com/Usher5048/Ruby/releases/tag/nightly](https://github.com/Usher5048/Ruby/releases/tag/nightly) |
+| **Download** | [Latest nightly releases](https://github.com/Usher5048/Ruby/releases?q=nightly&expanded=true) (pick the top entry) |
 | **Minecraft** | 1.21.11 |
 | **Loader** | Fabric 0.18.4 |
 | **Schedule** | Daily at 06:00 UTC |
-| **Tag** | `nightly` (updated in place, always points to the latest nightly) |
+| **Tag** | `nightly-<run_number>` (new release per build) |
 
 ## Building
 
