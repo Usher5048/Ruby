@@ -1,6 +1,7 @@
 package ruby.systems.bypasses;
 
 import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.PacketType;
 import net.minecraft.network.packet.c2s.common.CommonPongC2SPacket;
 import net.minecraft.network.packet.c2s.common.KeepAliveC2SPacket;
 import net.minecraft.network.packet.c2s.common.ResourcePackStatusC2SPacket;
@@ -8,6 +9,9 @@ import net.minecraft.network.packet.c2s.play.*;
 import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
 import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Nullables;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import ruby.RubyClient;
 import ruby.helpers.PlayerInteractEntity;
 
@@ -121,6 +125,24 @@ public class GrimBypass extends Bypass {
         );
     }
 
+    // Fixed but only while not sending rotation packets
+    private Packet<?> badPacketsJ(Packet<?> packet) {
+        if(packet instanceof PlayerInteractItemC2SPacket interact) {
+            if (RubyClient.client.player == null) return packet;
+            return new PlayerInteractItemC2SPacket(interact.getHand(),interact.getSequence(),this.yaw(),this.pitch());
+        }
+        return packet;
+    }
+
+    private Packet<?> badPacketsL(Packet<?> packet) {
+        if(!(packet instanceof PlayerActionC2SPacket action)) return packet;
+        if(action.getAction() == PlayerActionC2SPacket.Action.START_DESTROY_BLOCK) return packet;
+        if(action.getAction() == PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK) return packet;
+        if(action.getAction() == PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK) return packet;
+
+        return new PlayerActionC2SPacket(action.getAction(), BlockPos.ORIGIN, Direction.DOWN, 0);
+    }
+
     private boolean isVehicleSprint(Packet<?> packet) {
         if(RubyClient.client == null || RubyClient.client.player == null || !RubyClient.client.player.hasVehicle())
             return false;
@@ -205,6 +227,8 @@ public class GrimBypass extends Bypass {
 
         modified = this.aimModulo360(modified);
         modified = this.badPacketsD(modified);
+        modified = this.badPacketsJ(modified);
+        modified = this.badPacketsL(modified);
         modified = this.packetOrderB(modified);
         modified = this.packetOrderO(modified);
 
