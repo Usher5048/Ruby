@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/github/contributors/usher5048/ruby" alt="GitHub contributors"/>
   <br>
   <img src="https://img.shields.io/github/languages/code-size/usher5048/ruby" alt="GitHub code size"/>
-  <img src="https://img.shields.io/github/license/usher5048/ruby" alt="License"/>
+  <img src="https://img.shields.io/endpoint?url=https://ghloc.vercel.app/api/Usher5048/Ruby/badge?filter=.java$&label=lines%20of%20code&color=blue" alt="GitHub lines of code"/>
 </div>
 
 ---
