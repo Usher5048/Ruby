@@ -39,7 +39,7 @@ jobs:
           BASE_VERSION: 1.0+1.21.11-fabric
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
-          NIGHTLY_VERSION="${BASE_VERSION}-nightly${GITHUB_RUN_NUMBER}.${SHORT_SHA}"
+          NIGHTLY_VERSION="${BASE_VERSION}-nightly${GITHUB_RUN_NUMBER}"
           RELEASE_TAG="nightly-v${GITHUB_RUN_NUMBER}"
           BUILT_AT="$(date -u +'%Y-%m-%d %H:%M UTC')"
           echo "NIGHTLY_VERSION=${NIGHTLY_VERSION}" >> "${GITHUB_ENV}"
@@ -73,26 +73,22 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          name: Nightly (${{ env.NIGHTLY_VERSION }})
+          name: Nightly Build
           target_commitish: ${{ github.sha }}
           prerelease: true
           make_latest: false
           generate_release_notes: false
           fail_on_unmatched_files: true
           body: |
-            ## Nightly build
-
             Automated pre-release from [`main`](${{ github.server_url }}/${{ github.repository }}/tree/main) @ [`${{ env.SHORT_SHA }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}).
-
-            | | |
-            |---|---|
+            > Bleeding-edge build for testing. May be unstable or incomplete.
+            
             | **Version** | `${{ env.NIGHTLY_VERSION }}` |
+            | --- | --- |
             | **Tag** | `${{ env.RELEASE_TAG }}` |
             | **Built** | ${{ env.BUILT_AT }} |
             | **Trigger** | ${{ github.event_name == 'schedule' && 'Scheduled (06:00 UTC daily)' || 'Manual workflow dispatch' }} |
             | **Workflow run** | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
-
-            > Bleeding-edge build for testing. May be unstable or incomplete.
-
+            
             [All nightly releases](${{ github.server_url }}/${{ github.repository }}/releases?q=nightly&expanded=true)
           files: ${{ env.RELEASE_JAR }}
