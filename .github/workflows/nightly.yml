@@ -1,6 +1,8 @@
-# Builds the latest main branch once per day and publishes a new pre-release
-# for each run (tag: nightly-<run_number>). The legacy moving "nightly" tag
-# release is removed so jars do not accumulate on one release page.
+# Builds the latest main branch once per day and publishes a pre-release
+# only if the commit has not already been released.
+#
+# Release tags are based on the commit SHA:
+#   nightly-<short_sha>
 
 name: nightly
 on:
@@ -47,10 +49,22 @@ jobs:
           echo "SHORT_SHA=${SHORT_SHA}" >> "${GITHUB_ENV}"
           echo "BUILT_AT=${BUILT_AT}" >> "${GITHUB_ENV}"
 
+      - name: check if release already exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${RELEASE_TAG}" \
+            --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release already exists for ${GITHUB_SHA}"
+            echo "SKIP_RELEASE=true" >> "${GITHUB_ENV}"
+          fi
+
       - name: build nightly jar
+        if: env.SKIP_RELEASE != 'true'
         run: ./gradlew build --no-daemon -Pmod_version="${NIGHTLY_VERSION}"
 
       - name: resolve release jar
+        if: env.SKIP_RELEASE != 'true'
         run: |
           JAR_PATH="$(find build/libs -maxdepth 1 -name 'ruby-*.jar' ! -name '*-sources.jar' -print -quit)"
           if [ -z "${JAR_PATH}" ]; then
@@ -60,6 +74,7 @@ jobs:
           echo "RELEASE_JAR=${JAR_PATH}" >> "${GITHUB_ENV}"
 
       - name: remove legacy moving nightly release
+        if: env.SKIP_RELEASE != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         continue-on-error: true
@@ -70,6 +85,7 @@ jobs:
           fi
 
       - name: publish nightly release
+        if: env.SKIP_RELEASE != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
@@ -92,3 +108,8 @@ jobs:
             
             [All nightly releases](${{ github.server_url }}/${{ github.repository }}/releases?q=nightly&expanded=true)
           files: ${{ env.RELEASE_JAR }}
+
+      - name: release already exists
+        if: env.SKIP_RELEASE == 'true'
+        run: |
+          echo "Nightly release already exists for commit ${GITHUB_SHA}"

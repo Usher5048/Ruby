@@ -13,7 +13,6 @@
     "ChatInputSuggestorMixin",
     "ChatScreenMixin",
     "ChunkOcclusionDataBuilderMixin",
-    "ClientCommonNetworkHandlerMixin",
     "ClientConnectionMixin",
     "ClientPlayerEntityMixin",
     "ClientPlayerEntityAccessor",

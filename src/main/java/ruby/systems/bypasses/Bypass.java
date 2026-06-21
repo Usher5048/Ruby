@@ -2,9 +2,11 @@ package ruby.systems.bypasses;
 
 import net.minecraft.entity.EntityPosition;
 import net.minecraft.network.ClientConnection;
+import net.minecraft.network.NetworkSide;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.play.ClientTickEndC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.network.packet.c2s.play.TeleportConfirmC2SPacket;
 import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerRotationS2CPacket;
 import net.minecraft.network.packet.s2c.play.PositionFlag;
@@ -12,22 +14,50 @@ import net.minecraft.util.math.Vec3d;
 import ruby.RubyClient;
 
 public class Bypass {
-    protected ClientConnection connection;
-    private boolean movementTick;
-    private boolean serverOnGround;
-    private Vec3d serverPosition;
-    private Vec3d lastServerPosition;
+    protected static class Connection {
+        private ClientConnection clientConnection;
+
+        protected void send(Packet<?> packet) {
+            this.clientConnection.send(packet, null);
+        }
+        protected void resend(Packet<?> packet) {
+            this.clientConnection.send(packet);
+        }
+    }
+
+    protected final Connection connection = new Connection();
+
+    private boolean movementTick = false;
+    private boolean serverOnGround = false;
+    private Vec3d serverPosition = Vec3d.ZERO;
+    private Vec3d lastServerPosition = Vec3d.ZERO;
     private Vec3d serverVelocity = Vec3d.ZERO;
     private float serverYaw = Float.NaN;
     private float serverPitch = Float.NaN;
+    private boolean lastPacketTeleport = false;
+    private boolean setTeleport = false;
 
     public Packet<?> modifyPacket(Packet<?> packet) {
         return packet;
     }
 
     protected void onPacket(Packet<?> packet) {}
+    protected void onInit() {}
+    protected void onTick() {}
 
-    public void init() {}
+    public void init() {
+        this.movementTick = false;
+        this.serverOnGround = false;
+        this.serverPosition = Vec3d.ZERO;
+        this.lastServerPosition = Vec3d.ZERO;
+        this.serverVelocity = Vec3d.ZERO;
+        this.serverYaw = Float.NaN;
+        this.serverPitch = Float.NaN;
+        this.lastPacketTeleport = false;
+        this.setTeleport = false;
+
+        this.onInit();
+    }
 
     public void tick() {}
 
@@ -59,17 +89,28 @@ public class Bypass {
     public boolean sentMovementThisTick() {
         return this.movementTick;
     }
+    public boolean lastPacketWasTeleport() {
+        return this.lastPacketTeleport;
+    }
     public void setMovementTick(boolean val) {
         this.movementTick = val;
     }
 
     public void resetConnection(ClientConnection connection) {
-        this.connection = connection;
+        this.connection.clientConnection = connection;
     }
     public void updateServer(Packet<?> packet) {
+        if(packet.getPacketType().side() == NetworkSide.SERVERBOUND)
+            this.lastPacketTeleport = false;
+
         switch(packet) {
             case ClientTickEndC2SPacket tick -> this.lastServerPosition = this.serverPosition;
             case PlayerMoveC2SPacket move -> {
+                if(this.setTeleport) {
+                    this.lastPacketTeleport = true;
+                    this.setTeleport = false;
+                }
+
                 this.serverOnGround = move.isOnGround();
                 if(move.changesLook()) {
                     this.serverYaw = move.getYaw(0);
@@ -88,6 +129,7 @@ public class Bypass {
                 }
             }
 
+            case TeleportConfirmC2SPacket teleport -> this.setTeleport = true;
             case PlayerPositionLookS2CPacket teleport -> {
                 EntityPosition current = new EntityPosition(
                         this.position(), this.velocity(), this.yaw(), this.pitch()

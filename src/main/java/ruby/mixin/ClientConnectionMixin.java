@@ -1,11 +1,15 @@
 package ruby.mixin;
 
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
+import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -17,7 +21,10 @@ import ruby.systems.events.packet.PacketEvents;
 import java.util.Iterator;
 
 @Mixin(ClientConnection.class)
-public class ClientConnectionMixin {
+public abstract class ClientConnectionMixin {
+    @Shadow
+    public abstract void send(Packet<?> packet, @Nullable ChannelFutureListener listener);
+
     @Inject(
             method = "channelRead0",
             at = @At(
@@ -47,8 +54,19 @@ public class ClientConnectionMixin {
             info.cancel();
     }
 
-    @Inject(method = "send(Lnet/minecraft/network/packet/Packet;)V", at = @At("HEAD"))
-    private void updateBypass(Packet<?> packet, CallbackInfo info) {
-        Bypasses.get().updateServer(packet);
+    @Overwrite
+    public void send(Packet<?> packet) {
+        ClientConnection con = (ClientConnection) (Object) this;
+
+        PacketEvent event = new PacketEvent(con, packet);
+        Bypasses.get().resetConnection(con);
+
+        if(Events.PACKET.fire(PacketEvents.SEND, event)) return;
+
+        Packet<?> bypassedPacket = Bypasses.get().modifyPacket(event.packet());
+        if(bypassedPacket == null) return;
+
+        Bypasses.get().updateServer(bypassedPacket);
+        this.send(bypassedPacket, null);
     }
 }

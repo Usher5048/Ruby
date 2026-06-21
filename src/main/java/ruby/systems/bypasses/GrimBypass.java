@@ -1,15 +1,12 @@
 package ruby.systems.bypasses;
 
 import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.PacketType;
-import net.minecraft.network.packet.c2s.common.CommonPongC2SPacket;
 import net.minecraft.network.packet.c2s.common.KeepAliveC2SPacket;
 import net.minecraft.network.packet.c2s.common.ResourcePackStatusC2SPacket;
 import net.minecraft.network.packet.c2s.play.*;
 import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
 import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Nullables;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import ruby.RubyClient;
@@ -43,13 +40,40 @@ public class GrimBypass extends Bypass {
                 packet instanceof AcknowledgeChunksC2SPacket;
     }
 
-    private boolean isTransaction(Packet<?> packet) {
-        return packet instanceof CommonPongC2SPacket;
-    }
-
     private boolean isFlying(Packet<?> packet) {
         return packet instanceof PlayerMoveC2SPacket move &&
                 (move.changesPosition() || move.changesLook());
+    }
+
+    private boolean isTickPacketIncludingMovement(Packet<?> packet) {
+        if(packet instanceof ClientTickEndC2SPacket && !this.sentMovementThisTick())
+            return true;
+
+        return this.isFlying(packet);
+    }
+
+    private boolean isTickPacket(Packet<?> packet) {
+        if(this.isTickPacketIncludingMovement(packet)) {
+            if(this.isFlying(packet)) return !this.lastPacketWasTeleport();
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean isSequenced(Packet<?> packet) {
+        if(
+                packet instanceof PlayerInteractItemC2SPacket ||
+                packet instanceof PlayerInteractBlockC2SPacket
+        ) return true;
+
+        if(packet instanceof PlayerActionC2SPacket action) {
+            return action.getAction() == PlayerActionC2SPacket.Action.START_DESTROY_BLOCK ||
+                    action.getAction() == PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK ||
+                    action.getAction() == PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK;
+        }
+
+        return false;
     }
 
 
@@ -125,12 +149,43 @@ public class GrimBypass extends Bypass {
         );
     }
 
-    // Fixed but only while not sending rotation packets
+    private PlayerInteractItemC2SPacket queued = null;
     private Packet<?> badPacketsJ(Packet<?> packet) {
-        if(packet instanceof PlayerInteractItemC2SPacket interact) {
-            if (RubyClient.client.player == null) return packet;
-            return new PlayerInteractItemC2SPacket(interact.getHand(),interact.getSequence(),this.yaw(),this.pitch());
+        if(RubyClient.client.player == null) return packet;
+
+        if(packet instanceof PlayerMoveC2SPacket move && this.queued != null) {
+            if(!move.changesLook()) return packet;
+            this.connection.send(new PlayerInteractItemC2SPacket(
+                    this.queued.getHand(),
+                    this.queued.getSequence(),
+                    move.getYaw(0),
+                    move.getPitch(0)
+            ));
+
+            this.queued = null;
+            return packet;
         }
+
+        if(packet instanceof PlayerInteractItemC2SPacket interact) {
+            if(!this.sentMovementThisTick()) {
+                this.queued = interact;
+                return null;
+            }
+
+            return new PlayerInteractItemC2SPacket(
+                    interact.getHand(),
+                    interact.getSequence(),
+                    this.yaw(),
+                    this.pitch()
+            );
+        }
+
+        // TODO: This still flags it, but delaying sequence is worse, fix
+        if(this.isSequenced(packet) && this.queued != null) {
+            this.connection.send(this.queued);
+            this.queued = null;
+        }
+
         return packet;
     }
 
@@ -240,17 +295,18 @@ public class GrimBypass extends Bypass {
     }
 
     @Override
-    public void init() {
+    public void onInit() {
         this.teleportExempt = false;
         this.flyingSinceTickEnd = false;
         this.injectingTickEnd = false;
         this.lastSlot = -1;
         this.sentAttack = false;
         this.sentSwingSinceLastAttack = true;
+        this.queued = null;
     }
 
     @Override
-    public void tick() {
+    public void onTick() {
         this.teleportExempt = false;
     }
 }
