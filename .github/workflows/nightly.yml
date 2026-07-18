@@ -41,8 +41,8 @@ jobs:
           BASE_VERSION: 1.0+1.21.11-fabric
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
-          NIGHTLY_VERSION="${BASE_VERSION}-nightly${GITHUB_RUN_NUMBER}"
-          RELEASE_TAG="nightly-v${GITHUB_RUN_NUMBER}"
+          NIGHTLY_VERSION="${BASE_VERSION}-nightly-${SHORT_SHA}"
+          RELEASE_TAG="nightly-${SHORT_SHA}"
           BUILT_AT="$(date -u +'%Y-%m-%d %H:%M UTC')"
           echo "NIGHTLY_VERSION=${NIGHTLY_VERSION}" >> "${GITHUB_ENV}"
           echo "RELEASE_TAG=${RELEASE_TAG}" >> "${GITHUB_ENV}"
