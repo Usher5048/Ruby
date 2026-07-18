@@ -31,7 +31,7 @@ Ruby publishes automated **nightly** builds from the latest `main` branch. Stabl
 
 Nightlies are bleeding-edge builds intended for testing and early feedback. They may be unstable, incomplete, or change without notice.
 
-Each workflow run creates a **new** pre-release (`nightly-<run>`) with a single jar — older nightlies stay listed on the releases page for reference.
+Each workflow run creates a **new** pre-release (`nightly-<commit>`) with a single jar — older nightlies stay listed on the releases page for reference.
 
 | | |
 |---|---|
@@ -39,7 +39,7 @@ Each workflow run creates a **new** pre-release (`nightly-<run>`) with a single 
 | **Minecraft** | 1.21.11 |
 | **Loader** | Fabric 0.18.4 |
 | **Schedule** | Daily at 06:00 UTC |
-| **Tag** | `nightly-<run_number>` (new release per build) |
+| **Tag** | `nightly-<commit_hash>` (new release per build) |
 
 ## Building
 
