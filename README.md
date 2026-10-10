@@ -36,8 +36,8 @@ Each workflow run creates a **new** pre-release (`nightly-<commit>`) with a sing
 | | |
 |---|---|
 | **Download** | [Latest nightly releases](https://github.com/Usher5048/Ruby/releases?q=nightly&expanded=true) (pick the top entry) |
-| **Minecraft** | 1.21.11 |
-| **Loader** | Fabric 0.18.4 |
+| **Minecraft** | 26.3 |
+| **Loader** | Fabric 0.19.5 |
 | **Schedule** | Daily at 06:00 UTC |
 | **Tag** | `nightly-<commit_hash>` (new release per build) |
 
