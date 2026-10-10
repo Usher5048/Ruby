@@ -1,6 +1,6 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
@@ -19,10 +19,10 @@ public class Boost extends Module {
     @Override
     public void tick() {
         if (RubyClient.client.player == null) return;
-        float yaw = RubyClient.client.player.getYaw();
-        float pitch = RubyClient.client.player.getPitch();
+        float yaw = RubyClient.client.player.getYRot();
+        float pitch = RubyClient.client.player.getXRot();
 
-        Vec3d looking = Vec3d.fromPolar(pitch,yaw).multiply(this.speed.value());
-        RubyClient.client.player.setVelocity(looking);
+        Vec3 looking = Vec3.directionFromRotation(pitch,yaw).scale(this.speed.value());
+        RubyClient.client.player.setDeltaMovement(looking);
     }
 }

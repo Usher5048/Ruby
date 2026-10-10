@@ -1,13 +1,13 @@
 package ruby.systems.config;
 
-import net.minecraft.item.Item;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public class ItemValue extends Value<Item> {
     protected ItemValue(
@@ -21,15 +21,15 @@ public class ItemValue extends Value<Item> {
 
     @Override
     public String toString() {
-        return this.value().getName().getString();
+        return this.value().getName(new ItemStack(this.value())).getString();
     }
 
     @Override
     public boolean fromString(String str) {
         if(str == null) return false;
 
-        for(Item item : Registries.ITEM) {
-            if(!str.equals(item.getName().getString())) continue;
+        for(Item item : BuiltInRegistries.ITEM) {
+            if(!str.equals(item.getName(new ItemStack(item)).getString())) continue;
             return true;
         }
 
@@ -38,7 +38,7 @@ public class ItemValue extends Value<Item> {
 
     @Override
     public int serialize(ByteArrayOutputStream stream) {
-        String itemID = Registries.ITEM.getId(this.value()).toString();
+        String itemID = BuiltInRegistries.ITEM.getKey(this.value()).toString();
 
         byte[] bytes = itemID.getBytes();
         short len = (short) bytes.length;
@@ -58,16 +58,16 @@ public class ItemValue extends Value<Item> {
         stream.readNBytes(bytes, 0, length);
         String itemID = new String(bytes);
 
-        this.setValue(Registries.ITEM.get(Identifier.tryParse(itemID)));
+        this.setValue(BuiltInRegistries.ITEM.getValue(Identifier.tryParse(itemID)));
     }
 
-    public static class Builder extends Value.Builder<Item, Builder> {
+    public static class Builder extends Value.Builder<Item, ruby.systems.config.ItemValue.Builder> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.ItemValue.Builder self() {
             return this;
         }
 

@@ -1,74 +1,65 @@
 package ruby.helpers.render;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.client.gl.UniformType;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Pair;
-import net.minecraft.util.shape.VoxelShape;
-import ruby.RubyClient;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.util.math.*;
+import com.mojang.renderpearl.api.pipeline.BindGroupLayout;
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.ColorTargetState;
+import com.mojang.renderpearl.api.pipeline.CompareOp;
+import com.mojang.renderpearl.api.pipeline.DepthStencilState;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.pipeline.UniformType;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
+import ruby.RubyClient;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class Renderer {
-    private static final RenderPipeline TRIANGLES_NO_DEPTH = RenderPipeline.builder()
-            .withLocation(RubyClient.identifier("pipeline/triangle"))
-            .withVertexFormat(VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.TRIANGLES)
-            .withVertexShader(RubyClient.identifier("pos_color"))
-            .withFragmentShader(RubyClient.identifier("pos_color"))
-            .withUniform("meshData", UniformType.UNIFORM_BUFFER)
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthWrite(false)
-            .withCull(false)
-            .build();
+    // ShaderManager compiles registered pipelines on resource reload.
+    // ruby:pos_color resolves to assets/ruby/shaders/pos_color.vsh and .fsh.
+    public static void init() {}
 
-    private static final RenderPipeline TRIANGLES_DEPTH = RenderPipeline.builder()
-            .withLocation(RubyClient.identifier("pipeline/triangle_depth"))
-            .withVertexFormat(VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.TRIANGLES)
-            .withVertexShader(RubyClient.identifier("pos_color"))
-            .withFragmentShader(RubyClient.identifier("pos_color"))
-            .withUniform("meshData", UniformType.UNIFORM_BUFFER)
-            .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthWrite(false)
-            .withCull(false)
-            .build();
+    private static RenderPipeline pipeline(String path, PrimitiveTopology topology, boolean depth) {
+        return RenderPipelines.register(RenderPipeline.builder()
+                .withLocation(RubyClient.identifier(path))
+                .withVertexShader(RubyClient.identifier("pos_color"))
+                .withFragmentShader(RubyClient.identifier("pos_color"))
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
+                .withPrimitiveTopology(topology)
+                .withBindGroupLayout(BindGroupLayout.builder()
+                        .withUniform("meshData", UniformType.UNIFORM_BUFFER)
+                        .build())
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(
+                        depth ? CompareOp.LESS_THAN_OR_EQUAL : CompareOp.ALWAYS_PASS,
+                        false
+                ))
+                .withCull(false)
+                .build());
+    }
 
-    private static final RenderPipeline LINES_NO_DEPTH = RenderPipeline.builder()
-            .withLocation(RubyClient.identifier("pipeline/lines"))
-            .withVertexFormat(VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.DEBUG_LINES)
-            .withVertexShader(RubyClient.identifier("pos_color"))
-            .withFragmentShader(RubyClient.identifier("pos_color"))
-            .withUniform("meshData", UniformType.UNIFORM_BUFFER)
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthWrite(false)
-            .withCull(false)
-            .build();
-
-    private static final RenderPipeline LINES_DEPTH = RenderPipeline.builder()
-            .withLocation(RubyClient.identifier("pipeline/lines_depth"))
-            .withVertexFormat(VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.DEBUG_LINES)
-            .withVertexShader(RubyClient.identifier("pos_color"))
-            .withFragmentShader(RubyClient.identifier("pos_color"))
-            .withUniform("meshData", UniformType.UNIFORM_BUFFER)
-            .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthWrite(false)
-            .withCull(false)
-            .build();
+    private static final RenderPipeline TRIANGLES_NO_DEPTH = pipeline(
+            "pipeline/triangle", PrimitiveTopology.TRIANGLES, false);
+    private static final RenderPipeline TRIANGLES_DEPTH = pipeline(
+            "pipeline/triangle_depth", PrimitiveTopology.TRIANGLES, true);
+    private static final RenderPipeline LINES_NO_DEPTH = pipeline(
+            "pipeline/lines", PrimitiveTopology.DEBUG_LINES, false);
+    private static final RenderPipeline LINES_DEPTH = pipeline(
+            "pipeline/lines_depth", PrimitiveTopology.DEBUG_LINES, true);
 
     private static Matrix4f projection;
-    private static Vec3d screenCenter;
+    private static Vec3 screenCenter;
     private static Matrix4f position;
     public static void updateMatrices(Matrix4f projection, Matrix4f position) {
         Renderer.projection = projection;
@@ -80,11 +71,11 @@ public class Renderer {
         Vector4f center = new Vector4f(0, 0, 0.5f, 1).mul(invProj).mul(invView);
         center.div(center.w);
 
-        Vec3d cam = RubyClient.client.gameRenderer.getCamera().getCameraPos();
-        Renderer.screenCenter = new Vec3d(
-                cam.getX() + center.x,
-                cam.getY() + center.y,
-                cam.getZ() + center.z
+        Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
+        Renderer.screenCenter = new Vec3(
+                cam.x() + center.x,
+                cam.y() + center.y,
+                cam.z() + center.z
         );
     }
 
@@ -94,40 +85,40 @@ public class Renderer {
     public static Matrix4f view() {
         return Renderer.position;
     }
-    public static Vec3d getScreenCenter() {
+    public static Vec3 getScreenCenter() {
         return Renderer.screenCenter;
     }
-    public static Vec3d screenToWorld(Vec3d pos) {
+    public static Vec3 screenToWorld(Vec3 pos) {
         Matrix4f invProj = new Matrix4f(Renderer.projection).invert();
         Matrix4f invView = new Matrix4f(Renderer.position).invert();
 
-        pos = new Vec3d(
-                2 * (pos.getX() / RubyClient.client.getWindow().getWidth() - 0.5),
-                -2 * (pos.getY() / RubyClient.client.getWindow().getHeight() - 0.5),
-                pos.getZ()
+        pos = new Vec3(
+                2 * (pos.x() / RubyClient.client.getWindow().getWidth() - 0.5),
+                -2 * (pos.y() / RubyClient.client.getWindow().getHeight() - 0.5),
+                pos.z()
         );
 
         Vector4f center = new Vector4f(
-                (float) pos.getX(), (float) pos.getY(),
-                (float) pos.getZ(), 1
+                (float) pos.x(), (float) pos.y(),
+                (float) pos.z(), 1
         ).mul(invProj).mul(invView);
 
         center = center.div(center.w);
 
-        Vec3d cam = RubyClient.client.gameRenderer.getCamera().getCameraPos();
-        return new Vec3d(
-                cam.getX() + center.x,
-                cam.getY() + center.y,
-                cam.getZ() + center.z
+        Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
+        return new Vec3(
+                cam.x() + center.x,
+                cam.y() + center.y,
+                cam.z() + center.z
         );
     }
 
-    public static Vec2f worldToScreen(Vec3d pos) {
-        Vec3d cam = RubyClient.client.gameRenderer.getCamera().getCameraPos();
+    public static Vec2 worldToScreen(Vec3 pos) {
+        Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
         Vector4f vec = new Vector4f(
-                (float) (pos.getX() - cam.getX()),
-                (float) (pos.getY() - cam.getY()),
-                (float) (pos.getZ() - cam.getZ()),
+                (float) (pos.x() - cam.x()),
+                (float) (pos.y() - cam.y()),
+                (float) (pos.z() - cam.z()),
                 1
         );
 
@@ -142,7 +133,7 @@ public class Renderer {
         int screenX = (int) (     (ndcX * 0.5f + 0.5f)  * RubyClient.client.getWindow().getWidth());
         int screenY = (int) ((1 - (ndcY * 0.5f + 0.5f)) * RubyClient.client.getWindow().getHeight());
 
-        return new Vec2f(screenX, screenY);
+        return new Vec2(screenX, screenY);
     }
 
     public enum Mode {
@@ -152,38 +143,41 @@ public class Renderer {
         FILL_RESPECT_DEPTH
     }
 
-    private static final Map<Mode, Pair<RenderPipeline, MeshBuilder>> builders = new HashMap<>();
+    private record PipelineMesh(RenderPipeline pipeline, MeshBuilder mesh) {}
+
+    private static final Map<Mode, PipelineMesh> builders = new HashMap<>();
     static {
-        Renderer.builders.put(Mode.STROKE_RESPECT_DEPTH, new Pair<>(
+        Renderer.builders.put(Mode.STROKE_RESPECT_DEPTH, new PipelineMesh(
                 Renderer.LINES_DEPTH, new MeshBuilder(Renderer.LINES_DEPTH)));
 
-        Renderer.builders.put(Mode.FILL_RESPECT_DEPTH, new Pair<>(
+        Renderer.builders.put(Mode.FILL_RESPECT_DEPTH, new PipelineMesh(
                 Renderer.TRIANGLES_DEPTH, new MeshBuilder(Renderer.TRIANGLES_DEPTH)));
 
-        Renderer.builders.put(Mode.STROKE_ALWAYS_ON_TOP, new Pair<>(
+        Renderer.builders.put(Mode.STROKE_ALWAYS_ON_TOP, new PipelineMesh(
                 Renderer.LINES_NO_DEPTH, new MeshBuilder(Renderer.LINES_NO_DEPTH)));
 
-        Renderer.builders.put(Mode.FILL_ALWAYS_ON_TOP, new Pair<>(
+        Renderer.builders.put(Mode.FILL_ALWAYS_ON_TOP, new PipelineMesh(
                 Renderer.TRIANGLES_NO_DEPTH, new MeshBuilder(Renderer.TRIANGLES_NO_DEPTH)));
     }
 
     public static void begin() {
-        for(Pair<RenderPipeline, MeshBuilder> builderPair : Renderer.builders.values())
-            builderPair.getRight().begin();
+        for(PipelineMesh builderPair : Renderer.builders.values())
+            builderPair.mesh().begin();
     }
 
-    public static void end(MatrixStack stack) {
-        for(Pair<RenderPipeline, MeshBuilder> builderPair : Renderer.builders.values()) {
+    public static void end(PoseStack stack) {
+        for(PipelineMesh builderPair : Renderer.builders.values()) {
             MeshRenderer.begin()
-                    .attachments(RubyClient.client.getFramebuffer())
-                    .pipeline(builderPair.getLeft())
-                    .mesh(builderPair.getRight(), stack)
+                    .attachments(RubyClient.client.gameRenderer.mainRenderTarget())
+                    .pipeline(builderPair.pipeline())
+                    .mesh(builderPair.mesh(), stack)
                     .end();
         }
     }
 
-    private static Mode mode;
+    private static Mode mode = Mode.STROKE_ALWAYS_ON_TOP;
     public static void setMode(Mode mode) {
+        if(mode == null) return;
         Renderer.mode = mode;
     }
 
@@ -198,26 +192,26 @@ public class Renderer {
         Renderer.color = (r << 16) | (g << 8) | b;
     }
 
-    public static void line(Vec3d p0, Vec3d p1) {
+    public static void line(Vec3 p0, Vec3 p1) {
         Renderer.line(
-                p0.getX(), p0.getY(), p0.getZ(),
-                p1.getX(), p1.getY(), p1.getZ()
+                p0.x(), p0.y(), p0.z(),
+                p1.x(), p1.y(), p1.z()
         );
     }
 
     public static void line(double x0, double y0, double z0, double x1, double y1, double z1) {
-        Renderer.builders.get(Renderer.mode).getRight().ensureLineCapacity();
-        Renderer.builders.get(Renderer.mode).getRight().line(
-                Renderer.builders.get(Renderer.mode).getRight().vec3(x0, y0, z0).color(Renderer.color).next(),
-                Renderer.builders.get(Renderer.mode).getRight().vec3(x1, y1, z1).color(Renderer.color).next()
+        Renderer.builders.get(Renderer.mode).mesh().ensureLineCapacity();
+        Renderer.builders.get(Renderer.mode).mesh().line(
+                Renderer.builders.get(Renderer.mode).mesh().vec3(x0, y0, z0).color(Renderer.color).next(),
+                Renderer.builders.get(Renderer.mode).mesh().vec3(x1, y1, z1).color(Renderer.color).next()
         );
     }
 
-    public static void triangle(Vec3d p0, Vec3d p1, Vec3d p2) {
+    public static void triangle(Vec3 p0, Vec3 p1, Vec3 p2) {
         Renderer.triangle(
-                p0.getX(), p0.getY(), p0.getZ(),
-                p1.getX(), p1.getY(), p1.getZ(),
-                p2.getX(), p2.getY(), p2.getZ()
+                p0.x(), p0.y(), p0.z(),
+                p1.x(), p1.y(), p1.z(),
+                p2.x(), p2.y(), p2.z()
         );
     }
 
@@ -226,20 +220,20 @@ public class Renderer {
             double x1, double y1, double z1,
             double x2, double y2, double z2
     ) {
-        Renderer.builders.get(Renderer.mode).getRight().ensureTriangleCapacity();
-        Renderer.builders.get(Renderer.mode).getRight().triangle(
-                Renderer.builders.get(Renderer.mode).getRight().vec3(x0, y0, z0).color(Renderer.color).next(),
-                Renderer.builders.get(Renderer.mode).getRight().vec3(x1, y1, z1).color(Renderer.color).next(),
-                Renderer.builders.get(Renderer.mode).getRight().vec3(x2, y2, z2).color(Renderer.color).next()
+        Renderer.builders.get(Renderer.mode).mesh().ensureTriangleCapacity();
+        Renderer.builders.get(Renderer.mode).mesh().triangle(
+                Renderer.builders.get(Renderer.mode).mesh().vec3(x0, y0, z0).color(Renderer.color).next(),
+                Renderer.builders.get(Renderer.mode).mesh().vec3(x1, y1, z1).color(Renderer.color).next(),
+                Renderer.builders.get(Renderer.mode).mesh().vec3(x2, y2, z2).color(Renderer.color).next()
         );
     }
 
-    public static void quad(Vec3d p0, Vec3d p1, Vec3d p2, Vec3d p3) {
+    public static void quad(Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3) {
         Renderer.quad(
-                p0.getX(), p0.getY(), p0.getZ(),
-                p1.getX(), p1.getY(), p1.getZ(),
-                p2.getX(), p2.getY(), p2.getZ(),
-                p3.getX(), p3.getY(), p3.getZ()
+                p0.x(), p0.y(), p0.z(),
+                p1.x(), p1.y(), p1.z(),
+                p2.x(), p2.y(), p2.z(),
+                p3.x(), p3.y(), p3.z()
         );
     }
 
@@ -249,19 +243,19 @@ public class Renderer {
             double x2, double y2, double z2,
             double x3, double y3, double z3
     ) {
-        Renderer.builders.get(Renderer.mode).getRight().ensureQuadCapacity();
-        Renderer.builders.get(Renderer.mode).getRight().quad(
-                Renderer.builders.get(Renderer.mode).getRight().vec3(x0, y0, z0).color(Renderer.color).next(),
-                Renderer.builders.get(Renderer.mode).getRight().vec3(x1, y1, z1).color(Renderer.color).next(),
-                Renderer.builders.get(Renderer.mode).getRight().vec3(x2, y2, z2).color(Renderer.color).next(),
-                Renderer.builders.get(Renderer.mode).getRight().vec3(x3, y3, z3).color(Renderer.color).next()
+        Renderer.builders.get(Renderer.mode).mesh().ensureQuadCapacity();
+        Renderer.builders.get(Renderer.mode).mesh().quad(
+                Renderer.builders.get(Renderer.mode).mesh().vec3(x0, y0, z0).color(Renderer.color).next(),
+                Renderer.builders.get(Renderer.mode).mesh().vec3(x1, y1, z1).color(Renderer.color).next(),
+                Renderer.builders.get(Renderer.mode).mesh().vec3(x2, y2, z2).color(Renderer.color).next(),
+                Renderer.builders.get(Renderer.mode).mesh().vec3(x3, y3, z3).color(Renderer.color).next()
         );
     }
 
-    public static void cuboid(Vec3d pos, Vec3d size) {
+    public static void cuboid(Vec3 pos, Vec3 size) {
         Renderer.cuboid(
-                pos.getX(), pos.getY(), pos.getZ(),
-                size.getX(), size.getY(), size.getZ()
+                pos.x(), pos.y(), pos.z(),
+                size.x(), size.y(), size.z()
         );
     }
 
@@ -344,8 +338,8 @@ public class Renderer {
     }
 
     public static void block(BlockState state, BlockPos pos) {
-        VoxelShape shape = state.getOutlineShape(RubyClient.client.world, pos);
-        for(Box box : shape.getBoundingBoxes()) {
+        VoxelShape shape = state.getShape(RubyClient.client.level, pos);
+        for(AABB box : shape.toAabbs()) {
             double width  = box.maxX - box.minX;
             double height = box.maxY - box.minY;
             double length = box.maxZ - box.minZ;

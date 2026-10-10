@@ -9,8 +9,8 @@ public class Help extends Command {
 
     @Override
     public void execute(String[] args) {
-        RubyClient.notifyUser("Press " + RubyClient.openGUIKey.getBoundKeyLocalizedText().getString()
-                + " for Click GUI, " + RubyClient.openCommandKey.getBoundKeyLocalizedText().getString()
+        RubyClient.notifyUser("Press " + RubyClient.openGUIKey.getTranslatedKeyMessage().getString()
+                + " for Click GUI, " + RubyClient.openCommandKey.getTranslatedKeyMessage().getString()
                 + " for commands (" + RubyClient.chatPrefix.value() + ")");
     }
 }

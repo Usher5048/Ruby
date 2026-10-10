@@ -1,7 +1,8 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.helpers.RandomUtils;
 import ruby.systems.config.BooleanValue;
@@ -83,23 +84,25 @@ public class Velocity extends Module {
         Velocity velocity = INSTANCE;
         if (velocity == null || !velocity.enabled()) return;
         if (velocity.mode.value() != Mode.JumpReset) return;
-        if (!(event.packet() instanceof EntityVelocityUpdateS2CPacket packet)) return;
+        if (!(event.packet() instanceof ClientboundSetEntityMotionPacket(
+                int id, Vec3 movement
+        ))) return;
 
-        ClientPlayerEntity player = RubyClient.client.player;
-        if (player == null || packet.getEntityId() != player.getId()) return;
+        LocalPlayer player = RubyClient.client.player;
+        if (player == null || id != player.getId()) return;
 
-        velocity.isFallDamage = packet.getVelocity().x == 0.0
-                && packet.getVelocity().z == 0.0
-                && packet.getVelocity().y < 0;
+        velocity.isFallDamage = movement.x() == 0.0
+                && movement.z() == 0.0
+                && movement.y() < 0;
     }
 
     public boolean shouldJumpReset() {
         if (!enabled() || mode.value() != Mode.JumpReset) return false;
 
-        ClientPlayerEntity player = RubyClient.client.player;
+        LocalPlayer player = RubyClient.client.player;
         if (player == null) return false;
 
-        if (player.hurtTime != 9 || !player.isOnGround() || !player.isSprinting()
+        if (player.hurtTime != 9 || !player.onGround() || !player.isSprinting()
                 || isFallDamage || !isCooldownOver() || !RandomUtils.chance(chance.value().floatValue())) {
             updateLimit(player);
             return false;
@@ -115,7 +118,7 @@ public class Velocity extends Module {
         return true;
     }
 
-    private void updateLimit(ClientPlayerEntity player) {
+    private void updateLimit(LocalPlayer player) {
         if (jumpByReceivedHits.value()) {
             if (player.hurtTime == 9) limitUntilJump++;
             return;

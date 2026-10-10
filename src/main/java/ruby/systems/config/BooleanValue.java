@@ -40,13 +40,13 @@ public class BooleanValue extends Value<Boolean> {
         this.setValue(stream.read() == 1);
     }
 
-    public static class Builder extends Value.Builder<Boolean, Builder> {
+    public static class Builder extends Value.Builder<Boolean, ruby.systems.config.BooleanValue.Builder> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.BooleanValue.Builder self() {
             return this;
         }
 

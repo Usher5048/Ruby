@@ -1,12 +1,5 @@
 package ruby.helpers.inventory;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
-import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
-import net.minecraft.network.packet.s2c.play.CloseScreenS2CPacket;
-import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
 import ruby.RubyClient;
 import ruby.helpers.InventoryHelper;
 import ruby.systems.events.Events;
@@ -17,6 +10,13 @@ import ruby.systems.events.TickEvents;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.protocol.game.ClientboundContainerClosePacket;
+import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
+import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
+import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
 
 public final class InventoryManager {
     private static final ArrayList<InventoryActionChain> pendingChains = new ArrayList<>();
@@ -44,24 +44,24 @@ public final class InventoryManager {
     }
 
     private static void onSend(PacketEvent event) {
-        if(!(event.packet() instanceof ClickSlotC2SPacket packet)) return;
-        if(packet.syncId() == 0) serverInventoryOpen = true;
+        if(!(event.packet() instanceof ServerboundContainerClickPacket packet)) return;
+        if(packet.containerId() == 0) serverInventoryOpen = true;
     }
 
     private static void onReceive(PacketEvent event) {
         switch(event.packet()) {
-            case CloseScreenS2CPacket packet -> {
-                if(packet.getSyncId() == 0) serverInventoryOpen = false;
+            case ClientboundContainerClosePacket packet -> {
+                if(packet.getContainerId() == 0) serverInventoryOpen = false;
             }
-            case OpenScreenS2CPacket ignored -> serverInventoryOpen = true;
+            case ClientboundOpenScreenPacket ignored -> serverInventoryOpen = true;
             default -> {}
         }
     }
 
     private static void tick() {
-        MinecraftClient mc = RubyClient.client;
-        ClientPlayerEntity player = mc.player;
-        if(player == null || mc.interactionManager == null) {
+        Minecraft mc = RubyClient.client;
+        LocalPlayer player = mc.player;
+        if(player == null || mc.gameMode == null) {
             InventoryManager.reset();
             return;
         }
@@ -104,7 +104,7 @@ public final class InventoryManager {
         InventoryManager.startNextChain(mc, player);
     }
 
-    private static void startNextChain(MinecraftClient mc, ClientPlayerEntity player) {
+    private static void startNextChain(Minecraft mc, LocalPlayer player) {
         if(InventoryManager.pendingChains.isEmpty()) return;
 
         InventoryManager.activeChain = InventoryManager.pendingChains.removeFirst();
@@ -113,7 +113,7 @@ public final class InventoryManager {
         InventoryManager.beginChain(mc, player);
     }
 
-    private static void beginChain(MinecraftClient mc, ClientPlayerEntity player) {
+    private static void beginChain(Minecraft mc, LocalPlayer player) {
         InventoryActionChain chain = InventoryManager.activeChain;
         if(chain == null) return;
 
@@ -123,7 +123,7 @@ public final class InventoryManager {
         }
 
         if(chain.requiresInventoryOpen() && chain.constraints().requireInventoryOpen()) {
-            if(mc.currentScreen instanceof HandledScreen<?> screen && screen.getScreenHandler().syncId != 0) {
+            if(mc.gui.screen() instanceof AbstractContainerScreen<?> screen && screen.getMenu().containerId != 0) {
                 InventoryManager.activeChain = null;
                 return;
             }
@@ -140,7 +140,7 @@ public final class InventoryManager {
         if(InventoryManager.waitTicks > 0) InventoryHelper.lock();
     }
 
-    private static void advance(MinecraftClient mc, ClientPlayerEntity player) {
+    private static void advance(Minecraft mc, LocalPlayer player) {
         InventoryActionChain chain = InventoryManager.activeChain;
         if(chain == null) return;
 
@@ -191,18 +191,18 @@ public final class InventoryManager {
             InventoryHelper.unlock();
     }
 
-    private static void closeInventory(MinecraftClient mc) {
+    private static void closeInventory(Minecraft mc) {
         if(InventoryHelper.isOwned()) {
             InventoryHelper.closeOwned(mc);
-        } else if(mc.getNetworkHandler() != null) {
-            mc.getNetworkHandler().sendPacket(new CloseHandledScreenC2SPacket(0));
+        } else if(mc.getConnection() != null) {
+            mc.getConnection().send(new ServerboundContainerClosePacket(0));
         }
         serverInventoryOpen = false;
     }
 
-    private static boolean passesMovement(InventoryConstraints constraints, ClientPlayerEntity player) {
+    private static boolean passesMovement(InventoryConstraints constraints, LocalPlayer player) {
         if(!constraints.requireNoMovement()) return true;
-        return player.forwardSpeed == 0 && player.sidewaysSpeed == 0 && player.isOnGround();
+        return player.zza == 0 && player.xxa == 0 && player.onGround();
     }
 
     private static void reset() {

@@ -1,8 +1,7 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import ruby.systems.config.ProfileManager;
 import ruby.systems.gui.ClickGuiSelection;
 import ruby.systems.gui.GUIStyle;
@@ -11,6 +10,7 @@ import ruby.systems.social.FriendsManager;
 
 import java.util.List;
 import java.util.function.Consumer;
+import net.minecraft.client.input.MouseButtonEvent;
 
 public class CategorySidebarWindow extends Window {
     public static final int WIDTH = ClickGuiLayoutWindow.SIDEBAR_WIDTH;
@@ -65,7 +65,7 @@ public class CategorySidebarWindow extends Window {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         GUIStyle style = GUIStyle.get();
         int w = WIDTH;
         int h = this.getHeight();
@@ -110,7 +110,7 @@ public class CategorySidebarWindow extends Window {
     }
 
     private int drawCategoryRow(
-            DrawContext context, GUIStyle style, int innerR, int y,
+            GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
             int mouseX, int mouseY, String label, ClickGuiSelection sel, boolean lastRow
     ) {
         boolean active = !this.searchActive && this.selection.equals(sel);
@@ -137,8 +137,8 @@ public class CategorySidebarWindow extends Window {
     }
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
-        if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         if (click.y() < HEADER_H) {
             if (this.onHeaderDrag != null) this.onHeaderDrag.run();

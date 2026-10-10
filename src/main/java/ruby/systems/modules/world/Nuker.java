@@ -1,12 +1,13 @@
 package ruby.systems.modules.world;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.component.SwingAnimation;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import ruby.systems.config.BlockListValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
@@ -72,11 +73,11 @@ public class Nuker extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.world == null || mc.interactionManager == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.level == null || mc.gameMode == null) return;
 
-        BlockPos center = player.getBlockPos();
+        BlockPos center = player.blockPosition();
         int r = (int) Math.ceil(range.value());
         double rSq = range.value() * range.value();
         int broken = 0;
@@ -86,7 +87,7 @@ public class Nuker extends Module {
                 for (int z = -r; z <= r; z++) {
                     if (broken >= maxBlocksPerTick.value()) return;
 
-                    BlockPos pos = center.add(x, y, z);
+                    BlockPos pos = center.offset(x, y, z);
 
                     // Shape check
                     if (shape.value() == Shape.Sphere) {
@@ -96,11 +97,11 @@ public class Nuker extends Module {
                         if (dx * dx + dy * dy + dz * dz > rSq) continue;
                     }
 
-                    BlockState state = mc.world.getBlockState(pos);
+                    BlockState state = mc.level.getBlockState(pos);
                     if (state.isAir()) continue;
 
                     Block block = state.getBlock();
-                    float hardness = state.getHardness(mc.world, pos);
+                    float hardness = state.getDestroySpeed(mc.level, pos);
 
                     // Block list filter
                     if (!blockList.value().isEmpty()) {
@@ -125,8 +126,8 @@ public class Nuker extends Module {
                     // Also skip unbreakable in Flatten mode
                     if (mode.value() == Mode.Flatten && hardness < 0) continue;
 
-                    mc.interactionManager.attackBlock(pos, Direction.UP);
-                    player.swingHand(Hand.MAIN_HAND);
+                    mc.gameMode.startDestroyBlock(pos, Direction.UP);
+                    player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, true);
                     broken++;
                 }
             }

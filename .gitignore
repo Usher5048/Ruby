@@ -52,3 +52,7 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+# old mappings
+
+src/main/premappedJava/

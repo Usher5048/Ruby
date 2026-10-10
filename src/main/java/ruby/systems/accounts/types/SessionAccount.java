@@ -1,13 +1,13 @@
 package ruby.systems.accounts.types;
 
 import com.mojang.util.UndashedUuid;
-import net.minecraft.client.session.Session;
 import ruby.helpers.Http;
 import ruby.systems.accounts.Account;
 import ruby.systems.accounts.AccountStorage;
 import ruby.systems.accounts.AccountType;
 
 import java.util.Optional;
+import net.minecraft.client.User;
 
 public class SessionAccount extends Account {
     private String accessToken;
@@ -44,7 +44,7 @@ public class SessionAccount extends Account {
         if (this.accessToken == null || this.accessToken.isBlank()) return false;
         if (!super.login()) return false;
 
-        Account.setSession(new Session(
+        Account.setSession(new User(
                 this.cache.username,
                 UndashedUuid.fromStringLenient(this.cache.uuid),
                 this.accessToken,

@@ -1,6 +1,6 @@
 package ruby.helpers;
 
-import net.minecraft.text.ClickEvent;
+import net.minecraft.network.chat.ClickEvent;
 
 public class RunnableClickEvent implements ClickEvent {
     private final Runnable impl;
@@ -13,7 +13,7 @@ public class RunnableClickEvent implements ClickEvent {
     }
 
     @Override
-    public Action getAction() {
+    public Action action() {
         return null;
     }
 }

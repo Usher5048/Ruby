@@ -1,8 +1,8 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.phys.Vec3;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
@@ -48,40 +48,40 @@ public class Flight extends Module {
 
     @Override
     public void onEnable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
         if (mode.value() == Mode.Abilities) {
-            mc.player.getAbilities().allowFlying = true;
+            mc.player.getAbilities().mayfly = true;
             mc.player.getAbilities().flying = true;
-            mc.player.getAbilities().setFlySpeed(speed.value().floatValue() / 10f);
-            mc.player.sendAbilitiesUpdate();
+            mc.player.getAbilities().setFlyingSpeed(speed.value().floatValue() / 10f);
+            mc.player.onUpdateAbilities();
         }
     }
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
         switch (mode.value()) {
             case Abilities -> {
-                player.getAbilities().allowFlying = true;
+                player.getAbilities().mayfly = true;
                 player.getAbilities().flying = true;
-                player.getAbilities().setFlySpeed(speed.value().floatValue() / 10f);
+                player.getAbilities().setFlyingSpeed(speed.value().floatValue() / 10f);
             }
             case Velocity -> {
-                Vec3d velocity = player.getVelocity();
+                Vec3 velocity = player.getDeltaMovement();
                 double y = 0;
 
-                if (mc.options.jumpKey.isPressed()) y += speed.value() * 0.05;
-                if (mc.options.sneakKey.isPressed()) y -= speed.value() * 0.05;
+                if (mc.options.keyJump.isDown()) y += speed.value() * 0.05;
+                if (mc.options.keyShift.isDown()) y -= speed.value() * 0.05;
 
                 // Horizontal speed boost
-                double forward = player.forwardSpeed;
-                double strafe = player.sidewaysSpeed;
-                float yaw = player.getYaw();
+                double forward = player.zza;
+                double strafe = player.xxa;
+                float yaw = player.getYRot();
 
                 double mx = 0, mz = 0;
                 if (forward != 0 || strafe != 0) {
@@ -90,29 +90,29 @@ public class Flight extends Module {
                     mz = (Math.cos(angle) * forward + Math.sin(angle) * strafe) * speed.value() * 0.05;
                 }
 
-                player.setVelocity(mx, y, mz);
+                player.setDeltaMovement(mx, y, mz);
             }
         }
 
         // Anti-kick: send small downward position every 40 ticks
-        if (antiKick.value() && !player.isOnGround()) {
+        if (antiKick.value() && !player.onGround()) {
             antiKickTimer++;
             if (antiKickTimer >= 40) {
                 antiKickTimer = 0;
-                player.setVelocity(player.getVelocity().x, -0.04, player.getVelocity().z);
+                player.setDeltaMovement(player.getDeltaMovement().x, -0.04, player.getDeltaMovement().z);
             }
         }
     }
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        mc.player.getAbilities().allowFlying = false;
+        mc.player.getAbilities().mayfly = false;
         mc.player.getAbilities().flying = false;
-        mc.player.getAbilities().setFlySpeed(0.05f); // Default fly speed
-        mc.player.sendAbilitiesUpdate();
+        mc.player.getAbilities().setFlyingSpeed(0.05f); // Default fly speed
+        mc.player.onUpdateAbilities();
         antiKickTimer = 0;
     }
 

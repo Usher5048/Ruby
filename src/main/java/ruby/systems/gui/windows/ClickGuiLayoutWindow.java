@@ -1,10 +1,10 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.gui.ClickGUI;
 import ruby.systems.gui.ClickGuiSelection;
@@ -86,7 +86,7 @@ public class ClickGuiLayoutWindow extends Window {
         return this.searchQuery;
     }
 
-    public boolean handleSearchChar(CharInput input) {
+    public boolean handleSearchChar(CharacterEvent input) {
         char c = (char) input.codepoint();
         if (c < 32 || c >= 127) return false;
         if (this.searchQuery.length() >= SEARCH_MAX_LEN) return true;
@@ -101,8 +101,8 @@ public class ClickGuiLayoutWindow extends Window {
         return true;
     }
 
-    public boolean handleSearchKey(KeyInput input) {
-        if (input.key() == GLFW.GLFW_KEY_BACKSPACE) {
+    public boolean handleSearchKey(KeyEvent input) {
+        if (input.key() == InputConstants.KEY_BACKSPACE) {
             if (this.searchQuery.isEmpty()) return false;
             this.searchQuery = this.searchQuery.substring(0, this.searchQuery.length() - 1);
             if (this.searchQuery.isEmpty()) {
@@ -113,7 +113,7 @@ public class ClickGuiLayoutWindow extends Window {
             return true;
         }
 
-        if (input.key() == GLFW.GLFW_KEY_ESCAPE && !this.searchQuery.isEmpty()) {
+        if (input.key() == InputConstants.KEY_ESCAPE && !this.searchQuery.isEmpty()) {
             this.clearSearch(true);
             return true;
         }
@@ -147,7 +147,7 @@ public class ClickGuiLayoutWindow extends Window {
     }
 
     @Override
-    public boolean onMouseUp(Click click) {
+    public boolean onMouseUp(MouseButtonEvent click) {
         if (this.isDragging()) this.persistPosition();
         return false;
     }
@@ -160,7 +160,7 @@ public class ClickGuiLayoutWindow extends Window {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         if (!this.isSearching()) {
             this.modulePanel.syncSelection(this.sidebar.selection());
         }

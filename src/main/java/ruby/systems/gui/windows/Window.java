@@ -1,10 +1,11 @@
 package ruby.systems.gui.windows;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.*;
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import org.lwjgl.glfw.GLFW;
+import net.minecraft.client.gui.components.Renderable;
+import net.minecraft.client.gui.components.events.AbstractContainerEventHandler;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.input.*;
 import ruby.RubyClient;
 import ruby.systems.gui.text.FontRenderer;
 
@@ -12,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-public class Window extends AbstractParentElement implements Drawable, Selectable {
+public class Window extends AbstractContainerEventHandler implements GuiEventListener, Renderable {
     private final List<Window> children = new ArrayList<>();
     private int[] scissorSpace;
     private int x;
@@ -37,15 +38,15 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         this.disableCutout();
     }
 
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {}
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {}
 
-    public boolean onMouseDown(Click click, boolean doubled) {
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
         return false;
     }
-    public boolean onMouseUp(Click click) {
+    public boolean onMouseUp(MouseButtonEvent click) {
         return false;
     }
-    public boolean onMouseDragged(Click click, double deltaX, double deltaY) {
+    public boolean onMouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
         return false;
     }
     public boolean onMouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
@@ -53,13 +54,13 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
     public void onMouseMoved(double mouseX, double mouseY) {}
 
-    public boolean onKeyPress(KeyInput input) {
+    public boolean onKeyPress(KeyEvent input) {
         return false;
     }
-    public boolean onKeyRelease(KeyInput input) {
+    public boolean onKeyRelease(KeyEvent input) {
         return false;
     }
-    public boolean onCharTyped(CharInput input) {
+    public boolean onCharTyped(CharacterEvent input) {
         return false;
     }
 
@@ -79,11 +80,11 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         this.scissorSpace = new int[] {x1, y1, x2, y2};
     }
 
-    public void drawText(FontRenderer font, DrawContext context, String text, int x, int y, int color) {
+    public void drawText(FontRenderer font, GuiGraphicsExtractor context, String text, int x, int y, int color) {
         font.draw(context, text, x, y, color);
     }
 
-    public void drawCenteredText(FontRenderer font, DrawContext context, String text, int x, int y, int color) {
+    public void drawCenteredText(FontRenderer font, GuiGraphicsExtractor context, String text, int x, int y, int color) {
         this.drawText(
                 font, context,
                 text,
@@ -94,7 +95,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
 
     public void drawTextInRect(
-            FontRenderer font, DrawContext context, String text,
+            FontRenderer font, GuiGraphicsExtractor context, String text,
             int x1, int y1, int x2, int y2, int color
     ) {
         FontRenderer.TextBounds bounds = font.measure(text);
@@ -103,7 +104,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         font.draw(context, text, tx, ty, color);
     }
 
-    public void drawBorder(DrawContext context, int x1, int y1, int x2, int y2, int color, int thickness) {
+    public void drawBorder(GuiGraphicsExtractor context, int x1, int y1, int x2, int y2, int color, int thickness) {
         context.fill(x1, y1, x2, y1 + thickness, color);
         context.fill(x1, y2, x2, y2 - thickness, color);
         context.fill(x1, y1, x1 + thickness, y2, color);
@@ -111,7 +112,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
 
     public void drawRoundedRect(
-            DrawContext context,
+            GuiGraphicsExtractor context,
             int x1, int y1,
             int x2, int y2,
             int fillColor, int strokeColor,
@@ -198,28 +199,28 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float dt) {
-        context.getMatrices().pushMatrix();
-        context.getMatrices().scale(
-                1f / (float) RubyClient.client.getWindow().getScaleFactor(),
-                1f / (float) RubyClient.client.getWindow().getScaleFactor()
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
+        context.pose().pushMatrix();
+        context.pose().scale(
+                1f / (float) RubyClient.client.getWindow().getGuiScale(),
+                1f / (float) RubyClient.client.getWindow().getGuiScale()
         );
 
-        int sMouseX = mouseX * RubyClient.client.getWindow().getScaleFactor();
-        int sMouseY = mouseY * RubyClient.client.getWindow().getScaleFactor();
+        int sMouseX = mouseX * RubyClient.client.getWindow().getGuiScale();
+        int sMouseY = mouseY * RubyClient.client.getWindow().getGuiScale();
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
-        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
+        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
 
-        context.getMatrices().translate(this.x, this.y);
+        context.pose().translate(this.x, this.y);
         this.onRender(context, sMouseX - this.x, sMouseY - this.y, dt);
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
 
-        context.getMatrices().pushMatrix();
-        context.getMatrices().translate((float) sX, (float) sY);
+        context.pose().pushMatrix();
+        context.pose().translate((float) sX, (float) sY);
 
         if(!this.handleChildren) {
-            context.getMatrices().popMatrix();
+            context.pose().popMatrix();
             return;
         }
 
@@ -229,15 +230,15 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
 
         if(scissorEnabled) {
             context.enableScissor(
-                    this.scissorSpace[0] / RubyClient.client.getWindow().getScaleFactor(),
-                    this.scissorSpace[1] / RubyClient.client.getWindow().getScaleFactor(),
-                    this.scissorSpace[2] / RubyClient.client.getWindow().getScaleFactor(),
-                    this.scissorSpace[3] / RubyClient.client.getWindow().getScaleFactor()
+                    this.scissorSpace[0] / RubyClient.client.getWindow().getGuiScale(),
+                    this.scissorSpace[1] / RubyClient.client.getWindow().getGuiScale(),
+                    this.scissorSpace[2] / RubyClient.client.getWindow().getGuiScale(),
+                    this.scissorSpace[3] / RubyClient.client.getWindow().getGuiScale()
             );
         }
 
         for(Window window : this.windows()) {
-            window.render(
+            window.extractRenderState(
                     context,
                     (int) (mouseX - sX),
                     (int) (mouseY - sY),
@@ -246,18 +247,18 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
         }
 
         if(scissorEnabled) context.disableScissor();
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
     @Override
-    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
-        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getScaleFactor());
-        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getScaleFactor());
-        double sDeltaX = Math.round(deltaX * RubyClient.client.getWindow().getScaleFactor());
-        double sDeltaY = Math.round(deltaY * RubyClient.client.getWindow().getScaleFactor());
+    public boolean mouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
+        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getGuiScale());
+        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getGuiScale());
+        double sDeltaX = Math.round(deltaX * RubyClient.client.getWindow().getGuiScale());
+        double sDeltaY = Math.round(deltaY * RubyClient.client.getWindow().getGuiScale());
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
-        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
+        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
 
         for(int i = this.children.size() - 1; i >= 0; i--) {
             if(!this.handleChildren) continue;
@@ -268,7 +269,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
             if(sMouseX - this.x >= window.getX() + window.getWidth()) continue;
             if(sMouseY - this.y >= window.getY() + window.getHeight()) continue;
 
-            if(this.focusWindow(window).mouseDragged(new Click(
+            if(this.focusWindow(window).mouseDragged(new MouseButtonEvent(
                     click.x() - sX,
                     click.y() - sY,
                     click.buttonInfo()
@@ -276,13 +277,13 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
             break;
         }
 
-        if(this.onMouseDragged(new Click(
+        if(this.onMouseDragged(new MouseButtonEvent(
                 sMouseX - this.x,
                 sMouseY - this.y,
                 click.buttonInfo()
         ), deltaX, deltaY)) return true;
 
-        if(this.isDragging() && click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if(this.isDragging() && click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             this.x += (int) sDeltaX;
             this.y += (int) sDeltaY;
         }
@@ -300,12 +301,12 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
-        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getScaleFactor());
-        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getScaleFactor());
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
+        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getGuiScale());
+        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getGuiScale());
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
-        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
+        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
 
         for(int i = this.children.size() - 1; i >= 0; i--) {
             if(!this.handleChildren) continue;
@@ -316,7 +317,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
             if(sMouseX - this.x >= window.getX() + window.getWidth()) continue;
             if(sMouseY - this.y >= window.getY() + window.getHeight()) continue;
 
-            if(this.focusWindow(window).mouseClicked(new Click(
+            if(this.focusWindow(window).mouseClicked(new MouseButtonEvent(
                     click.x() - sX,
                     click.y() - sY,
                     click.buttonInfo()
@@ -324,30 +325,30 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
             break;
         }
 
-        if(this.onMouseDown(new Click(
+        if(this.onMouseDown(new MouseButtonEvent(
                 sMouseX - this.x,
                 sMouseY - this.y,
                 click.buttonInfo()
         ), doubled)) return true;
 
         if(
-                click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT &&
-                        sMouseX > this.x + this.draggableBounds[0] &&
-                        sMouseX < this.x + this.draggableBounds[2] &&
-                        sMouseY > this.y + this.draggableBounds[1] &&
-                        sMouseY < this.y + this.draggableBounds[3]
+                click.button() == InputConstants.MOUSE_BUTTON_LEFT &&
+                sMouseX > this.x + this.draggableBounds[0] &&
+                sMouseX < this.x + this.draggableBounds[2] &&
+                sMouseY > this.y + this.draggableBounds[1] &&
+                sMouseY < this.y + this.draggableBounds[3]
         ) this.setDragging(true);
 
         return false;
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
-        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getScaleFactor());
-        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getScaleFactor());
+    public boolean mouseReleased(MouseButtonEvent click) {
+        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getGuiScale());
+        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getGuiScale());
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
-        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
+        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
 
         for(int i = this.children.size() - 1; i >= 0; i--) {
             if(!this.handleChildren) continue;
@@ -358,7 +359,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
             if(sMouseX - this.x >= window.getX() + window.getWidth()) continue;
             if(sMouseY - this.y >= window.getY() + window.getHeight()) continue;
 
-            if(window.mouseReleased(new Click(
+            if(window.mouseReleased(new MouseButtonEvent(
                     click.x() - sX,
                     click.y() - sY,
                     click.buttonInfo()
@@ -366,7 +367,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
             break;
         }
 
-        if(this.onMouseUp(new Click(
+        if(this.onMouseUp(new MouseButtonEvent(
                 sMouseX - this.x,
                 sMouseY - this.y,
                 click.buttonInfo()
@@ -377,24 +378,24 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if(this.runFocused(win -> win.keyPressed(input))) return true;
         return this.onKeyPress(input);
     }
 
     @Override
-    public boolean keyReleased(KeyInput input) {
+    public boolean keyReleased(KeyEvent input) {
         if(this.runFocused(win -> win.keyReleased(input))) return true;
         return this.onKeyRelease(input);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        double sMouseX = Math.round(mouseX * RubyClient.client.getWindow().getScaleFactor());
-        double sMouseY = Math.round(mouseY * RubyClient.client.getWindow().getScaleFactor());
+        double sMouseX = Math.round(mouseX * RubyClient.client.getWindow().getGuiScale());
+        double sMouseY = Math.round(mouseY * RubyClient.client.getWindow().getGuiScale());
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
-        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
+        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
 
         for(int i = this.children.size() - 1; i >= 0; i--) {
             if(!this.handleChildren) continue;
@@ -424,11 +425,11 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        double sMouseX = Math.round(mouseX * RubyClient.client.getWindow().getScaleFactor());
-        double sMouseY = Math.round(mouseY * RubyClient.client.getWindow().getScaleFactor());
+        double sMouseX = Math.round(mouseX * RubyClient.client.getWindow().getGuiScale());
+        double sMouseY = Math.round(mouseY * RubyClient.client.getWindow().getGuiScale());
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getScaleFactor();
-        double sY = this.y / (double) RubyClient.client.getWindow().getScaleFactor();
+        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
+        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
 
         for(int i = this.children.size() - 1; i >= 0; i--) {
             if(!this.handleChildren) continue;
@@ -454,7 +455,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
 
     @Override
-    public boolean charTyped(CharInput input) {
+    public boolean charTyped(CharacterEvent input) {
         if(this.runFocused(win -> win.charTyped(input))) return true;
         return this.onCharTyped(input);
     }
@@ -524,15 +525,7 @@ public class Window extends AbstractParentElement implements Drawable, Selectabl
     }
 
     @Override
-    public List<? extends Element> children() {
+    public List<? extends GuiEventListener> children() {
         return this.children;
     }
-
-    @Override
-    public SelectionType getType() {
-        return SelectionType.NONE;
-    }
-
-    @Override
-    public void appendNarrations(NarrationMessageBuilder builder) {}
 }

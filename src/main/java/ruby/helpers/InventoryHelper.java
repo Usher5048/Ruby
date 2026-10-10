@@ -1,7 +1,7 @@
 package ruby.helpers;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 
 public final class InventoryHelper {
     private static boolean owned;
@@ -9,8 +9,8 @@ public final class InventoryHelper {
 
     private InventoryHelper() {}
 
-    public static boolean isOpen(MinecraftClient mc) {
-        return mc.currentScreen instanceof InventoryScreen;
+    public static boolean isOpen(Minecraft mc) {
+        return mc.gui.screen() instanceof InventoryScreen;
     }
 
     public static boolean isOwned() {
@@ -21,17 +21,17 @@ public final class InventoryHelper {
         return locked;
     }
 
-    public static boolean canStart(MinecraftClient mc) {
-        return mc.currentScreen == null;
+    public static boolean canStart(Minecraft mc) {
+        return mc.gui.screen() == null;
     }
 
-    public static boolean isModuleSession(MinecraftClient mc) {
+    public static boolean isModuleSession(Minecraft mc) {
         return owned && isOpen(mc);
     }
 
-    public static void openOwned(MinecraftClient mc) {
+    public static void openOwned(Minecraft mc) {
         if(mc.player == null) return;
-        if(!isOpen(mc)) mc.setScreen(new InventoryScreen(mc.player));
+        if(!isOpen(mc)) mc.setScreenAndShow(new InventoryScreen(mc.player));
         owned = true;
     }
 
@@ -43,8 +43,8 @@ public final class InventoryHelper {
         locked = false;
     }
 
-    public static void closeOwned(MinecraftClient mc) {
-        if(owned && isOpen(mc)) mc.setScreen(null);
+    public static void closeOwned(Minecraft mc) {
+        if(owned && isOpen(mc)) mc.setScreenAndShow(null);
         owned = false;
         locked = false;
     }

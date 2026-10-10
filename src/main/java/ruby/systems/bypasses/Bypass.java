@@ -1,37 +1,33 @@
 package ruby.systems.bypasses;
 
-import net.minecraft.entity.EntityPosition;
-import net.minecraft.network.ClientConnection;
-import net.minecraft.network.NetworkSide;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.ClientTickEndC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.c2s.play.TeleportConfirmC2SPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerRotationS2CPacket;
-import net.minecraft.network.packet.s2c.play.PositionFlag;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.*;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.Relative;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 
 public class Bypass {
-    protected static class Connection {
-        private ClientConnection clientConnection;
+    protected static class WrappedConnection {
+        private Connection connection;
 
         protected void send(Packet<?> packet) {
-            this.clientConnection.send(packet, null);
+            this.connection.send(packet, null);
         }
         protected void resend(Packet<?> packet) {
-            this.clientConnection.send(packet);
+            this.connection.send(packet);
         }
     }
 
-    protected final Connection connection = new Connection();
+    protected final WrappedConnection connection = new WrappedConnection();
 
     private boolean movementTick = false;
     private boolean serverOnGround = false;
-    private Vec3d serverPosition = Vec3d.ZERO;
-    private Vec3d lastServerPosition = Vec3d.ZERO;
-    private Vec3d serverVelocity = Vec3d.ZERO;
+    private Vec3 serverPosition = Vec3.ZERO;
+    private Vec3 lastServerPosition = Vec3.ZERO;
+    private Vec3 serverVelocity = Vec3.ZERO;
     private float serverYaw = Float.NaN;
     private float serverPitch = Float.NaN;
     private boolean lastPacketTeleport = false;
@@ -48,9 +44,9 @@ public class Bypass {
     public void init() {
         this.movementTick = false;
         this.serverOnGround = false;
-        this.serverPosition = Vec3d.ZERO;
-        this.lastServerPosition = Vec3d.ZERO;
-        this.serverVelocity = Vec3d.ZERO;
+        this.serverPosition = Vec3.ZERO;
+        this.lastServerPosition = Vec3.ZERO;
+        this.serverVelocity = Vec3.ZERO;
         this.serverYaw = Float.NaN;
         this.serverPitch = Float.NaN;
         this.lastPacketTeleport = false;
@@ -61,14 +57,14 @@ public class Bypass {
 
     public void tick() {}
 
-    public Vec3d position() {
-        return this.serverPosition != null ? this.serverPosition : Vec3d.ZERO;
+    public Vec3 position() {
+        return this.serverPosition != null ? this.serverPosition : Vec3.ZERO;
     }
-    public Vec3d lastPosition() {
+    public Vec3 lastPosition() {
         return this.lastServerPosition != null ? this.lastServerPosition : this.position();
     }
 
-    public Vec3d velocity() {
+    public Vec3 velocity() {
         return this.serverVelocity;
     }
     public boolean onGround() {
@@ -76,13 +72,13 @@ public class Bypass {
     }
     public float yaw() {
         if(Float.isNaN(this.serverYaw) && RubyClient.client.player != null)
-            return RubyClient.client.player.getYaw();
+            return RubyClient.client.player.getYRot();
         return this.serverYaw;
     }
 
     public float pitch() {
         if(Float.isNaN(this.serverPitch) && RubyClient.client.player != null)
-            return RubyClient.client.player.getPitch();
+            return RubyClient.client.player.getXRot();
         return this.serverPitch;
     }
 
@@ -96,29 +92,29 @@ public class Bypass {
         this.movementTick = val;
     }
 
-    public void resetConnection(ClientConnection connection) {
-        this.connection.clientConnection = connection;
+    public void resetConnection(Connection connection) {
+        this.connection.connection = connection;
     }
     public void updateServer(Packet<?> packet) {
-        if(packet.getPacketType().side() == NetworkSide.SERVERBOUND)
+        if(packet.type().flow() == PacketFlow.SERVERBOUND)
             this.lastPacketTeleport = false;
 
         switch(packet) {
-            case ClientTickEndC2SPacket tick -> this.lastServerPosition = this.serverPosition;
-            case PlayerMoveC2SPacket move -> {
+            case ServerboundClientTickEndPacket tick -> this.lastServerPosition = this.serverPosition;
+            case ServerboundMovePlayerPacket move -> {
                 if(this.setTeleport) {
                     this.lastPacketTeleport = true;
                     this.setTeleport = false;
                 }
 
                 this.serverOnGround = move.isOnGround();
-                if(move.changesLook()) {
-                    this.serverYaw = move.getYaw(0);
-                    this.serverPitch = move.getPitch(0);
+                if(move.hasRotation()) {
+                    this.serverYaw = move.getYRot(0);
+                    this.serverPitch = move.getXRot(0);
                 }
 
-                if(move.changesPosition()) {
-                    this.serverPosition = new Vec3d(
+                if(move.hasPosition()) {
+                    this.serverPosition = new Vec3(
                             move.getX(0),
                             move.getY(0),
                             move.getZ(0)
@@ -129,27 +125,32 @@ public class Bypass {
                 }
             }
 
-            case TeleportConfirmC2SPacket teleport -> this.setTeleport = true;
-            case PlayerPositionLookS2CPacket teleport -> {
-                EntityPosition current = new EntityPosition(
+            case ServerboundAcceptTeleportationPacket teleport -> this.setTeleport = true;
+            case ClientboundPlayerPositionPacket teleport -> {
+                PositionMoveRotation current = new PositionMoveRotation(
                         this.position(), this.velocity(), this.yaw(), this.pitch()
                 );
-                EntityPosition next = EntityPosition.apply(current, teleport.change(), teleport.relatives());
-                this.serverYaw = next.yaw();
-                this.serverPitch = next.pitch();
+
+                PositionMoveRotation next = PositionMoveRotation.calculateAbsolute(current, teleport.change(), teleport.relatives());
+                this.serverYaw = next.yRot();
+                this.serverPitch = next.xRot();
                 this.serverPosition = next.position();
                 this.serverVelocity = next.deltaMovement();
             }
 
-            case PlayerRotationS2CPacket(float yaw, boolean rYaw, float pitch, boolean rPitch) -> {
-                EntityPosition current = new EntityPosition(
+            case ClientboundPlayerRotationPacket(float yaw, boolean rYaw, float pitch, boolean rPitch) -> {
+                PositionMoveRotation current = new PositionMoveRotation(
                         this.position(), this.velocity(), this.yaw(), this.pitch()
                 );
-                EntityPosition next = EntityPosition.apply(
-                        current, current.withRotation(yaw, pitch), PositionFlag.ofRot(rYaw, rPitch)
+
+                PositionMoveRotation next = PositionMoveRotation.calculateAbsolute(
+                        current,
+                        current.withRotation(yaw, pitch),
+                        Relative.rotation(rYaw, rPitch)
                 );
-                this.serverYaw = next.yaw();
-                this.serverPitch = next.pitch();
+
+                this.serverYaw = next.yRot();
+                this.serverPitch = next.xRot();
             }
 
             default -> {}

@@ -1,6 +1,6 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.block.Blocks;
+import net.minecraft.world.level.block.Blocks;
 import ruby.helpers.world.ChunkReloadHelper;
 import ruby.systems.config.BlockListValue;
 import ruby.systems.config.BooleanValue;

@@ -1,10 +1,9 @@
 package ruby.systems.gui.text;
 
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.Identifier;
 import ruby.RubyClient;
-
+import com.mojang.blaze3d.platform.NativeImage;
 import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
@@ -130,18 +129,18 @@ public class GlyphSheet {
         NativeImage image = new NativeImage(this.imageWidth, this.imageHeight, true);
         for (int y = 0; y < this.imageHeight; y++) {
             for (int x = 0; x < this.imageWidth; x++) {
-                image.setColor(x, y, this.imageBuffer.getRGB(x, y));
+                image.setPixelABGR(x, y, this.imageBuffer.getRGB(x, y));
             }
         }
 
-        RubyClient.client.getTextureManager().registerTexture(Identifier.of(
+        RubyClient.client.getTextureManager().register(Identifier.fromNamespaceAndPath(
                 RubyClient.MOD_ID,
                 "fonts/" + this.identifier
-        ), new NativeImageBackedTexture(() -> this.identifier, image));
+        ), new DynamicTexture(() -> this.identifier, image));
     }
 
     protected Identifier getTexture() {
-        return Identifier.of(RubyClient.MOD_ID, "fonts/" + this.identifier);
+        return Identifier.fromNamespaceAndPath(RubyClient.MOD_ID, "fonts/" + this.identifier);
     }
 
     protected int getTextureWidth() {

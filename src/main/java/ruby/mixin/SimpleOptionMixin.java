@@ -1,20 +1,20 @@
 package ruby.mixin;
 
-import net.minecraft.client.option.SimpleOption;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.Optional;
+import net.minecraft.client.OptionInstance;
 
-@Mixin(SimpleOption.class)
+@Mixin(OptionInstance.class)
 public class SimpleOptionMixin {
     @Redirect(
-            method = "setValue",
+            method = "set",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/option/SimpleOption$Callbacks;validate(Ljava/lang/Object;)Ljava/util/Optional;"
+                    target = "Lnet/minecraft/client/OptionInstance$ValueSet;validateValue(Ljava/lang/Object;)Ljava/util/Optional;"
             )
     )
     private Optional<?> forceValid(@Coerce Object callbacks, Object value) {

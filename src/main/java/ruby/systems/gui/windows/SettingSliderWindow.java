@@ -1,8 +1,8 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.config.Value;
@@ -40,7 +40,7 @@ public class SettingSliderWindow extends SettingWindow {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         GUIStyle style = GUIStyle.get();
         int w = this.getWidth();
 
@@ -78,17 +78,17 @@ public class SettingSliderWindow extends SettingWindow {
                 ? ((IntegerValue) this.value).value()
                 : ((DoubleValue) this.value).value();
         if (this.max <= this.min) return 0;
-        return Math.max(0, Math.min(1, (current - this.min) / (this.max - this.min)));
+        return Math.clamp((current - this.min) / (this.max - this.min), 0, 1);
     }
 
     private void updateFromMouse(double mouseX) {
         int trackLeft = INDENT;
         int trackRight = this.getWidth() - INDENT;
         double normalized = (mouseX - trackLeft) / (trackRight - trackLeft);
-        normalized = Math.max(0, Math.min(1, normalized));
+        normalized = Math.clamp(normalized, 0, 1);
         double newVal = this.min + normalized * (this.max - this.min);
         newVal = Math.round(newVal / this.step) * this.step;
-        newVal = Math.max(this.min, Math.min(this.max, newVal));
+        newVal = Math.clamp(newVal, this.min, this.max);
         if (this.isInteger) {
             ((IntegerValue) this.value).setValue((int) Math.round(newVal));
         } else {
@@ -97,8 +97,8 @@ public class SettingSliderWindow extends SettingWindow {
     }
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
-        if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
         if (click.y() >= 22 && click.y() <= 44) {
             this.dragging = true;
             updateFromMouse(click.x());
@@ -108,7 +108,7 @@ public class SettingSliderWindow extends SettingWindow {
     }
 
     @Override
-    public boolean onMouseDragged(Click click, double deltaX, double deltaY) {
+    public boolean onMouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
         if (this.dragging) {
             updateFromMouse(click.x());
             return true;
@@ -117,7 +117,7 @@ public class SettingSliderWindow extends SettingWindow {
     }
 
     @Override
-    public boolean onMouseUp(Click click) {
+    public boolean onMouseUp(MouseButtonEvent click) {
         if (this.dragging) {
             this.dragging = false;
             return true;

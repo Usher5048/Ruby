@@ -46,13 +46,13 @@ public class StringListValue extends ListValue<String> {
         return new String(bytes);
     }
 
-    public static class Builder extends ListValue.Builder<String, Builder> {
+    public static class Builder extends ListValue.Builder<String, ruby.systems.config.StringListValue.Builder> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.StringListValue.Builder self() {
             return this;
         }
 

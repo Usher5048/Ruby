@@ -1,8 +1,8 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.phys.Vec3;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -35,16 +35,16 @@ public class TridentBoost extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
-        boolean riptiding = player.isUsingRiptide();
+        boolean riptiding = player.isAutoSpinAttack();
 
         // Boost on the first tick of riptide activation
         if (riptiding && !wasRiptiding) {
-            Vec3d velocity = player.getVelocity();
-            player.setVelocity(
+            Vec3 velocity = player.getDeltaMovement();
+            player.setDeltaMovement(
                     velocity.x * multiplier.value(),
                     velocity.y * multiplier.value(),
                     velocity.z * multiplier.value()

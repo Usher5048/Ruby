@@ -1,16 +1,16 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.social.FriendsManager;
 import ruby.systems.social.PlayerHeadCache;
 
 import java.util.List;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 
 public class FriendsPanelContent extends Window {
     private static final int PAD = 14;
@@ -54,11 +54,11 @@ public class FriendsPanelContent extends Window {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         this.drawContent(context, mouseX, mouseY);
     }
 
-    private void drawContent(DrawContext context, int mouseX, int mouseY) {
+    private void drawContent(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         GUIStyle style = GUIStyle.get();
         int w = this.getWidth();
         int innerR = w - INNER_L;
@@ -110,7 +110,7 @@ public class FriendsPanelContent extends Window {
         }
     }
 
-    private int drawAddButton(DrawContext context, GUIStyle style, int w, int innerR, int y, int mx, int my) {
+    private int drawAddButton(GuiGraphicsExtractor context, GUIStyle style, int w, int innerR, int y, int mx, int my) {
         int btnR = innerR - PAD;
         int by = y + 10;
         int bh = 24;
@@ -124,7 +124,7 @@ public class FriendsPanelContent extends Window {
         return y + ADD_BTN_ROW_H;
     }
 
-    private int drawAddInput(DrawContext context, GUIStyle style, int w, int innerR, int y, int mx, int my) {
+    private int drawAddInput(GuiGraphicsExtractor context, GUIStyle style, int w, int innerR, int y, int mx, int my) {
         int rowY = y + 8;
         int inputH = 24;
         int contentR = innerR - PAD;
@@ -153,7 +153,7 @@ public class FriendsPanelContent extends Window {
         return y + ADD_ROW_H;
     }
 
-    private void drawPlayerHead(DrawContext context, GUIStyle style, String username, int x, int y) {
+    private void drawPlayerHead(GuiGraphicsExtractor context, GUIStyle style, String username, int x, int y) {
         if (PlayerHeadCache.getSkin(username) != null) {
             PlayerHeadCache.drawHead(context, username, x, y, HEAD_SIZE);
         } else {
@@ -163,8 +163,8 @@ public class FriendsPanelContent extends Window {
     }
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
-        if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         int w = this.getWidth();
         int innerR = w - INNER_L;
@@ -213,19 +213,19 @@ public class FriendsPanelContent extends Window {
     }
 
     @Override
-    public boolean onKeyPress(KeyInput input) {
+    public boolean onKeyPress(KeyEvent input) {
         if (!this.showAddInput) return false;
 
-        if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (input.key() == InputConstants.KEY_ESCAPE) {
             this.showAddInput = false;
             this.inputText = "";
             return true;
         }
-        if (input.key() == GLFW.GLFW_KEY_BACKSPACE && !this.inputText.isEmpty()) {
+        if (input.key() == InputConstants.KEY_BACKSPACE && !this.inputText.isEmpty()) {
             this.inputText = this.inputText.substring(0, this.inputText.length() - 1);
             return true;
         }
-        if (input.key() == GLFW.GLFW_KEY_ENTER) {
+        if (input.key() == InputConstants.KEY_RETURN) {
             if (FriendsManager.addFriend(this.inputText)) {
                 ConfigManager.saveState();
             }
@@ -237,7 +237,7 @@ public class FriendsPanelContent extends Window {
     }
 
     @Override
-    public boolean onCharTyped(CharInput input) {
+    public boolean onCharTyped(CharacterEvent input) {
         if (!this.showAddInput) return false;
         char c = (char) input.codepoint();
         if (c >= 32 && c < 127 && this.inputText.length() < 16) {

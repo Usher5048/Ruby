@@ -1,27 +1,18 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.consume.UseAction;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
-import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.ExplosionS2CPacket;
-import net.minecraft.network.packet.s2c.play.HealthUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.*;
+import net.minecraft.world.item.ItemUseAnimation;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.helpers.RandomUtils;
 import ruby.helpers.blink.BlinkManager;
 import ruby.helpers.combat.CombatUtils;
-import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.config.IntegerValue;
@@ -33,8 +24,6 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
 import java.util.List;
-import java.util.Locale;
-import java.util.function.Predicate;
 
 /**
  * LiquidBounce {@code FakeLag} port.
@@ -49,11 +38,11 @@ public class FakeLag extends Module {
 
         public boolean test(Packet<?> packet) {
             return switch (this) {
-                case EntityInteract -> packet instanceof PlayerInteractEntityC2SPacket
-                        || packet instanceof HandSwingC2SPacket;
-                case BlockInteract -> packet instanceof PlayerInteractBlockC2SPacket
-                        || packet instanceof net.minecraft.network.packet.c2s.play.UpdateSignC2SPacket;
-                case Action -> packet instanceof PlayerActionC2SPacket;
+                case EntityInteract -> packet instanceof ServerboundInteractPacket
+                        || packet instanceof ServerboundPunchPacket;
+                case BlockInteract -> packet instanceof ServerboundUseItemOnPacket
+                        || packet instanceof ServerboundSignUpdatePacket;
+                case Action -> packet instanceof ServerboundPlayerActionPacket;
             };
         }
 
@@ -136,8 +125,8 @@ public class FakeLag extends Module {
     }
 
     private void handleBlink(BlinkPacketEvent event) {
-        MinecraftClient mc = RubyClient.client;
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = RubyClient.client;
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
         if (event.origin() == BlinkManager.Origin.OUTGOING) {
@@ -148,8 +137,8 @@ public class FakeLag extends Module {
         handleIncomingFlush(event, player);
     }
 
-    private void handleOutgoing(BlinkPacketEvent event, ClientPlayerEntity player, MinecraftClient mc) {
-        if (player.isDead() || player.isTouchingWater() || mc.currentScreen != null) return;
+    private void handleOutgoing(BlinkPacketEvent event, LocalPlayer player, Minecraft mc) {
+        if (player.isDeadOrDying() || player.isInWater() || mc.gui.screen() != null) return;
 
         if (!hasRecoilElapsed()) return;
 
@@ -165,23 +154,23 @@ public class FakeLag extends Module {
             return;
         }
 
-        if (packet instanceof PlayerInteractEntityC2SPacket
-                || packet instanceof HandSwingC2SPacket) {
+        if (packet instanceof ServerboundInteractPacket
+                || packet instanceof ServerboundPunchPacket) {
             if (shouldFlush(FlushOn.EntityInteract)) {
                 resetRecoil();
                 return;
             }
         }
 
-        if (packet instanceof PlayerInteractBlockC2SPacket
-                || packet instanceof net.minecraft.network.packet.c2s.play.UpdateSignC2SPacket) {
+        if (packet instanceof ServerboundUseItemOnPacket
+                || packet instanceof ServerboundSignUpdatePacket) {
             if (shouldFlush(FlushOn.BlockInteract)) {
                 resetRecoil();
                 return;
             }
         }
 
-        if (packet instanceof PlayerActionC2SPacket && shouldFlush(FlushOn.Action)) {
+        if (packet instanceof ServerboundPlayerActionPacket && shouldFlush(FlushOn.Action)) {
             resetRecoil();
             return;
         }
@@ -194,57 +183,58 @@ public class FakeLag extends Module {
         });
     }
 
-    private void handleIncomingFlush(BlinkPacketEvent event, ClientPlayerEntity player) {
+    private void handleIncomingFlush(BlinkPacketEvent event, LocalPlayer player) {
         Packet<?> packet = event.packet();
-        if (packet == null) return;
-
-        if (packet instanceof EntityVelocityUpdateS2CPacket velocity
-                && velocity.getEntityId() == player.getId()
-                && !velocity.getVelocity().equals(Vec3d.ZERO)) {
-            resetRecoil();
-            event.setAction(BlinkManager.Action.FLUSH);
-            return;
-        }
-
-        if (packet instanceof ExplosionS2CPacket explosion) {
-            Vec3d knockback = explosion.playerKnockback().orElse(Vec3d.ZERO);
-            if (!knockback.equals(Vec3d.ZERO)) {
+        switch (packet) {
+            case ClientboundSetEntityMotionPacket(
+                    int id, Vec3 movement
+            ) when id == player.getId() && !movement.equals(Vec3.ZERO) -> {
                 resetRecoil();
                 event.setAction(BlinkManager.Action.FLUSH);
             }
-            return;
+            
+            case ClientboundExplodePacket explosion -> {
+                Vec3 knockback = explosion.playerKnockback().orElse(Vec3.ZERO);
+                if (!knockback.equals(Vec3.ZERO)) {
+                    resetRecoil();
+                    event.setAction(BlinkManager.Action.FLUSH);
+                }
+            }
+            
+            case ClientboundSetHealthPacket healthUpdateS2CPacket -> {
+                resetRecoil();
+                event.setAction(BlinkManager.Action.FLUSH);
+            }
+            
+            case null, default -> {}
         }
 
-        if (packet instanceof HealthUpdateS2CPacket) {
-            resetRecoil();
-            event.setAction(BlinkManager.Action.FLUSH);
-        }
     }
 
-    private boolean shouldDynamicLag(ClientPlayerEntity player) {
+    private boolean shouldDynamicLag(LocalPlayer player) {
         if (!enemyNearby) return false;
 
-        List<Vec3d> positions = BlinkManager.positions();
-        Vec3d lagPosition = positions.isEmpty() ? player.getEntityPos() : positions.getFirst();
+        List<Vec3> positions = BlinkManager.positions();
+        net.minecraft.world.phys.Vec3 lagPosition = positions.isEmpty() ? player.getClientPosition() : positions.getFirst();
         double maxRange = rangeMax.value();
 
-        List<Entity> entities = RubyClient.client.world.getOtherEntities(
+        List<Entity> entities = RubyClient.client.level.getEntities(
                 player,
-                new Box(lagPosition, lagPosition).expand(maxRange),
+                new AABB(lagPosition, lagPosition).inflate(maxRange),
                 CombatUtils::shouldBeAttacked
         );
 
         if (entities.isEmpty()) return false;
 
-        Box playerBox = player.getDimensions(player.getPose()).getBoxAt(lagPosition);
+        AABB playerBox = player.getDimensions(player.getPose()).makeBoundingBox(lagPosition);
         boolean intersects = entities.stream().anyMatch(entity -> entity.getBoundingBox().intersects(playerBox));
 
         double serverDistance = entities.stream()
-                .mapToDouble(entity -> entity.getEntityPos().distanceTo(lagPosition))
+                .mapToDouble(entity -> entity.getClientPosition().distanceTo(lagPosition))
                 .min()
                 .orElse(Double.MAX_VALUE);
         double clientDistance = entities.stream()
-                .mapToDouble(entity -> entity.getEntityPos().distanceTo(player.getEntityPos()))
+                .mapToDouble(entity -> entity.getClientPosition().distanceTo(player.getClientPosition()))
                 .min()
                 .orElse(Double.MAX_VALUE);
 
@@ -269,7 +259,7 @@ public class FakeLag extends Module {
     }
 
     private static boolean isConsumable(ItemStack stack) {
-        return !stack.isEmpty() && stack.getUseAction() != UseAction.NONE;
+        return !stack.isEmpty() && stack.getUseAnimation() != ItemUseAnimation.NONE;
     }
 
     private boolean hasRecoilElapsed() {

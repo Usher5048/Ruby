@@ -1,51 +1,51 @@
 package ruby.mixin;
 
 import com.mojang.authlib.minecraft.UserApiService;
-import com.mojang.authlib.yggdrasil.ProfileResult;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.SocialInteractionsManager;
-import net.minecraft.client.session.ProfileKeys;
-import net.minecraft.client.session.Session;
-import net.minecraft.client.session.report.AbuseReportContext;
-import net.minecraft.client.texture.PlayerSkinProvider;
-import net.minecraft.util.ApiServices;
+import com.mojang.authlib.services.ProfileResult;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 import java.util.concurrent.CompletableFuture;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.User;
+import net.minecraft.client.gui.screens.social.PlayerSocialManager;
+import net.minecraft.client.multiplayer.ProfileKeyPairManager;
+import net.minecraft.client.multiplayer.chat.report.ReportingContext;
+import net.minecraft.client.resources.SkinManager;
+import net.minecraft.server.Services;
 
-@Mixin(MinecraftClient.class)
+@Mixin(Minecraft.class)
 public interface MinecraftClientSessionAccessor {
     @Mutable
-    @Accessor("session")
-    void ruby$setSession(Session session);
+    @Accessor("user")
+    void ruby$setSession(User session);
 
     @Mutable
     @Accessor("userApiService")
     void ruby$setUserApiService(UserApiService service);
 
     @Mutable
-    @Accessor("socialInteractionsManager")
-    void ruby$setSocialInteractionsManager(SocialInteractionsManager manager);
+    @Accessor("playerSocialManager")
+    void ruby$setSocialInteractionsManager(PlayerSocialManager manager);
 
     @Mutable
-    @Accessor("profileKeys")
-    void ruby$setProfileKeys(ProfileKeys keys);
+    @Accessor("profileKeyPairManager")
+    void ruby$setProfileKeys(ProfileKeyPairManager keys);
 
     @Mutable
-    @Accessor("abuseReportContext")
-    void ruby$setAbuseReportContext(AbuseReportContext context);
+    @Accessor("reportingContext")
+    void ruby$setAbuseReportContext(ReportingContext context);
 
     @Mutable
-    @Accessor("gameProfileFuture")
+    @Accessor("profileFuture")
     void ruby$setGameProfileFuture(CompletableFuture<ProfileResult> future);
 
     @Mutable
-    @Accessor("apiServices")
-    void ruby$setApiServices(ApiServices services);
+    @Accessor("services")
+    void ruby$setApiServices(Services services);
 
     @Mutable
-    @Accessor("skinProvider")
-    void ruby$setSkinProvider(PlayerSkinProvider provider);
+    @Accessor("skinManager")
+    void ruby$setSkinProvider(SkinManager manager);
 }

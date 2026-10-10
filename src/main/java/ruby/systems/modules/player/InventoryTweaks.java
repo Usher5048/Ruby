@@ -1,13 +1,17 @@
 package ruby.systems.modules.player;
 
-import net.minecraft.client.gui.screen.ingame.*;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
-import net.minecraft.screen.slot.Slot;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.inventory.DispenserScreen;
+import net.minecraft.client.gui.screens.inventory.ShulkerBoxScreen;
+import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 import ruby.RubyClient;
+import ruby.helpers.input.InputUtils;
 import ruby.helpers.Slots;
 import ruby.mixin.HandledScreenAccessor;
 import ruby.systems.config.BooleanValue;
@@ -38,11 +42,11 @@ public class InventoryTweaks extends Module {
             .changed(val -> {
                 if(val) return;
                 if(RubyClient.client.player == null) return;
-                if(RubyClient.client.getNetworkHandler() == null) return;
+                if(RubyClient.client.getConnection() == null) return;
 
                 this.openedOnServer = false;
-                RubyClient.client.getNetworkHandler().sendPacket(new CloseHandledScreenC2SPacket(
-                        RubyClient.client.player.playerScreenHandler.syncId
+                RubyClient.client.getConnection().send(new ServerboundContainerClosePacket(
+                        RubyClient.client.player.inventoryMenu.containerId
                 ));
             }).build());
 
@@ -54,8 +58,8 @@ public class InventoryTweaks extends Module {
             if(!this.xCarryEnabled.value()) return;
             if(RubyClient.client.player == null) return;
 
-            if(!(event.packet() instanceof CloseHandledScreenC2SPacket packet)) return;
-            if(packet.getSyncId() != RubyClient.client.player.playerScreenHandler.syncId) return;
+            if(!(event.packet() instanceof ServerboundContainerClosePacket packet)) return;
+            if(packet.getContainerId() != RubyClient.client.player.inventoryMenu.containerId) return;
 
             this.openedOnServer = true;
             event.setCancelled(true);
@@ -64,10 +68,7 @@ public class InventoryTweaks extends Module {
 
     private boolean pressedLastCheck = false;
     private boolean sortKeyPressed() {
-        boolean pressed = GLFW.glfwGetMouseButton(
-                RubyClient.client.getWindow().getHandle(),
-                GLFW.GLFW_MOUSE_BUTTON_MIDDLE
-        ) == GLFW.GLFW_PRESS;
+        boolean pressed = InputUtils.isMousePressed(InputConstants.MOUSE_BUTTON_MIDDLE);
 
         boolean wasPressed = pressed && !this.pressedLastCheck;
         this.pressedLastCheck = pressed;
@@ -82,16 +83,16 @@ public class InventoryTweaks extends Module {
         CONTAINER
     }
 
-    private SlotSection getSlotSection(HandledScreen<?> screen, Slot focusedSlot) {
+    private SlotSection getSlotSection(AbstractContainerScreen<?> screen, Slot focusedSlot) {
         SlotSection section = null;
-        if(focusedSlot.inventory instanceof PlayerInventory) {
-            if(Slots.HOTBAR.contains(focusedSlot.getIndex())) section = SlotSection.HOTBAR;
-            else if(Slots.MAIN.contains(focusedSlot.getIndex())) section = SlotSection.INVENTORY;
+        if(focusedSlot.container instanceof Inventory) {
+            if(Slots.HOTBAR.contains(focusedSlot.getContainerSlot())) section = SlotSection.HOTBAR;
+            else if(Slots.MAIN.contains(focusedSlot.getContainerSlot())) section = SlotSection.INVENTORY;
         } else if((
-                screen instanceof Generic3x3ContainerScreen ||
-                screen instanceof GenericContainerScreen ||
+                screen instanceof DispenserScreen ||
+                screen instanceof ContainerScreen ||
                 screen instanceof ShulkerBoxScreen
-        ) && focusedSlot.inventory instanceof SimpleInventory) section = SlotSection.CONTAINER;
+        ) && focusedSlot.container instanceof SimpleContainer) section = SlotSection.CONTAINER;
         return section;
     }
 
@@ -103,12 +104,12 @@ public class InventoryTweaks extends Module {
         int countCmp = Integer.compare(b.getCount(), a.getCount());
         if(countCmp != 0) return countCmp;
 
-        return a.getItem().getName().getString().compareToIgnoreCase(b.getItem().getName().getString());
+        return a.getHoverName().getString().compareToIgnoreCase(b.getHoverName().getString());
     }
 
     private final ArrayList<SlotMove> moves = new ArrayList<>();
     private void tickSort() {
-        if(!(RubyClient.client.currentScreen instanceof HandledScreen<?> screen)) {
+        if(!(RubyClient.client.gui.screen() instanceof AbstractContainerScreen<?> screen)) {
             this.moves.clear();
             return;
         }
@@ -128,13 +129,13 @@ public class InventoryTweaks extends Module {
         if(section == null) return;
 
         ArrayList<Slot> slots = new ArrayList<>();
-        for(Slot slot : screen.getScreenHandler().slots) {
+        for(Slot slot : screen.getMenu().slots) {
             if(this.getSlotSection(screen, slot) != section) continue;
             slots.add(slot);
         }
 
         List<ItemStack> original = slots.stream()
-                .map(s -> s.getStack().copy())
+                .map(s -> s.getItem().copy())
                 .collect(Collectors.toCollection(ArrayList::new));
 
         List<ItemStack> sorted = original.stream()
@@ -144,11 +145,11 @@ public class InventoryTweaks extends Module {
         for(int i = 0; i < slots.size(); i++) {
             ItemStack current = original.get(i);
             ItemStack target = sorted.get(i);
-            if(ItemStack.areEqual(current, target)) continue;
+            if(ItemStack.matches(current, target)) continue;
 
             for(int j = i + 1; j < slots.size(); j++) {
-                if(!ItemStack.areEqual(original.get(j), target)) continue;
-                this.moves.add(new SlotMove(slots.get(j).id, slots.get(i).id));
+                if(!ItemStack.matches(original.get(j), target)) continue;
+                this.moves.add(new SlotMove(slots.get(j).index, slots.get(i).index));
 
                 ItemStack tmp = original.get(i);
                 original.set(i, original.get(j));
@@ -167,11 +168,11 @@ public class InventoryTweaks extends Module {
     public void onDisable() {
         if(!this.openedOnServer) return;
         if(RubyClient.client.player == null) return;
-        if(RubyClient.client.getNetworkHandler() == null) return;
+        if(RubyClient.client.getConnection() == null) return;
 
         this.openedOnServer = false;
-        RubyClient.client.getNetworkHandler().sendPacket(new CloseHandledScreenC2SPacket(
-                RubyClient.client.player.playerScreenHandler.syncId
+        RubyClient.client.getConnection().send(new ServerboundContainerClosePacket(
+                RubyClient.client.player.inventoryMenu.containerId
         ));
     }
 }

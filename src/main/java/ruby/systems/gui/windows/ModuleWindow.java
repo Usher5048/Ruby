@@ -1,10 +1,6 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import ruby.systems.config.*;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.modules.Keybind;
@@ -13,6 +9,10 @@ import ruby.systems.modules.Modules;
 
 import java.util.LinkedHashSet;
 import java.util.function.Consumer;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 
 public class ModuleWindow extends CollapsibleWindow {
 
@@ -149,7 +149,7 @@ public class ModuleWindow extends CollapsibleWindow {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         this.lastMouseX = mouseX;
         this.lastMouseY = mouseY;
 
@@ -192,7 +192,7 @@ public class ModuleWindow extends CollapsibleWindow {
     }
 
     @Override
-    public void drawHeader(DrawContext context) {
+    public void drawHeader(GuiGraphicsExtractor context) {
         GUIStyle style = GUIStyle.get();
         int w = PANEL_WIDTH;
         int innerR = w - INNER_L;
@@ -248,7 +248,7 @@ public class ModuleWindow extends CollapsibleWindow {
     }
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
         if (this.waitingForBind) {
             this.waitingForBind = false;
             if (Keybind.canBindTo(click.button(), false)) {
@@ -271,12 +271,12 @@ public class ModuleWindow extends CollapsibleWindow {
             return true;
         }
 
-        if (click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             Modules.toggle(this.module);
             return true;
         }
 
-        if (click.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+        if (click.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
             this.expanded = !this.expanded;
             if (this.accordionHost != null) this.accordionHost.accept(this);
             return true;
@@ -286,12 +286,12 @@ public class ModuleWindow extends CollapsibleWindow {
     }
 
     @Override
-    public boolean onCharTyped(CharInput input) {
+    public boolean onCharTyped(CharacterEvent input) {
         return this.waitingForBind;
     }
 
     @Override
-    public boolean onKeyRelease(KeyInput input) {
+    public boolean onKeyRelease(KeyEvent input) {
         if (!this.waitingForBind) return false;
 
         this.waitingForBind = false;
@@ -302,9 +302,9 @@ public class ModuleWindow extends CollapsibleWindow {
     }
 
     @Override
-    public boolean onKeyPress(KeyInput input) {
+    public boolean onKeyPress(KeyEvent input) {
         if (!this.waitingForBind) return false;
-        return input.key() == GLFW.GLFW_KEY_ESCAPE;
+        return input.key() == InputConstants.KEY_RETURN;
     }
 
     @Override

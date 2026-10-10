@@ -1,9 +1,8 @@
 package ruby.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
-import net.minecraft.client.render.Camera;
-import net.minecraft.entity.Entity;
-import net.minecraft.world.World;
+import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -17,28 +16,21 @@ import ruby.systems.modules.render.Freecam;
 
 @Mixin(Camera.class)
 public abstract class CameraMixin {
-    @Shadow private boolean thirdPerson;
-    @Shadow private float yaw;
-    @Shadow private float pitch;
+    @Shadow private boolean detached;
+    @Shadow private float yRot;
+    @Shadow private float xRot;
 
     @Shadow protected abstract void setRotation(float yaw, float pitch);
 
     @Inject(method = "update", at = @At("TAIL"))
-    private void ruby$freecamThirdPerson(
-            World area,
-            Entity focusedEntity,
-            boolean thirdPerson,
-            boolean inverseView,
-            float tickProgress,
-            CallbackInfo ci
-    ) {
+    private void ruby$freecamThirdPerson(DeltaTracker tracker, CallbackInfo ci) {
         Freecam freecam = Modules.getByClass(Freecam.class);
         if (freecam != null && freecam.enabled()) {
-            this.thirdPerson = true;
+            this.detached = true;
         }
     }
 
-    @ModifyArgs(method = "update", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/Camera;setPos(DDD)V"))
+    @ModifyArgs(method = "alignWithEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setPosition(DDD)V"))
     private void ruby$freecamPos(Args args, @Local(argsOnly = true) float tickDelta) {
         Freecam freecam = Modules.getByClass(Freecam.class);
         if (freecam != null && freecam.enabled()) {
@@ -48,7 +40,7 @@ public abstract class CameraMixin {
         }
     }
 
-    @ModifyArgs(method = "update", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/Camera;setRotation(FF)V"))
+    @ModifyArgs(method = "alignWithEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setRotation(FF)V"))
     private void ruby$freecamRotation(Args args, @Local(argsOnly = true) float tickDelta) {
         Freecam freecam = Modules.getByClass(Freecam.class);
         if (freecam != null && freecam.enabled()) {

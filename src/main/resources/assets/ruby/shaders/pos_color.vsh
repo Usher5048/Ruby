@@ -1,15 +1,17 @@
-#version 330 core
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
-layout (location = 0) in vec4 pos;
-layout (location = 1) in vec4 col;
-
-layout (std140) uniform meshData {
+layout(std140) uniform meshData {
     mat4 u_proj;
     mat4 u_modelView;
 };
 
-out vec4 vCol;
+layout(location = 0) in vec3 Position;
+layout(location = 1) in vec4 Color;
+
+layout(location = 0) out vec4 vertexColor;
+
 void main() {
-    gl_Position = u_proj * u_modelView * pos;
-    vCol = col;
+    gl_Position = u_proj * u_modelView * vec4(Position, 1.0);
+    vertexColor = Color;
 }

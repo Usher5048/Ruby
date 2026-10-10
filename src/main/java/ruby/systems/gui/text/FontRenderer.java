@@ -1,7 +1,7 @@
 package ruby.systems.gui.text;
 
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 
 import java.awt.*;
 import java.io.InputStream;
@@ -41,7 +41,7 @@ public class FontRenderer {
         return new FontRenderer(sheet);
     }
 
-    public void draw(DrawContext context, String text, int x, int y, int color) {
+    public void draw(GuiGraphicsExtractor context, String text, int x, int y, int color) {
         if(text == null) return;
         for(char c : text.toCharArray()) {
             GlyphSheet.Glyph glyph = this.sheet.glyph(c);
@@ -50,7 +50,7 @@ public class FontRenderer {
             int drawX = x + glyph.bearingX();
             int drawY = y + glyph.bearingY();
 
-            context.drawTexture(
+            context.blit(
                     RenderPipelines.GUI_TEXTURED,
                     this.sheet.getTexture(),
                     drawX, drawY,

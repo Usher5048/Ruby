@@ -1,6 +1,5 @@
 package ruby.mixin;
 
-import net.minecraft.client.network.ClientPlayNetworkHandler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -13,16 +12,18 @@ import ruby.systems.modules.Modules;
 import ruby.systems.modules.render.Xray;
 
 import java.util.Arrays;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 
-@Mixin(ClientPlayNetworkHandler.class)
+@Mixin(ClientPacketListener.class)
 public class ClientPlayNetworkHandlerMixin {
-	@Inject(at = @At("HEAD"), method = "sendChatMessage", cancellable = true)
+	@Inject(at = @At("HEAD"), method = "sendChat", cancellable = true)
 	public void onChatMessage(String message, CallbackInfo info) {
 		String chatPrefix = RubyClient.chatPrefix.value().toLowerCase();
 		if(!message.toLowerCase().startsWith(chatPrefix)) return;
 
 		info.cancel();
-		RubyClient.client.inGameHud.getChatHud().addToMessageHistory(message);
+		RubyClient.client.gui.hud.getChat().addRecentChat(message);
 
 		String[] args = message.substring(chatPrefix.length()).split(" ");
 		String command = args[0].toLowerCase();
@@ -33,8 +34,8 @@ public class ClientPlayNetworkHandlerMixin {
 		else cmd.execute(args);
 	}
 
-	@Inject(method = "onGameJoin", at = @At("TAIL"))
-	private void ruby$reloadXrayOnJoin(CallbackInfo ci) {
+	@Inject(method = "handleLogin", at = @At("TAIL"))
+	private void ruby$reloadXrayOnJoin(ClientboundLoginPacket packet, CallbackInfo ci) {
 		Xray xray = Modules.getByClass(Xray.class);
 		if (xray != null && xray.enabled()) {
 			ChunkReloadHelper.schedule();

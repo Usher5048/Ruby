@@ -45,6 +45,7 @@ public class Modules {
         Modules.modules.add(new AntiVanish());
         Modules.modules.add(new AutoReconnect());
         Modules.modules.add(new GamemodeNotifier());
+        Modules.modules.add(new Test());
 
         // Movement
         Modules.modules.add(new AirJump());
@@ -53,7 +54,7 @@ public class Modules {
         Modules.modules.add(new AutoWalk());
         Modules.modules.add(new Boost());
         Modules.modules.add(new Dolphin());
-        Modules.modules.add(new ElytraBoost());
+        Modules.modules.add(new ElytraTweaks());
         Modules.modules.add(new FastClimb());
         Modules.modules.add(new Flight());
         Modules.modules.add(new HighJump());
@@ -206,7 +207,7 @@ public class Modules {
     }
 
     private static void runOnRenderThread(Runnable action) {
-        if(RubyClient.client.isOnThread()) action.run();
+        if(RubyClient.client.isSameThread()) action.run();
         else RubyClient.client.execute(action);
     }
 
@@ -217,7 +218,7 @@ public class Modules {
     }
 
     public static void tick(Events.GenericEvent e) {
-        for(Module module : modules) {
+        for(Module module : Modules.modules) {
             if(module.keybind.isUnbound()) continue;
             if(module.keybind.isPressed()) Modules.toggle(module);
             if(module.keybind.togglesOnRelease() && module.keybind.wasPressed())
@@ -234,16 +235,16 @@ public class Modules {
     }
 
     public static void render2D(Render2DEvent event) {
-        event.getContext().getMatrices().pushMatrix();
-        event.getContext().getMatrices().scale(
-                1f / RubyClient.client.getWindow().getScaleFactor(),
-                1f / RubyClient.client.getWindow().getScaleFactor()
+        event.getContext().pose().pushMatrix();
+        event.getContext().pose().scale(
+                1f / RubyClient.client.getWindow().getGuiScale(),
+                1f / RubyClient.client.getWindow().getGuiScale()
         );
 
         for(Module module : Modules.activeModules.toArray(new Module[0]))
             module.render2D(event);
 
-        event.getContext().getMatrices().popMatrix();
+        event.getContext().pose().popMatrix();
     }
 
     public static void render3D(Events.GenericEvent e) {

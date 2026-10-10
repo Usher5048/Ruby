@@ -1,7 +1,7 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -47,13 +47,13 @@ public class NoSlow extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
         // If using an item and items setting is enabled, maintain sprint
         if (items.value() && player.isUsingItem()) {
-            if (player.forwardSpeed > 0) {
+            if (player.zza > 0) {
                 player.setSprinting(true);
             }
         }

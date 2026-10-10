@@ -1,7 +1,7 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
@@ -19,18 +19,18 @@ public class Sneak extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
         if (player.getAbilities().flying) return;
 
-        mc.options.sneakKey.setPressed(true);
+        mc.options.keyShift.setDown(true);
     }
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        mc.options.sneakKey.setPressed(false);
+        mc.options.keyShift.setDown(false);
     }
 }

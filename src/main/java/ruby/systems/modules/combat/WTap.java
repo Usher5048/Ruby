@@ -1,10 +1,6 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
 import ruby.RubyClient;
-import ruby.helpers.PlayerInteractEntity;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.events.Events;
@@ -14,6 +10,9 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
 import java.util.concurrent.ThreadLocalRandom;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 
 /**
  * W-tap knockback boost — ported from LiquidBounce SuperKnockback WTap mode.
@@ -104,7 +103,7 @@ public class WTap extends Module {
     }
 
     private void onAttack(EntityEvent event) {
-        if(event.type() != PlayerInteractEntity.Type.ATTACK) return;
+        if(event.wasSecondary()) return;
         if (!enabled() || state != State.IDLE) return;
         if (!shouldOperate(event.entity())) return;
         if (!shouldStopSprinting(event.entity())) return;
@@ -114,7 +113,7 @@ public class WTap extends Module {
     }
 
     private boolean shouldStopSprinting(Entity target) {
-        ClientPlayerEntity player = RubyClient.client.player;
+        LocalPlayer player = RubyClient.client.player;
         if (player == null || !player.isSprinting()) return false;
         if (Criticals.wouldDoCriticalHit()) return false;
         if (!(target instanceof LivingEntity living) || living.hurtTime > hurtTime.value()) return false;
@@ -122,24 +121,24 @@ public class WTap extends Module {
     }
 
     private boolean shouldOperate(Entity target) {
-        ClientPlayerEntity player = RubyClient.client.player;
+        LocalPlayer player = RubyClient.client.player;
         if (player == null) return false;
-        if (player.isTouchingWater() || player.isSubmergedInWater()) return false;
-        if (!player.isOnGround()) return false;
+        if (player.isInWater() || player.isUnderWater()) return false;
+        if (!player.onGround()) return false;
 
         if (!onlyOnMove.value()) return true;
 
-        float sideways = player.input.getMovementInput().x;
-        float forward = player.input.getMovementInput().y;
+        float sideways = player.input.getMoveVector().x;
+        float forward = player.input.getMoveVector().y;
         boolean moving = forward != 0f || sideways != 0f;
         if (!moving) return false;
         return !onlyForward.value() || sideways == 0f;
     }
 
     private boolean hasForwardImpulse() {
-        ClientPlayerEntity player = RubyClient.client.player;
+        LocalPlayer player = RubyClient.client.player;
         if (player == null) return true;
-        return player.input.getMovementInput().y == 0f && player.input.getMovementInput().x == 0f;
+        return player.input.getMoveVector().y == 0f && player.input.getMoveVector().x == 0f;
     }
 
     private static int randomDelay(int min, int max) {

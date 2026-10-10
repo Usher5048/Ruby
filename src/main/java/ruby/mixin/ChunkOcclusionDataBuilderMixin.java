@@ -1,7 +1,7 @@
 package ruby.mixin;
 
-import net.minecraft.client.render.chunk.ChunkOcclusionDataBuilder;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.renderer.chunk.VisGraph;
+import net.minecraft.core.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -10,9 +10,9 @@ import ruby.systems.modules.Modules;
 import ruby.systems.modules.render.Freecam;
 import ruby.systems.modules.render.Xray;
 
-@Mixin(ChunkOcclusionDataBuilder.class)
+@Mixin(VisGraph.class)
 public abstract class ChunkOcclusionDataBuilderMixin {
-    @Inject(method = "markClosed", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "setOpaque", at = @At("HEAD"), cancellable = true)
     private void ruby$disableOcclusion(BlockPos pos, CallbackInfo ci) {
         Xray xray = Modules.getByClass(Xray.class);
         if (xray != null && xray.enabled()) {

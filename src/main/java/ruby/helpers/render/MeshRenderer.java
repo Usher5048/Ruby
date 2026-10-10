@@ -1,24 +1,26 @@
 package ruby.helpers.render;
 
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.renderpearl.api.commands.CommandEncoder;
+import com.mojang.renderpearl.api.commands.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.gl.GpuSampler;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Pair;
-import net.minecraft.util.math.ColorHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.datafixers.util.Pair;
+import com.mojang.renderpearl.api.pipeline.IndexType;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
+import com.mojang.renderpearl.api.textures.GpuSampler;
 import org.joml.Matrix4f;
 
 import java.awt.*;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.OptionalInt;
 import java.util.function.Supplier;
+
+import org.joml.Vector4f;
+import org.joml.Vector4fc;
 
 public class MeshRenderer {
     private static final MeshRenderer INSTANCE = new MeshRenderer();
@@ -43,9 +45,9 @@ public class MeshRenderer {
         return this;
     }
 
-    public MeshRenderer attachments(Framebuffer framebuffer) {
-        this.colorAttachment = framebuffer.getColorAttachmentView();
-        this.depthAttachment = framebuffer.getDepthAttachmentView();
+    public MeshRenderer attachments(RenderTarget framebuffer) {
+        this.colorAttachment = framebuffer.getColorTextureView();
+        this.depthAttachment = framebuffer.getDepthTextureView();
         return this;
     }
 
@@ -70,8 +72,8 @@ public class MeshRenderer {
         return this;
     }
 
-    public MeshRenderer mesh(MeshBuilder mesh, MatrixStack matrices) {
-        this.matrix = matrices.peek().getPositionMatrix();
+    public MeshRenderer mesh(MeshBuilder mesh, PoseStack matrices) {
+        this.matrix = matrices.last().pose();
         this.mesh = mesh;
         return this;
     }
@@ -81,8 +83,8 @@ public class MeshRenderer {
         return this;
     }
 
-    public MeshRenderer transform(MatrixStack matrices) {
-        this.matrix = matrices.peek().getPositionMatrix();
+    public MeshRenderer transform(PoseStack matrices) {
+        this.matrix = matrices.last().pose();
         return this;
     }
 
@@ -96,13 +98,13 @@ public class MeshRenderer {
         return this;
     }
 
-    private RenderPass makePass(Supplier<String> ls, GpuTextureView ca, OptionalInt cc) {
+    private RenderPass makePass(Supplier<String> ls, GpuTextureView ca, Optional<Vector4fc> cc) {
         return RenderSystem.getDevice()
                 .createCommandEncoder()
                 .createRenderPass(ls, ca, cc);
     }
 
-    private RenderPass makePass(Supplier<String> ls, GpuTextureView ca, OptionalInt cc, GpuTextureView da) {
+    private RenderPass makePass(Supplier<String> ls, GpuTextureView ca, Optional<Vector4fc> cc, GpuTextureView da) {
         return RenderSystem.getDevice()
                 .createCommandEncoder()
                 .createRenderPass(ls, ca, cc, da, OptionalDouble.empty());
@@ -118,35 +120,39 @@ public class MeshRenderer {
         RenderSystem.getModelViewStack().pushMatrix();
         if(this.matrix != null) RenderSystem.getModelViewStack().mul(this.matrix);
 
-        OptionalInt clearColor = this.clearColor != null ? OptionalInt.of(ColorHelper.getArgb(
-                this.clearColor.getAlpha(),
-                this.clearColor.getRed(),
-                this.clearColor.getGreen(),
-                this.clearColor.getBlue()
-        )) : OptionalInt.empty();
+        Optional<Vector4fc> clearColor = this.clearColor != null ? Optional.of(new Vector4f(
+                this.clearColor.getRed() / 255f,
+                this.clearColor.getGreen() / 255f,
+                this.clearColor.getBlue() / 255f,
+                this.clearColor.getAlpha() / 255f
+        )) : Optional.empty();
 
         GpuBufferSlice slice = MeshUniformBuilder.write(
                 Renderer.projection(),
                 RenderSystem.getModelViewStack()
         );
 
-        GpuBuffer vertexBuf = this.mesh.getVertexBuffer();
-        GpuBuffer indexBuf = this.mesh.getIndexBuffer();
+        CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
+        GpuBufferSlice vertexBuf = this.mesh.uploadVertexBuffer(encoder);
+        GpuBufferSlice indexBuf = this.mesh.uploadIndexBuffer(encoder);
 
         RenderPass pass = (this.depthAttachment != null && this.pipeline.wantsDepthTexture()) ?
                 this.makePass(() -> "Ruby Render Pass", this.colorAttachment, clearColor, this.depthAttachment) :
                 this.makePass(() -> "Ruby Render Pass", this.colorAttachment, clearColor);
 
-        pass.setPipeline(this.pipeline);
+        pass.setPipeline(RenderSystem.getCompiledPipeline(this.pipeline));
         pass.setUniform("meshData", slice);
 
         for(String key : this.uniforms.keySet()) pass.setUniform(key, this.uniforms.get(key));
-        for(String key : this.samplers.keySet())
-            pass.bindTexture(key, this.samplers.get(key).getLeft(), this.samplers.get(key).getRight());
+        for(String key : this.samplers.keySet()) {
+            Pair<GpuTextureView, GpuSampler> sampler = this.samplers.get(key);
+            pass.setUniform(key, sampler.getFirst(), sampler.getSecond());
+        }
 
         pass.setVertexBuffer(0, vertexBuf);
-        pass.setIndexBuffer(indexBuf, VertexFormat.IndexType.INT);
-        pass.drawIndexed(0, 0, indexCount, 1);
+        pass.setIndexBuffer(indexBuf.buffer(), IndexType.INT);
+        int firstIndex = (int) (indexBuf.offset() / Integer.BYTES);
+        pass.drawIndexed(indexCount, 1, firstIndex, 0, 0);
 
         pass.close();
         RenderSystem.getModelViewStack().popMatrix();

@@ -1,29 +1,28 @@
 package ruby.systems.events.entity;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.EntityHitResult;
-import ruby.helpers.PlayerInteractEntity;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.EntityHitResult;
 import ruby.systems.events.Event;
 
 public final class EntityEvent extends Event {
-    private final PlayerInteractEntity.Type type;
+    private final boolean wasSecondary;
     private EntityHitResult hitResult;
     private Entity entity;
-    private Hand hand;
+    private InteractionHand hand;
 
     public EntityEvent(
-            PlayerInteractEntity.Type type, Entity entity,
-            EntityHitResult hitResult, Hand hand
+            boolean wasSecondary, Entity entity,
+            EntityHitResult hitResult, InteractionHand hand
     ) {
-        this.type = type;
+        this.wasSecondary = wasSecondary;
         this.entity = entity;
         this.hitResult = hitResult;
         this.hand = hand;
     }
 
-    public PlayerInteractEntity.Type type() {
-        return this.type;
+    public boolean wasSecondary() {
+        return this.wasSecondary;
     }
     public Entity entity() {
         return this.entity;
@@ -31,7 +30,7 @@ public final class EntityEvent extends Event {
     public EntityHitResult hitResult() {
         return this.hitResult;
     }
-    public Hand hand() {
+    public InteractionHand hand() {
         return this.hand;
     }
 
@@ -41,7 +40,7 @@ public final class EntityEvent extends Event {
     public void setHitResult(EntityHitResult hitResult) {
         this.hitResult = hitResult;
     }
-    public void setHand(Hand hand) {
+    public void setHand(InteractionHand hand) {
         this.hand = hand;
     }
 }

@@ -1,8 +1,8 @@
 package ruby.systems.hud;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.Window;
+import com.mojang.blaze3d.platform.Window;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Anchor-based HUD element bounds, matching Meteor Client's {@code HudBox}.
@@ -44,9 +44,9 @@ public class HudBox {
         return this.getRenderY(null);
     }
 
-    public int getRenderX(DrawContext context) {
-        Window window = MinecraftClient.getInstance().getWindow();
-        int windowWidth = window.getWidth();
+    public int getRenderX(GuiGraphicsExtractor context) {
+        Window window = Minecraft.getInstance().getWindow();
+        int windowWidth = window.getScreenWidth();
         int offset = this.scaledOffset(this.x, window);
         return switch (this.xAnchor) {
             case Left -> offset;
@@ -55,9 +55,9 @@ public class HudBox {
         };
     }
 
-    public int getRenderY(DrawContext context) {
-        Window window = MinecraftClient.getInstance().getWindow();
-        int windowHeight = window.getHeight();
+    public int getRenderY(GuiGraphicsExtractor context) {
+        Window window = Minecraft.getInstance().getWindow();
+        int windowHeight = window.getScreenHeight();
         int offset = this.scaledOffset(this.y, window);
         return switch (this.yAnchor) {
             case Top -> offset;
@@ -71,7 +71,7 @@ public class HudBox {
      * while offsets are configured in GUI-scaled units.
      */
     private int scaledOffset(int offset, Window window) {
-        return (int) Math.round(offset * window.getScaleFactor());
+        return (int) Math.round(offset * window.getGuiScale());
     }
 
     /**

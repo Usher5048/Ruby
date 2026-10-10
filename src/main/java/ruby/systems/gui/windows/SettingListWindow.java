@@ -1,20 +1,21 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.block.Block;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.Item;
-import net.minecraft.registry.Registries;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import ruby.systems.config.*;
 import ruby.systems.gui.GUIStyle;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 
 /**
  * Inline expandable list setting widget for selecting blocks, items, or entity types
@@ -57,14 +58,14 @@ public class SettingListWindow extends SettingWindow {
         allEntries = new ArrayList<>();
 
         if (this.value instanceof BlockListValue) {
-            for (Block b : Registries.BLOCK)
+            for (Block b : BuiltInRegistries.BLOCK)
                 allEntries.add(new Entry(b.getName().getString(), b));
         } else if (this.value instanceof ItemListValue) {
-            for (Item i : Registries.ITEM)
-                allEntries.add(new Entry(i.getName().getString(), i));
+            for (Item i : BuiltInRegistries.ITEM)
+                allEntries.add(new Entry(i.getName(new ItemStack(i)).getString(), i));
         } else if (this.value instanceof EntityTypeListValue) {
-            for (EntityType<?> t : Registries.ENTITY_TYPE)
-                allEntries.add(new Entry(t.getName().getString(), t));
+            for (EntityType<?> t : BuiltInRegistries.ENTITY_TYPE)
+                allEntries.add(new Entry(t.getDescription().getString(), t));
         }
 
         allEntries.sort((a, b) -> a.name.compareToIgnoreCase(b.name));
@@ -95,8 +96,7 @@ public class SettingListWindow extends SettingWindow {
             });
         }
 
-        scrollOffset = Math.max(0,
-                Math.min(scrollOffset, Math.max(0, filteredEntries.size() - MAX_ROWS)));
+        scrollOffset = Math.clamp(scrollOffset, 0, Math.max(0, filteredEntries.size() - MAX_ROWS));
     }
 
     private boolean isSelected(Entry entry) {
@@ -141,7 +141,7 @@ public class SettingListWindow extends SettingWindow {
     /* ---- render ---- */
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         GUIStyle style = GUIStyle.get();
         int w = this.getWidth();
 
@@ -162,7 +162,7 @@ public class SettingListWindow extends SettingWindow {
         }
     }
 
-    private void renderHeader(DrawContext ctx, GUIStyle style, int w, int mx, int my) {
+    private void renderHeader(GuiGraphicsExtractor ctx, GUIStyle style, int w, int mx, int my) {
         boolean hovered = mx >= 0 && my >= 0 && mx < w && my < HEADER_H;
         if (hovered) ctx.fill(0, 0, w, HEADER_H, 0x0DFFFFFF);
 
@@ -182,7 +182,7 @@ public class SettingListWindow extends SettingWindow {
         this.drawText(style.monospaceFont(), ctx, badge, bx + 6, by + 2, style.ruby());
     }
 
-    private void renderSearch(DrawContext ctx, GUIStyle style, int w) {
+    private void renderSearch(GuiGraphicsExtractor ctx, GUIStyle style, int w) {
         int y = HEADER_H + 2;
         int h = SEARCH_H - 4;
         int l = 14, r = w - 14;
@@ -208,7 +208,7 @@ public class SettingListWindow extends SettingWindow {
         }
     }
 
-    private void renderList(DrawContext ctx, GUIStyle style, int w, int mx, int my) {
+    private void renderList(GuiGraphicsExtractor ctx, GUIStyle style, int w, int mx, int my) {
         int startY = HEADER_H + SEARCH_H;
 
         if (filteredEntries == null || filteredEntries.isEmpty()) {
@@ -277,11 +277,11 @@ public class SettingListWindow extends SettingWindow {
     /* ---- input ---- */
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
         int my = (int) click.y();
 
         // Header click → toggle expand
-        if (my < HEADER_H && click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if (my < HEADER_H && click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             if (!hasRegistry) return false;
             expanded = !expanded;
             if (expanded) {
@@ -308,7 +308,7 @@ public class SettingListWindow extends SettingWindow {
 
         // List row click → toggle item
         int startY = HEADER_H + SEARCH_H;
-        if (my >= startY && click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if (my >= startY && click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             int row = (my - startY) / ROW_H;
             int idx = scrollOffset + row;
             if (filteredEntries != null && idx >= 0 && idx < filteredEntries.size()) {
@@ -325,15 +325,15 @@ public class SettingListWindow extends SettingWindow {
                                    double horizontal, double vertical) {
         if (!expanded || filteredEntries == null) return false;
         int max = Math.max(0, filteredEntries.size() - MAX_ROWS);
-        scrollOffset = Math.max(0, Math.min(max, scrollOffset - (int) vertical));
+        scrollOffset = Math.clamp(scrollOffset - (int) vertical, 0, max);
         return true;
     }
 
     @Override
-    public boolean onKeyPress(KeyInput input) {
+    public boolean onKeyPress(KeyEvent input) {
         if (!searchFocused) return false;
 
-        if (input.key() == GLFW.GLFW_KEY_BACKSPACE) {
+        if (input.key() == InputConstants.KEY_BACKSPACE) {
             if (!filterText.isEmpty()) {
                 filterText = filterText.substring(0, filterText.length() - 1);
                 rebuildFiltered();
@@ -342,7 +342,7 @@ public class SettingListWindow extends SettingWindow {
             return true;
         }
 
-        if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (input.key() == InputConstants.KEY_ESCAPE) {
             if (!filterText.isEmpty()) {
                 filterText = "";
                 rebuildFiltered();
@@ -357,7 +357,7 @@ public class SettingListWindow extends SettingWindow {
     }
 
     @Override
-    public boolean onCharTyped(CharInput input) {
+    public boolean onCharTyped(CharacterEvent input) {
         if (!searchFocused) return false;
 
         int cp = input.codepoint();

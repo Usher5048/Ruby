@@ -1,6 +1,6 @@
 package ruby.helpers.render;
 
-import net.minecraft.client.render.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
 /**
  * Multiplies vertex alpha for Xray semi-transparent blocks.
@@ -15,44 +15,49 @@ public final class XrayAlphaVertexConsumer implements VertexConsumer {
     }
 
     @Override
-    public VertexConsumer vertex(float x, float y, float z) {
-        return delegate.vertex(x, y, z);
+    public VertexConsumer addVertex(float x, float y, float z) {
+        return delegate.addVertex(x, y, z);
     }
 
     @Override
-    public VertexConsumer color(int red, int green, int blue, int alpha) {
-        return delegate.color(red, green, blue, scaleAlpha(alpha));
+    public VertexConsumer setColor(int red, int green, int blue, int alpha) {
+        return delegate.setColor(red, green, blue, scaleAlpha(alpha));
     }
 
     @Override
-    public VertexConsumer color(int argb) {
+    public VertexConsumer setColor(int argb) {
         int a = (argb >>> 24) & 0xFF;
-        return delegate.color((scaleAlpha(a) << 24) | (argb & 0x00FFFFFF));
+        return delegate.setColor((scaleAlpha(a) << 24) | (argb & 0x00FFFFFF));
     }
 
     @Override
-    public VertexConsumer texture(float u, float v) {
-        return delegate.texture(u, v);
+    public VertexConsumer setUv(float u, float v) {
+        return delegate.setUv(u, v);
     }
 
     @Override
-    public VertexConsumer overlay(int u, int v) {
-        return delegate.overlay(u, v);
+    public VertexConsumer setUv1(int u, int v) {
+        return delegate.setUv1(u, v);
     }
 
     @Override
-    public VertexConsumer light(int u, int v) {
-        return delegate.light(u, v);
+    public VertexConsumer setUv2(int u, int v) {
+        return delegate.setUv2(u, v);
     }
 
     @Override
-    public VertexConsumer normal(float x, float y, float z) {
-        return delegate.normal(x, y, z);
+    public VertexConsumer setUv3(float u, float v) {
+        return delegate.setUv3(u, v);
     }
 
     @Override
-    public VertexConsumer lineWidth(float width) {
-        return delegate.lineWidth(width);
+    public VertexConsumer setNormal(float x, float y, float z) {
+        return delegate.setNormal(x, y, z);
+    }
+
+    @Override
+    public VertexConsumer setLineWidth(float width) {
+        return delegate.setLineWidth(width);
     }
 
     private int scaleAlpha(int original) {

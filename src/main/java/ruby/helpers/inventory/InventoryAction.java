@@ -1,12 +1,12 @@
 package ruby.helpers.inventory;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.world.inventory.ContainerInput;
 import ruby.RubyClient;
 import ruby.helpers.Slots;
 
@@ -14,7 +14,7 @@ public sealed interface InventoryAction {
     boolean requiresInventoryOpen();
     boolean perform();
 
-    record Click(int slotId, int button, SlotActionType type) implements InventoryAction {
+    record Click(int slotId, int button, ContainerInput type) implements InventoryAction {
         @Override
         public boolean requiresInventoryOpen() {
             return true;
@@ -22,12 +22,12 @@ public sealed interface InventoryAction {
 
         @Override
         public boolean perform() {
-            MinecraftClient mc = RubyClient.client;
-            ClientPlayerEntity player = mc.player;
-            if(player == null || mc.interactionManager == null) return false;
+            Minecraft mc = RubyClient.client;
+            LocalPlayer player = mc.player;
+            if(player == null || mc.gameMode == null) return false;
 
-            mc.interactionManager.clickSlot(
-                    player.currentScreenHandler.syncId,
+            mc.gameMode.handleContainerInput(
+                    player.containerMenu.containerId,
                     this.slotId,
                     this.button,
                     this.type,
@@ -37,19 +37,19 @@ public sealed interface InventoryAction {
         }
 
         public static Click quickMove(int slotId) {
-            return new Click(slotId, 0, SlotActionType.QUICK_MOVE);
+            return new Click(slotId, 0, ContainerInput.QUICK_MOVE);
         }
 
         public static Click pickup(int slotId) {
-            return new Click(slotId, 0, SlotActionType.PICKUP);
+            return new Click(slotId, 0, ContainerInput.PICKUP);
         }
 
         public static Click swap(int slotId, int hotbarButton) {
-            return new Click(slotId, hotbarButton, SlotActionType.SWAP);
+            return new Click(slotId, hotbarButton, ContainerInput.SWAP);
         }
 
         public static Click throwSlot(int slotId) {
-            return new Click(slotId, 1, SlotActionType.THROW);
+            return new Click(slotId, 1, ContainerInput.THROW);
         }
     }
 
@@ -61,23 +61,23 @@ public sealed interface InventoryAction {
 
         @Override
         public boolean perform() {
-            MinecraftClient mc = RubyClient.client;
-            ClientPlayerEntity player = mc.player;
-            if(player == null || mc.getNetworkHandler() == null) return false;
+            Minecraft mc = RubyClient.client;
+            LocalPlayer player = mc.player;
+            if(player == null || mc.getConnection() == null) return false;
 
             int prev = player.getInventory().getSelectedSlot();
             if(prev != this.hotbarSlot)
-                mc.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(this.hotbarSlot));
+                mc.getConnection().send(new ServerboundSetCarriedItemPacket(this.hotbarSlot));
 
-            mc.getNetworkHandler().sendPacket(new PlayerActionC2SPacket(
-                    PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND,
-                    BlockPos.ORIGIN,
+            mc.getConnection().send(new ServerboundPlayerActionPacket(
+                    ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND,
+                    BlockPos.ZERO,
                     Direction.DOWN,
                     0
             ));
 
             if(prev != this.hotbarSlot)
-                mc.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(prev));
+                mc.getConnection().send(new ServerboundSetCarriedItemPacket(prev));
 
             return true;
         }
@@ -91,13 +91,13 @@ public sealed interface InventoryAction {
 
         @Override
         public boolean perform() {
-            MinecraftClient mc = RubyClient.client;
-            ClientPlayerEntity player = mc.player;
-            if(player == null || mc.interactionManager == null) return false;
+            Minecraft mc = RubyClient.client;
+            LocalPlayer player = mc.player;
+            if(player == null || mc.gameMode == null) return false;
 
             int prev = player.getInventory().getSelectedSlot();
             player.getInventory().setSelectedSlot(this.hotbarSlot);
-            mc.interactionManager.interactItem(player, net.minecraft.util.Hand.MAIN_HAND);
+            mc.gameMode.useItem(player, net.minecraft.world.InteractionHand.MAIN_HAND);
             player.getInventory().setSelectedSlot(prev);
             return true;
         }

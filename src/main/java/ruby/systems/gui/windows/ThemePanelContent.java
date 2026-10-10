@@ -1,13 +1,13 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.gui.ThemeManager;
 
 import java.awt.Color;
 import java.util.List;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 
 public class ThemePanelContent extends Window {
     private static final int PAD = 14;
@@ -61,11 +61,11 @@ public class ThemePanelContent extends Window {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         this.drawContent(context, mouseX, mouseY);
     }
 
-    private void drawContent(DrawContext context, int mouseX, int mouseY) {
+    private void drawContent(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         GUIStyle style = GUIStyle.get();
         int innerR = this.getWidth() - INNER_L;
         int y = 0;
@@ -92,7 +92,7 @@ public class ThemePanelContent extends Window {
         }
     }
 
-    private int drawColorRow(DrawContext context, GUIStyle style, int innerR, int y,
+    private int drawColorRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
                              int mouseX, int mouseY, ThemeManager.ThemeColor color, int index, boolean isLast) {
         int rowH = this.rowHeight(index, ThemeManager.get().colors().size());
         boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + rowH;
@@ -127,7 +127,7 @@ public class ThemePanelContent extends Window {
         return y + rowH;
     }
 
-    private int drawExpandedPicker(DrawContext context, GUIStyle style, int innerR, int y,
+    private int drawExpandedPicker(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
                                    int mouseX, int mouseY, ThemeManager.ThemeColor color, boolean isLast) {
         if (isLast) {
             ModuleTypeWindow.fillBottomRoundedRect(context, INNER_L, y, innerR, y + EXPANDED_EXTRA,
@@ -158,7 +158,7 @@ public class ThemePanelContent extends Window {
         return y + EXPANDED_EXTRA;
     }
 
-    private void drawHueBar(DrawContext context, int left, int top, int right, int bottom) {
+    private void drawHueBar(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
         int width = right - left;
         if (width <= 0) return;
         for (int i = 0; i < width; i++) {
@@ -167,7 +167,7 @@ public class ThemePanelContent extends Window {
         }
     }
 
-    private void drawSvField(DrawContext context, int left, int top, int right, int bottom) {
+    private void drawSvField(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
         int width = right - left;
         int height = bottom - top;
         if (width <= 0 || height <= 0) return;
@@ -198,8 +198,8 @@ public class ThemePanelContent extends Window {
     }
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
-        if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         int innerR = this.getWidth() - INNER_L;
         int y = 0;
@@ -249,7 +249,7 @@ public class ThemePanelContent extends Window {
         int trackL = PAD;
         int trackR = this.getWidth() - INNER_L - PAD;
         float norm = (float) ((mouseX - trackL) / (trackR - trackL));
-        this.hue = Math.max(0f, Math.min(1f, norm));
+        this.hue = Math.clamp(norm, 0f, 1f);
         this.applyHsb(color);
     }
 
@@ -261,13 +261,13 @@ public class ThemePanelContent extends Window {
         int svH = 36;
         float s = (float) ((mouseX - trackL) / (trackR - trackL));
         float v = 1f - (float) ((mouseY - baseY) / svH);
-        this.saturation = Math.max(0f, Math.min(1f, s));
-        this.brightness = Math.max(0f, Math.min(1f, v));
+        this.saturation = Math.clamp(s, 0f, 1f);
+        this.brightness = Math.clamp(v, 0f, 1f);
         this.applyHsb(color);
     }
 
     @Override
-    public boolean onMouseDragged(Click click, double deltaX, double deltaY) {
+    public boolean onMouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
         if (this.draggingHue >= 0) {
             this.updateHueFromMouse(click.x(), ThemeManager.get().colors().get(this.draggingHue));
             return true;
@@ -280,7 +280,7 @@ public class ThemePanelContent extends Window {
     }
 
     @Override
-    public boolean onMouseUp(Click click) {
+    public boolean onMouseUp(MouseButtonEvent click) {
         if (this.draggingHue >= 0 || this.draggingSv >= 0) {
             this.draggingHue = -1;
             this.draggingSv = -1;

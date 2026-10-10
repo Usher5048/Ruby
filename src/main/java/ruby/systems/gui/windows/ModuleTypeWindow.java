@@ -1,6 +1,6 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -33,7 +33,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
 
         // fix order
         int yOffset = this.getHeaderHeight();
@@ -62,7 +62,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     }
 
     @Override
-    public void drawHeader(DrawContext context) {
+    public void drawHeader(GuiGraphicsExtractor context) {
         GUIStyle style = GUIStyle.get();
         int w = this.getWidth();
         int h = this.getHeight();
@@ -94,12 +94,12 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     /**
      * Draws a rounded panel with a 1px inset border matching test.html.
      */
-    public static void drawRoundedPanel(DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int bg, int border) {
+    public static void drawRoundedPanel(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int bg, int border) {
         ModuleTypeWindow.drawRoundedPanel(ctx, x1, y1, x2, y2, radius, bg, border, true);
     }
 
     public static void drawRoundedPanel(
-            DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int bg, int border, boolean roundBottom
+            GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int bg, int border, boolean roundBottom
     ) {
         if (roundBottom) {
             fillSmoothRoundedRect(ctx, x1, y1, x2, y2, radius, border);
@@ -111,7 +111,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     }
 
     /** Flat bottom edge, rounded top corners — used when the module panel is collapsed. */
-    public static void fillTopRoundedRect(DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int color) {
+    public static void fillTopRoundedRect(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int color) {
         if (x2 <= x1 || y2 <= y1) return;
         int baseAlpha = (color >> 24) & 0xFF;
         int rgb = color & 0x00FFFFFF;
@@ -142,7 +142,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     }
 
     /** Small chevron arrow drawn with pixels so it works without unicode font glyphs. */
-    public static void drawChevron(DrawContext ctx, int x, int y, int color, boolean pointRight) {
+    public static void drawChevron(GuiGraphicsExtractor ctx, int x, int y, int color, boolean pointRight) {
         for (int i = 0; i < 5; i++) {
             int inset = Math.min(i, 4 - i);
             int px = pointRight ? x + inset : x + (4 - inset);
@@ -151,12 +151,12 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     }
 
     /** Same › glyph rotated — open = 90° (down), collapsed = -90° (right). */
-    public static void drawCollapseArrow(DrawContext ctx, int cx, int cy, int color, boolean collapsed) {
+    public static void drawCollapseArrow(GuiGraphicsExtractor ctx, int cx, int cy, int color, boolean collapsed) {
         drawCollapseArrow(ctx, cx, cy, color, collapsed ? -90f : 90f);
     }
 
-    public static void drawCollapseArrow(DrawContext ctx, int cx, int cy, int color, float rotationDeg) {
-        var matrices = ctx.getMatrices();
+    public static void drawCollapseArrow(GuiGraphicsExtractor ctx, int cx, int cy, int color, float rotationDeg) {
+        var matrices = ctx.pose();
         matrices.pushMatrix();
         matrices.translate(cx, cy);
         matrices.rotate((float) Math.toRadians(rotationDeg));
@@ -165,7 +165,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     }
 
     public static void fillRowBackground(
-            DrawContext ctx, int x1, int y1, int x2, int y2, int color, boolean roundBottom
+            GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int color, boolean roundBottom
     ) {
         if (roundBottom) {
             ModuleTypeWindow.fillBottomRoundedRect(ctx, x1, y1, x2, y2, GUIStyle.RADIUS_PANEL, color);
@@ -174,14 +174,14 @@ public class ModuleTypeWindow extends CollapsibleWindow {
         }
     }
 
-    public static void drawRoundedBadge(DrawContext ctx, int x1, int y1, int x2, int y2, int bg, int border) {
+    public static void drawRoundedBadge(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int bg, int border) {
         int r = GUIStyle.RADIUS_BADGE;
         fillSmoothRoundedRect(ctx, x1, y1, x2, y2, r, border);
         fillSmoothRoundedRect(ctx, x1 + 1, y1 + 1, x2 - 1, y2 - 1, Math.max(0, r - 1), bg);
     }
 
     /** Horizontal ⋮ using three stacked dots at right side of row. */
-    public static void drawMenuDots(DrawContext ctx, int rightX, int centerY, int color) {
+    public static void drawMenuDots(GuiGraphicsExtractor ctx, int rightX, int centerY, int color) {
         int dot = 2;
         int gap = 3;
         int cx = rightX - 3;
@@ -194,7 +194,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     /**
      * Draws a filled rounded rectangle with anti-aliased edges.
      */
-    public static void fillSmoothRoundedRect(DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int color) {
+    public static void fillSmoothRoundedRect(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int color) {
         if (x2 <= x1 || y2 <= y1) return;
         int baseAlpha = (color >> 24) & 0xFF;
         int rgb = color & 0x00FFFFFF;
@@ -235,7 +235,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
      * Left accent strip flush with the panel's rounded left edge.
      */
     public static void fillLeftAccentStrip(
-            DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int accentW, int color
+            GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int accentW, int color
     ) {
         if (accentW <= 0 || x2 <= x1 || y2 <= y1) return;
 
@@ -278,7 +278,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
 
     /** Soft 1px inset outline with anti-aliased edges. */
     public static void strokeSmoothRoundedRect(
-            DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int color
+            GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int color
     ) {
         if (x2 <= x1 || y2 <= y1) return;
 
@@ -304,7 +304,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
 
     /** Nametag panel: smooth fill, left accent, soft outline (no inset double-fill). */
     public static void drawNametagPanel(
-            DrawContext ctx,
+            GuiGraphicsExtractor ctx,
             int x1,
             int y1,
             int x2,
@@ -334,7 +334,7 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     /**
      * Draws a filled rectangle with flat top corners and rounded bottom corners.
      */
-    public static void fillBottomRoundedRect(DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int color) {
+    public static void fillBottomRoundedRect(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int color) {
         if (x2 <= x1 || y2 <= y1) return;
         int baseAlpha = (color >> 24) & 0xFF;
         int rgb = color & 0x00FFFFFF;

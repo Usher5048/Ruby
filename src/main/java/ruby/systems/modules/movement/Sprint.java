@@ -1,7 +1,7 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import ruby.helpers.RotationManager;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.EnumValue;
@@ -30,7 +30,7 @@ public class Sprint extends Module {
 
     @Override
     public void tick() {
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if(player == null) return;
 
         if(Criticals.blocksSprintInput()) {
@@ -43,17 +43,17 @@ public class Sprint extends Module {
         if(shouldSprint(player)) player.setSprinting(true);
     }
 
-    private boolean shouldSprint(ClientPlayerEntity player) {
-        if(player.forwardSpeed <= 0) return false;
+    private boolean shouldSprint(LocalPlayer player) {
+        if(player.zza <= 0) return false;
         if(mode.value() == Mode.Rage) return true;
-        return !player.isSneaking()
+        return !player.isShiftKeyDown()
                 && !player.isUsingItem()
-                && player.getHungerManager().getFoodLevel() > 6;
+                && player.getFoodData().getFoodLevel() > 6;
     }
 
     @Override
     public void onDisable() {
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if(player != null) player.setSprinting(false);
     }
 }

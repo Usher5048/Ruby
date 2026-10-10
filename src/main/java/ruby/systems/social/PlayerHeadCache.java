@@ -1,9 +1,8 @@
 package ruby.systems.social;
 
 import com.mojang.authlib.GameProfile;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.PlayerSkinDrawer;
-import net.minecraft.entity.player.SkinTextures;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import ruby.RubyClient;
 
 import java.nio.charset.StandardCharsets;
@@ -11,30 +10,31 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.world.entity.player.PlayerSkin;
 
 public final class PlayerHeadCache {
-    private static final Map<String, SkinTextures> SKINS = new ConcurrentHashMap<>();
+    private static final Map<String, PlayerSkin> SKINS = new ConcurrentHashMap<>();
     private static final Map<String, Boolean> LOADING = new ConcurrentHashMap<>();
 
     private PlayerHeadCache() {}
 
-    public static SkinTextures getSkin(String username) {
+    public static PlayerSkin getSkin(String username) {
         if (username == null || username.isBlank()) return null;
         String key = username.toLowerCase().trim();
-        SkinTextures cached = PlayerHeadCache.SKINS.get(key);
+        PlayerSkin cached = PlayerHeadCache.SKINS.get(key);
         if (cached != null) return cached;
 
         if (PlayerHeadCache.LOADING.putIfAbsent(key, true) == null) {
             String trimmed = username.trim();
-            Optional<GameProfile> resolved = RubyClient.client.getApiServices()
+            Optional<GameProfile> resolved = RubyClient.client.services()
                     .profileResolver()
-                    .getProfileByName(trimmed);
+                    .fetchByName(trimmed);
             GameProfile profile = resolved.orElseGet(() -> new GameProfile(
                     UUID.nameUUIDFromBytes(("OfflinePlayer:" + trimmed).getBytes(StandardCharsets.UTF_8)),
                     trimmed
             ));
 
-            RubyClient.client.getSkinProvider().fetchSkinTextures(profile).thenAccept(opt -> {
+            RubyClient.client.getSkinManager().get(profile).thenAccept(opt -> {
                 opt.ifPresent(skin -> PlayerHeadCache.SKINS.put(key, skin));
                 PlayerHeadCache.LOADING.remove(key);
             });
@@ -43,10 +43,10 @@ public final class PlayerHeadCache {
         return PlayerHeadCache.SKINS.get(key);
     }
 
-    public static void drawHead(DrawContext context, String username, int x, int y, int size) {
-        SkinTextures skin = PlayerHeadCache.getSkin(username);
+    public static void drawHead(GuiGraphicsExtractor context, String username, int x, int y, int size) {
+        PlayerSkin skin = PlayerHeadCache.getSkin(username);
         if (skin != null) {
-            PlayerSkinDrawer.draw(context, skin, x, y, size);
+            PlayerFaceExtractor.extractRenderState(context, skin, x, y, size);
         }
     }
 }

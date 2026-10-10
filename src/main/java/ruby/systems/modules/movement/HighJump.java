@@ -1,7 +1,7 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -38,30 +38,30 @@ public class HighJump extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
         // Detect the frame right after a jump: was on ground, now airborne with positive Y velocity
-        if (wasOnGround && !player.isOnGround() && player.getVelocity().y > 0) {
+        if (wasOnGround && !player.onGround() && player.getDeltaMovement().y > 0) {
             applyJumpMultiplier(player, 0.0);
         }
 
-        wasOnGround = player.isOnGround();
+        wasOnGround = player.onGround();
     }
 
-    public static void applyJumpMultiplier(ClientPlayerEntity player, double preJumpY) {
+    public static void applyJumpMultiplier(LocalPlayer player, double preJumpY) {
         HighJump highJump = Modules.getByClass(HighJump.class);
         if (highJump == null || !highJump.enabled()) return;
 
-        double postJumpY = player.getVelocity().y;
+        double postJumpY = player.getDeltaMovement().y;
         double jumpDelta = postJumpY - preJumpY;
         if (jumpDelta <= 0) return;
 
-        player.setVelocity(
-                player.getVelocity().x,
+        player.setDeltaMovement(
+                player.getDeltaMovement().x,
                 preJumpY + jumpDelta * highJump.multiplier.value(),
-                player.getVelocity().z
+                player.getDeltaMovement().z
         );
     }
 }

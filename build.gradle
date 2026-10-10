@@ -1,19 +1,11 @@
 plugins {
-    id 'fabric-loom' version "${loom_version}"
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
     id 'maven-publish'
 }
 
 version = project.mod_version
-group = project.maven_group
-
-base {
-    archivesName = project.archives_base_name
-}
 
 repositories {
-    mavenCentral()
-    maven { url = 'https://maven.fabricmc.net/' }
-    maven { url = 'https://api.modrinth.com/maven' }
     exclusiveContent {
         forRepository {
             maven { url = 'https://api.modrinth.com/maven' }
@@ -26,38 +18,51 @@ repositories {
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-    modCompileOnly "maven.modrinth:sodium:mc1.21.11-0.8.7-fabric"
-    modRuntimeOnly "maven.modrinth:sodium:mc1.21.11-0.8.7-fabric"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+    // sodium
+    compileOnly "maven.modrinth:AANobbMI:bAZQdGpg"
+    runtimeOnly "maven.modrinth:AANobbMI:bAZQdGpg"
+
     annotationProcessor "io.github.llamalad7:mixinextras-common:0.5.0"
     implementation include("io.github.llamalad7:mixinextras-fabric:0.5.0")
+
+    // auth me
+//    implementation "org.apache.httpcomponents:httpclient:4.5.14"
+//    runtimeOnly "maven.modrinth:resourceful-config:8bR7M6K7"
+    runtimeOnly "maven.modrinth:yjgIrBjZ:IruchRZE"
 }
 
 processResources {
-    inputs.property 'version', project.version
+    def version = project.version
+    inputs.property "version", version
 
-    filesMatching('fabric.mod.json') {
-        expand 'version': project.version
+    filesMatching("fabric.mod.json") {
+        expand "version": version
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
+    it.options.release = 25
 }
 
 java {
+    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
+    // if it is present.
+    // If you remove this line, sources will not be generated.
     withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
-    inputs.property 'archivesName', project.base.archivesName
+    def projectName = project.name
+    inputs.property "projectName", projectName
 
-    from('LICENSE') {
-        rename { "${it}_${inputs.properties.archivesName}" }
+    from("LICENSE") {
+        rename { "${it}_$projectName"}
     }
 
     manifest {
@@ -65,55 +70,19 @@ jar {
     }
 }
 
-def userHome = System.getenv('USERPROFILE') ?: System.getProperty('user.home')
-def localAppData = System.getenv('LOCALAPPDATA') ?: new File(userHome, 'AppData/Local').absolutePath
-def qolProfileDir = new File(userHome, 'AppData/Roaming/ModrinthApp/profiles/QoL Profile')
-def qolModsDir = new File(qolProfileDir, 'mods')
-def modrinthApp = new File(localAppData, 'Modrinth App/Modrinth App.exe')
-
-tasks.register('deployQoL', Copy) {
-    dependsOn remapJar
-    from remapJar.archiveFile
-    into qolModsDir
-    doFirst {
-        qolModsDir.mkdirs()
-        qolModsDir.listFiles()?.findAll { it.name.startsWith('ruby-') && it.name.endsWith('.jar') }?.each { it.delete() }
-    }
-}
-
-loom {
-    runConfigs.configureEach {
-        vmArgs '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
-    }
-}
-
-tasks.register('launchModrinth') {
-    dependsOn deployQoL
-    doLast {
-        if (!modrinthApp.isFile()) {
-            throw new GradleException("Modrinth App not found at: ${modrinthApp.absolutePath}")
-        }
-        exec {
-            commandLine modrinthApp.absolutePath
-        }
-    }
-}
-
-tasks.register('play') {
-    group = 'fabric'
-    description = 'Deploy jar to QoL profile and open Modrinth App'
-    dependsOn launchModrinth
-}
-
-tasks.named('runClient').configure {
-    dependsOn deployQoL
-}
-
+// configure the maven publication
 publishing {
     publications {
-        create('mavenJava', MavenPublication) {
-            artifactId = project.archives_base_name
+        create("mavenJava", MavenPublication) {
             from components.java
         }
+    }
+
+    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+    repositories {
+        // Add repositories to publish to here.
+        // Notice: This block does NOT have the same function as the block in the top level.
+        // The repositories here will be used for publishing your artifact, not for
+        // retrieving dependencies.
     }
 }

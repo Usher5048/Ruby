@@ -1,7 +1,7 @@
 package ruby.helpers.input;
 
-import net.minecraft.client.option.KeyBinding;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
 import ruby.mixin.KeyBindingAccessor;
 
 public class InputUtils {
@@ -19,20 +19,20 @@ public class InputUtils {
     }
 
     public static boolean isMousePressed(int button) {
-        if(button == GLFW.GLFW_KEY_UNKNOWN) return false;
+        if(button == InputConstants.UNKNOWN.getValue()) return false;
         if(button < 0 || button >= mouseButtons.length) return false;
 
         return mouseButtons[button];
     }
 
     public static boolean isKeyPressed(int key) {
-        if(key == GLFW.GLFW_KEY_UNKNOWN) return false;
+        if(key == InputConstants.UNKNOWN.getValue()) return false;
         if(key < 0 || key >= keys.length) return false;
 
         return keys[key];
     }
 
-    public static boolean isKeyPressed(KeyBinding bind) {
-        return InputUtils.isKeyPressed(((KeyBindingAccessor) bind).getBoundKey().getCode());
+    public static boolean isKeyPressed(KeyMapping bind) {
+        return InputUtils.isKeyPressed(((KeyBindingAccessor) bind).getBoundKey().getValue());
     }
 }

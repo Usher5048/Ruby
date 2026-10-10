@@ -1,12 +1,12 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import ruby.systems.config.ColorValue;
 import ruby.systems.gui.GUIStyle;
 
 import java.awt.Color;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 
 public class SettingColorPickerWindow extends SettingWindow {
     private static final int INDENT = 14;
@@ -46,7 +46,7 @@ public class SettingColorPickerWindow extends SettingWindow {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         if (!this.color.visible()) return;
         GUIStyle style = GUIStyle.get();
         int w = this.getWidth();
@@ -86,7 +86,7 @@ public class SettingColorPickerWindow extends SettingWindow {
         context.fill(thumbX - 1, thumbY - 1, thumbX + 1, thumbY + 1, this.color.opaque());
     }
 
-    private void drawHueBar(DrawContext context, int left, int top, int right, int bottom) {
+    private void drawHueBar(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
         int width = right - left;
         if (width <= 0) return;
         for (int i = 0; i < width; i++) {
@@ -95,7 +95,7 @@ public class SettingColorPickerWindow extends SettingWindow {
         }
     }
 
-    private void drawSvField(DrawContext context, int left, int top, int right, int bottom) {
+    private void drawSvField(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
         int width = right - left;
         int height = bottom - top;
         if (width <= 0 || height <= 0) return;
@@ -120,7 +120,7 @@ public class SettingColorPickerWindow extends SettingWindow {
         int trackL = INDENT;
         int trackR = this.getWidth() - INDENT;
         float norm = (float) ((mouseX - trackL) / (trackR - trackL));
-        this.hue = Math.max(0f, Math.min(1f, norm));
+        this.hue = Math.clamp(norm, 0f, 1f);
         this.applyHsb();
     }
 
@@ -131,14 +131,14 @@ public class SettingColorPickerWindow extends SettingWindow {
         int svH = 36;
         float s = (float) ((mouseX - trackL) / (trackR - trackL));
         float v = 1f - (float) ((mouseY - svY) / svH);
-        this.saturation = Math.max(0f, Math.min(1f, s));
-        this.brightness = Math.max(0f, Math.min(1f, v));
+        this.saturation = Math.clamp(s, 0f, 1f);
+        this.brightness = Math.clamp(v, 0f, 1f);
         this.applyHsb();
     }
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
-        if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         int w = this.getWidth();
         int swX = w - INDENT - 28;
@@ -173,7 +173,7 @@ public class SettingColorPickerWindow extends SettingWindow {
     }
 
     @Override
-    public boolean onMouseDragged(Click click, double deltaX, double deltaY) {
+    public boolean onMouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
         if (this.draggingHue) {
             this.updateHueFromMouse(click.x());
             return true;
@@ -186,7 +186,7 @@ public class SettingColorPickerWindow extends SettingWindow {
     }
 
     @Override
-    public boolean onMouseUp(Click click) {
+    public boolean onMouseUp(MouseButtonEvent click) {
         if (this.draggingHue || this.draggingSv) {
             this.draggingHue = false;
             this.draggingSv = false;

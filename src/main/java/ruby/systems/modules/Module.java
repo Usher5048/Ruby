@@ -1,6 +1,6 @@
 package ruby.systems.modules;
 
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 import ruby.RubyClient;
 import ruby.systems.config.Configuration;
 import ruby.systems.events.Render2DEvent;
@@ -70,17 +70,17 @@ public abstract class Module {
         this.notifyUser(message, false);
     }
     public void notifyUser(String message, boolean actionBar) {
-        this.notifyUser(Text.of(message), actionBar);
+        this.notifyUser(Component.nullToEmpty(message), actionBar);
     }
-    public void notifyUser(Text message) {
+    public void notifyUser(Component message) {
         this.notifyUser(message, false);
     }
-    public void notifyUser(Text message, boolean actionBar) {
+    public void notifyUser(Component message, boolean actionBar) {
         RubyClient.notifyUser(
-                Text.empty()
-                        .append(!actionBar ? Text.literal("[").withColor(0x666666) : Text.empty())
-                        .append(!actionBar ? Text.literal(this.name()).withColor(0x999999) : Text.empty())
-                        .append(!actionBar ? Text.literal("] ").withColor(0x666666) : Text.empty())
+                Component.empty()
+                        .append(!actionBar ? Component.literal("[").withColor(0x666666) : Component.empty())
+                        .append(!actionBar ? Component.literal(this.name()).withColor(0x999999) : Component.empty())
+                        .append(!actionBar ? Component.literal("] ").withColor(0x666666) : Component.empty())
                         .append(message),
                 actionBar
         );

@@ -1,11 +1,10 @@
 package ruby.systems.social;
 
-import net.minecraft.entity.player.PlayerEntity;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import net.minecraft.world.entity.player.Player;
 
 public final class FriendsManager {
     private static final List<String> friends = new ArrayList<>();
@@ -49,7 +48,7 @@ public final class FriendsManager {
         return name.substring(0, 1).toUpperCase(Locale.ROOT) + name.substring(1);
     }
 
-    public static boolean isFriend(PlayerEntity player) {
+    public static boolean isFriend(Player player) {
         String name = player.getGameProfile().name();
         return FriendsManager.isFriend(name);
     }

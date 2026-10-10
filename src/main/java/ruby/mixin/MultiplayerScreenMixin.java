@@ -1,9 +1,9 @@
 package ruby.mixin;
 
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -11,9 +11,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ruby.RubyClient;
 import ruby.systems.gui.AccountsScreen;
 
-@Mixin(MultiplayerScreen.class)
+@Mixin(JoinMultiplayerScreen.class)
 public abstract class MultiplayerScreenMixin extends Screen {
-    protected MultiplayerScreenMixin(Text title) {
+    protected MultiplayerScreenMixin(Component title) {
         super(title);
     }
 
@@ -21,8 +21,8 @@ public abstract class MultiplayerScreenMixin extends Screen {
     private void ruby$addAccountsButton(CallbackInfo ci) {
         int btnW = 100;
         int btnH = 20;
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Accounts"), button ->
-                RubyClient.client.setScreen(new AccountsScreen(this))
-        ).dimensions(this.width - btnW - 5, 5, btnW, btnH).build());
+        this.addRenderableWidget(Button.builder(Component.literal("Accounts"), button ->
+                RubyClient.client.setScreenAndShow(new AccountsScreen(this))
+        ).bounds(this.width - btnW - 5, 5, btnW, btnH).build());
     }
 }

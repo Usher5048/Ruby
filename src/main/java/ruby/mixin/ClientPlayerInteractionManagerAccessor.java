@@ -1,34 +1,34 @@
 package ruby.mixin;
 
-import net.minecraft.client.network.ClientPlayerInteractionManager;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.core.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(ClientPlayerInteractionManager.class)
+@Mixin(MultiPlayerGameMode.class)
 public interface ClientPlayerInteractionManagerAccessor {
-    @Invoker("syncSelectedSlot")
+    @Invoker("ensureHasSentCarriedItem")
     void ruby$syncSelectedSlot();
 
-    @Accessor("lastSelectedSlot")
+    @Accessor("carriedIndex")
     int ruby$getLastSelectedSlot();
 
-    @Accessor("lastSelectedSlot")
+    @Accessor("carriedIndex")
     void ruby$setLastSelectedSlot(int slot);
 
-    @Accessor("currentBreakingProgress")
+    @Accessor("destroyProgress")
     float ruby$getBreakingProgress();
 
-    @Accessor("currentBreakingProgress")
+    @Accessor("destroyProgress")
     void ruby$setBreakingProgress(float newProgress);
 
-    @Accessor("currentBreakingPos")
+    @Accessor("destroyBlockPos")
     BlockPos ruby$getBreakingPos();
 
-    @Accessor("blockBreakingCooldown")
+    @Accessor("destroyDelay")
     int ruby$getBlockBreakingCooldown();
 
-    @Accessor("blockBreakingCooldown")
+    @Accessor("destroyDelay")
     void ruby$setBlockBreakingCooldown(int cooldown);
 }

@@ -1,12 +1,12 @@
 package ruby.helpers.render;
 
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.entity.player.PlayerEntity;
 import ruby.RubyClient;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.world.entity.player.Player;
 
 /** Filters tab-list NPC bots; resists brief gamemode flicker during list refreshes. */
 public final class NametagBotFilter {
@@ -22,21 +22,15 @@ public final class NametagBotFilter {
     }
 
     public void tick() {
-        if (RubyClient.client.world == null || RubyClient.client.getNetworkHandler() == null) return;
+        if (RubyClient.client.level == null || RubyClient.client.getConnection() == null) return;
 
-        for (PlayerEntity player : RubyClient.client.world.getPlayers()) {
-            UUID uuid = player.getUuid();
-            PlayerListEntry entry = RubyClient.client.getNetworkHandler().getPlayerListEntry(uuid);
-
-            if (entry != null && entry.getGameMode() == null) {
-                confirmedBots.put(uuid, true);
-                stableTabTicks.remove(uuid);
-                continue;
-            }
+        for (Player player : RubyClient.client.level.players()) {
+            UUID uuid = player.getUUID();
+            PlayerInfo entry = RubyClient.client.getConnection().getPlayerInfo(uuid);
 
             if (Boolean.TRUE.equals(confirmedBots.get(uuid))) continue;
 
-            if (entry != null && entry.getGameMode() != null) {
+            if (entry != null) {
                 stableTabTicks.merge(uuid, 1, Integer::sum);
             } else {
                 stableTabTicks.remove(uuid);
@@ -44,13 +38,13 @@ public final class NametagBotFilter {
         }
     }
 
-    public boolean shouldHide(PlayerEntity player) {
-        UUID uuid = player.getUuid();
+    public boolean shouldHide(Player player) {
+        UUID uuid = player.getUUID();
         if (Boolean.TRUE.equals(confirmedBots.get(uuid))) return true;
-        if (RubyClient.client.getNetworkHandler() == null) return true;
+        if (RubyClient.client.getConnection() == null) return true;
 
-        PlayerListEntry entry = RubyClient.client.getNetworkHandler().getPlayerListEntry(uuid);
-        if (entry == null || entry.getGameMode() == null) return true;
+        PlayerInfo entry = RubyClient.client.getConnection().getPlayerInfo(uuid);
+        if (entry == null) return true;
         return stableTabTicks.getOrDefault(uuid, 0) < STABLE_TAB_TICKS;
     }
 }

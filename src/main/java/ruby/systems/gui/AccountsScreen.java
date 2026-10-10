@@ -1,9 +1,9 @@
 package ruby.systems.gui;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import ruby.RubyClient;
 import ruby.systems.gui.windows.AccountsPanelContent;
 import ruby.systems.gui.windows.ModuleTypeWindow;
@@ -28,7 +28,7 @@ public class AccountsScreen extends WindowedScreen {
     }
 
     private void layoutPanel() {
-        float sf = (float) RubyClient.client.getWindow().getScaleFactor();
+        float sf = (float) RubyClient.client.getWindow().getGuiScale();
         int contentH = this.panel == null ? 120 : this.panel.getHeight();
         int totalH = HEADER_H + contentH;
         int x = Math.round((this.width * sf - PANEL_W) / 2f);
@@ -42,7 +42,7 @@ public class AccountsScreen extends WindowedScreen {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         GUIStyle style = GUIStyle.get();
         int width = RubyClient.client.getWindow().getWidth();
         int height = RubyClient.client.getWindow().getHeight();
@@ -50,7 +50,7 @@ public class AccountsScreen extends WindowedScreen {
 
         this.layoutPanel();
 
-        float sf = (float) RubyClient.client.getWindow().getScaleFactor();
+        float sf = (float) RubyClient.client.getWindow().getGuiScale();
         int contentH = this.panel.getHeight();
         int totalH = HEADER_H + contentH;
         int px = Math.round((this.width * sf - PANEL_W) / 2f);
@@ -59,14 +59,14 @@ public class AccountsScreen extends WindowedScreen {
         ModuleTypeWindow.drawRoundedPanel(context, px - 1, py, px + PANEL_W + 1, bottom,
                 GUIStyle.RADIUS_PANEL, style.bgPanel(), style.borderPanel());
         style.logoFont().draw(context, "Accounts", px + 14, py + 8, style.ruby());
-        style.bodyFont().draw(context, "Logged in as " + RubyClient.client.getSession().getUsername(),
+        style.bodyFont().draw(context, "Logged in as " + RubyClient.client.getUser().getName(),
                 px + 14, py + HEADER_H - 12, style.textMuted());
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
-            RubyClient.client.setScreen(this.parent);
+    public boolean keyPressed(KeyEvent input) {
+        if (input.key() == InputConstants.KEY_ESCAPE) {
+            RubyClient.client.setScreenAndShow(this.parent);
             return true;
         }
         return super.keyPressed(input);

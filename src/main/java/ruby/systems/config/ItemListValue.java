@@ -1,8 +1,8 @@
 package ruby.systems.config;
 
-import net.minecraft.item.Item;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -22,15 +22,15 @@ public class ItemListValue extends ListValue<Item> {
 
     @Override
     protected String toStringElement(Item value) {
-        return value.getName().getString();
+        return value.getName(value.getDefaultInstance()).getString();
     }
 
     @Override
     protected Item fromStringElement(String str) {
         if(str == null) return null;
 
-        for(Item item : Registries.ITEM) {
-            if(!str.equals(item.getName().getString())) continue;
+        for(Item item : BuiltInRegistries.ITEM) {
+            if(!str.equals(item.getName(item.getDefaultInstance()).getString())) continue;
             return item;
         }
 
@@ -39,7 +39,7 @@ public class ItemListValue extends ListValue<Item> {
 
     @Override
     protected int serializeElement(ByteArrayOutputStream stream, Item value) {
-        String itemID = Registries.ITEM.getId(value).toString();
+        String itemID = BuiltInRegistries.ITEM.getKey(value).toString();
 
         byte[] bytes = itemID.getBytes();
         short len = (short) bytes.length;
@@ -59,16 +59,16 @@ public class ItemListValue extends ListValue<Item> {
         stream.readNBytes(bytes, 0, length);
         String itemID = new String(bytes);
 
-        return Registries.ITEM.get(Identifier.tryParse(itemID));
+        return BuiltInRegistries.ITEM.getValue(Identifier.tryParse(itemID));
     }
 
-    public static class Builder extends ListValue.Builder<Item, Builder> {
+    public static class Builder extends ListValue.Builder<Item, ruby.systems.config.ItemListValue.Builder> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.ItemListValue.Builder self() {
             return this;
         }
 

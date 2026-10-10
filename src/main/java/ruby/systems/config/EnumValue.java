@@ -57,13 +57,13 @@ public class EnumValue<T extends Enum<?>> extends Value<T> {
         this.setValue(this.enumValues[stream.read()]);
     }
 
-    public static class Builder<T extends Enum<?>> extends Value.Builder<T, Builder<T>> {
+    public static class Builder<T extends Enum<?>> extends Value.Builder<T, ruby.systems.config.EnumValue.Builder<T>> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder<T> self() {
+        protected ruby.systems.config.EnumValue.Builder<T> self() {
             return this;
         }
 

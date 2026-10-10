@@ -1,8 +1,8 @@
 package ruby.helpers.render;
 
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Vector4f;
 import ruby.RubyClient;
 
@@ -17,35 +17,35 @@ public final class NametagUtils {
 
     private NametagUtils() {}
 
-    public static boolean to2D(Vec3d worldPos, double tagScale) {
+    public static boolean to2D(Vec3 worldPos, double tagScale) {
         return to2D(worldPos, tagScale, true, 0.85);
     }
 
-    public static boolean to2D(Vec3d worldPos, double tagScale, boolean distanceScaling, double minScale) {
+    public static boolean to2D(Vec3 worldPos, double tagScale, boolean distanceScaling, double minScale) {
         if (!project(worldPos)) return false;
 
         scale = tagScale;
         if (distanceScaling) {
-            Vec3d cam = RubyClient.client.gameRenderer.getCamera().getCameraPos();
-            double distScale = MathHelper.clamp(1.0 - cam.distanceTo(worldPos) * 0.004, minScale, 1.0);
+            Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
+            double distScale = Mth.clamp(1.0 - cam.distanceTo(worldPos) * 0.004, minScale, 1.0);
             scale *= distScale;
         }
         return true;
     }
 
-    public static ScreenBounds projectBounds(Box box) {
+    public static ScreenBounds projectBounds(AABB box) {
         double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE;
         double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
         boolean any = false;
 
         double x0 = box.minX, y0 = box.minY, z0 = box.minZ;
         double x1 = box.maxX, y1 = box.maxY, z1 = box.maxZ;
-        Vec3d[] corners = {
-                new Vec3d(x0, y0, z0), new Vec3d(x1, y0, z0), new Vec3d(x0, y0, z1), new Vec3d(x1, y0, z1),
-                new Vec3d(x0, y1, z0), new Vec3d(x1, y1, z0), new Vec3d(x0, y1, z1), new Vec3d(x1, y1, z1)
+        Vec3[] corners = {
+                new Vec3(x0, y0, z0), new Vec3(x1, y0, z0), new Vec3(x0, y0, z1), new Vec3(x1, y0, z1),
+                new Vec3(x0, y1, z0), new Vec3(x1, y1, z0), new Vec3(x0, y1, z1), new Vec3(x1, y1, z1)
         };
 
-        for (Vec3d corner : corners) {
+        for (Vec3 corner : corners) {
             if (!project(corner)) continue;
             minX = Math.min(minX, x);
             minY = Math.min(minY, y);
@@ -57,10 +57,10 @@ public final class NametagUtils {
         return any ? new ScreenBounds(minX, minY, maxX, maxY) : null;
     }
 
-    private static boolean project(Vec3d worldPos) {
+    private static boolean project(Vec3 worldPos) {
         if (Renderer.projection() == null || Renderer.view() == null) return false;
 
-        Vec3d cam = RubyClient.client.gameRenderer.getCamera().getCameraPos();
+        Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
         Vector4f vec = new Vector4f(
                 (float) (worldPos.x - cam.x),
                 (float) (worldPos.y - cam.y),

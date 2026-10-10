@@ -1,12 +1,12 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Overlay;
-import net.minecraft.client.gui.screen.Screen;
 import ruby.RubyClient;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Overlay;
+import net.minecraft.client.gui.screens.Screen;
 
 public class WindowedOverlay extends Overlay {
     private final List<Window> windows = new ArrayList<>();
@@ -24,24 +24,24 @@ public class WindowedOverlay extends Overlay {
     public List<Window> windows() {
         return this.windows;
     }
-    public void onRender(DrawContext context, int mouseX, int mouseY) {}
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY) {}
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-        this.parent.render(context, mouseX, mouseY, tickDelta);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
+        this.parent.extractRenderState(context, mouseX, mouseY, tickDelta);
 
-        context.getMatrices().pushMatrix();
-        context.getMatrices().scale(
-                1f / (float) RubyClient.client.getWindow().getScaleFactor(),
-                1f / (float) RubyClient.client.getWindow().getScaleFactor()
+        context.pose().pushMatrix();
+        context.pose().scale(
+                1f / (float) RubyClient.client.getWindow().getGuiScale(),
+                1f / (float) RubyClient.client.getWindow().getGuiScale()
         );
 
         this.onRender(context, mouseX, mouseY);
 
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
 
         for(Window window : this.windows())
-            window.render(context, mouseX, mouseY, tickDelta);
+            window.extractRenderState(context, mouseX, mouseY, tickDelta);
     }
 
     public void onTick() {}

@@ -1,10 +1,10 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.option.Perspective;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.CameraType;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.helpers.input.InputUtils;
 import ruby.helpers.world.ChunkReloadHelper;
@@ -34,7 +34,7 @@ public class Freecam extends Module {
     public float yaw, pitch;
     public float lastYaw, lastPitch;
 
-    private Perspective perspective;
+    private CameraType perspective;
     private double speedValue;
     private boolean isSneaking;
 
@@ -74,30 +74,30 @@ public class Freecam extends Module {
         if (RubyClient.client.player == null) return;
 
         if (staticView.value()) {
-            savedFovScale = RubyClient.client.options.getFovEffectScale().getValue();
-            savedBobView = RubyClient.client.options.getBobView().getValue();
-            RubyClient.client.options.getFovEffectScale().setValue(0.0);
-            RubyClient.client.options.getBobView().setValue(false);
+            savedFovScale = RubyClient.client.options.fovEffectScale().get();
+            savedBobView = RubyClient.client.options.bobView().get();
+            RubyClient.client.options.fovEffectScale().set(0.0);
+            RubyClient.client.options.bobView().set(false);
         }
 
         speedValue = speed.value();
-        yaw = RubyClient.client.player.getYaw();
-        pitch = RubyClient.client.player.getPitch();
+        yaw = RubyClient.client.player.getYRot();
+        pitch = RubyClient.client.player.getXRot();
         lastYaw = yaw;
         lastPitch = pitch;
-        perspective = RubyClient.client.options.getPerspective();
+        perspective = RubyClient.client.options.getCameraType();
 
-        Vec3d cam = RubyClient.client.gameRenderer.getCamera().getCameraPos();
+        Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
         x = prevX = cam.x;
         y = prevY = cam.y;
         z = prevZ = cam.z;
 
-        if (perspective == Perspective.THIRD_PERSON_FRONT) {
+        if (perspective == CameraType.THIRD_PERSON_FRONT) {
             yaw += 180;
             pitch *= -1;
         }
 
-        isSneaking = InputUtils.isKeyPressed(RubyClient.client.options.sneakKey);
+        isSneaking = InputUtils.isKeyPressed(RubyClient.client.options.keyShift);
         syncKeysFromInput();
         unpressKeys();
 
@@ -113,11 +113,11 @@ public class Freecam extends Module {
         }
 
         if (staticView.value()) {
-            RubyClient.client.options.getFovEffectScale().setValue(savedFovScale);
-            RubyClient.client.options.getBobView().setValue(savedBobView);
+            RubyClient.client.options.fovEffectScale().set(savedFovScale);
+            RubyClient.client.options.bobView().set(savedBobView);
         }
 
-        if (perspective != null) RubyClient.client.options.setPerspective(perspective);
+        if (perspective != null) RubyClient.client.options.setCameraType(perspective);
         isSneaking = false;
         forward = backward = right = left = up = down = false;
     }
@@ -126,17 +126,17 @@ public class Freecam extends Module {
     public void tick() {
         if (RubyClient.client.player == null) return;
 
-        if (!RubyClient.client.options.getPerspective().isFirstPerson()) {
-            RubyClient.client.options.setPerspective(Perspective.FIRST_PERSON);
+        if (!RubyClient.client.options.getCameraType().isFirstPerson()) {
+            RubyClient.client.options.setCameraType(CameraType.FIRST_PERSON);
         }
 
         unpressKeys();
 
-        Vec3d forwardVec = Vec3d.fromPolar(0, yaw);
-        Vec3d rightVec = Vec3d.fromPolar(0, yaw + 90);
+        Vec3 forwardVec = Vec3.directionFromRotation(0, yaw);
+        Vec3 rightVec = Vec3.directionFromRotation(0, yaw + 90);
 
         double velX = 0, velY = 0, velZ = 0;
-        double s = InputUtils.isKeyPressed(RubyClient.client.options.sprintKey) ? 1.0 : 0.5;
+        double s = InputUtils.isKeyPressed(RubyClient.client.options.keySprint) ? 1.0 : 0.5;
 
         boolean movingForward = false;
         if (forward) {
@@ -189,38 +189,38 @@ public class Freecam extends Module {
     }
 
     public boolean onKey(int key, int action) {
-        if (RubyClient.client.currentScreen != null) return false;
-        if (InputUtils.isKeyPressed(GLFW.GLFW_KEY_F3)) return false;
+        if (RubyClient.client.gui.screen() != null) return false;
+        if (InputUtils.isKeyPressed(InputConstants.KEY_F3)) return false;
 
         var options = RubyClient.client.options;
-        if (key == bindingCode(options.forwardKey)) {
-            forward = action != GLFW.GLFW_RELEASE;
-            options.forwardKey.setPressed(false);
+        if (key == bindingCode(options.keyUp)) {
+            forward = action != InputConstants.RELEASE;
+            options.keyUp.setDown(false);
             return true;
         }
-        if (key == bindingCode(options.backKey)) {
-            backward = action != GLFW.GLFW_RELEASE;
-            options.backKey.setPressed(false);
+        if (key == bindingCode(options.keyDown)) {
+            backward = action != InputConstants.RELEASE;
+            options.keyDown.setDown(false);
             return true;
         }
-        if (key == bindingCode(options.rightKey)) {
-            right = action != GLFW.GLFW_RELEASE;
-            options.rightKey.setPressed(false);
+        if (key == bindingCode(options.keyRight)) {
+            right = action != InputConstants.RELEASE;
+            options.keyRight.setDown(false);
             return true;
         }
-        if (key == bindingCode(options.leftKey)) {
-            left = action != GLFW.GLFW_RELEASE;
-            options.leftKey.setPressed(false);
+        if (key == bindingCode(options.keyLeft)) {
+            left = action != InputConstants.RELEASE;
+            options.keyLeft.setDown(false);
             return true;
         }
-        if (key == bindingCode(options.jumpKey)) {
-            up = action != GLFW.GLFW_RELEASE;
-            options.jumpKey.setPressed(false);
+        if (key == bindingCode(options.keyJump)) {
+            up = action != InputConstants.RELEASE;
+            options.keyJump.setDown(false);
             return true;
         }
-        if (key == bindingCode(options.sneakKey)) {
-            down = action != GLFW.GLFW_RELEASE;
-            options.sneakKey.setPressed(false);
+        if (key == bindingCode(options.keyShift)) {
+            down = action != InputConstants.RELEASE;
+            options.keyShift.setDown(false);
             return true;
         }
         return false;
@@ -228,25 +228,25 @@ public class Freecam extends Module {
 
     private void syncKeysFromInput() {
         var options = RubyClient.client.options;
-        forward = InputUtils.isKeyPressed(options.forwardKey);
-        backward = InputUtils.isKeyPressed(options.backKey);
-        right = InputUtils.isKeyPressed(options.rightKey);
-        left = InputUtils.isKeyPressed(options.leftKey);
-        up = InputUtils.isKeyPressed(options.jumpKey);
-        down = InputUtils.isKeyPressed(options.sneakKey);
+        forward = InputUtils.isKeyPressed(options.keyUp);
+        backward = InputUtils.isKeyPressed(options.keyDown);
+        right = InputUtils.isKeyPressed(options.keyRight);
+        left = InputUtils.isKeyPressed(options.keyLeft);
+        up = InputUtils.isKeyPressed(options.keyJump);
+        down = InputUtils.isKeyPressed(options.keyShift);
     }
 
-    private static int bindingCode(KeyBinding binding) {
-        return ((KeyBindingAccessor) binding).getBoundKey().getCode();
+    private static int bindingCode(KeyMapping binding) {
+        return ((KeyBindingAccessor) binding).getBoundKey().getValue();
     }
 
     private void unpressKeys() {
-        RubyClient.client.options.forwardKey.setPressed(false);
-        RubyClient.client.options.backKey.setPressed(false);
-        RubyClient.client.options.rightKey.setPressed(false);
-        RubyClient.client.options.leftKey.setPressed(false);
-        RubyClient.client.options.jumpKey.setPressed(false);
-        RubyClient.client.options.sneakKey.setPressed(false);
+        RubyClient.client.options.keyUp.setDown(false);
+        RubyClient.client.options.keyDown.setDown(false);
+        RubyClient.client.options.keyRight.setDown(false);
+        RubyClient.client.options.keyLeft.setDown(false);
+        RubyClient.client.options.keyJump.setDown(false);
+        RubyClient.client.options.keyShift.setDown(false);
     }
 
     public void changeLookDirection(double deltaX, double deltaY) {
@@ -254,11 +254,11 @@ public class Freecam extends Module {
         lastPitch = pitch;
         yaw += (float) deltaX;
         pitch += (float) deltaY;
-        pitch = MathHelper.clamp(pitch, -90, 90);
+        pitch = Mth.clamp(pitch, -90, 90);
     }
 
     public boolean onScroll(double vertical) {
-        if (scrollSensitivity.value() <= 0 || RubyClient.client.currentScreen != null) return false;
+        if (scrollSensitivity.value() <= 0 || RubyClient.client.gui.screen() != null) return false;
         speedValue += vertical * 0.25 * scrollSensitivity.value() * speedValue;
         speedValue = Math.max(0.1, speedValue);
         return true;
@@ -278,22 +278,22 @@ public class Freecam extends Module {
     }
 
     public double getX(float tickDelta) {
-        return MathHelper.lerp(tickDelta, prevX, x);
+        return Mth.lerp(tickDelta, prevX, x);
     }
 
     public double getY(float tickDelta) {
-        return MathHelper.lerp(tickDelta, prevY, y);
+        return Mth.lerp(tickDelta, prevY, y);
     }
 
     public double getZ(float tickDelta) {
-        return MathHelper.lerp(tickDelta, prevZ, z);
+        return Mth.lerp(tickDelta, prevZ, z);
     }
 
     public float getYaw(float tickDelta) {
-        return MathHelper.lerp(tickDelta, lastYaw, yaw);
+        return Mth.lerp(tickDelta, lastYaw, yaw);
     }
 
     public float getPitch(float tickDelta) {
-        return MathHelper.lerp(tickDelta, lastPitch, pitch);
+        return Mth.lerp(tickDelta, lastPitch, pitch);
     }
 }

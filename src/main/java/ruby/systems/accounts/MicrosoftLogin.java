@@ -2,12 +2,13 @@ package ruby.systems.accounts;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import net.minecraft.util.Util;
 import ruby.RubyClient;
 import ruby.helpers.Http;
 
+import java.awt.Desktop;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +41,11 @@ public final class MicrosoftLogin {
         String url = "https://login.live.com/oauth20_authorize.srf?client_id=" + CLIENT_ID
                 + "&response_type=code&redirect_uri=http://127.0.0.1:" + PORT
                 + "&scope=XboxLive.signin%20offline_access&prompt=select_account";
-        Util.getOperatingSystem().open(url);
+        try {
+            Desktop.getDesktop().browse(URI.create(url));
+        } catch (IOException e) {
+            RubyClient.LOGGER.warn("Failed to open the Microsoft login page", e);
+        }
     }
 
     public static LoginData login(String refreshToken) {

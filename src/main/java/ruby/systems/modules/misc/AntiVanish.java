@@ -1,8 +1,6 @@
 package ruby.systems.modules.misc;
 
 import com.mojang.brigadier.suggestion.Suggestion;
-import net.minecraft.network.packet.c2s.play.RequestCommandCompletionsC2SPacket;
-import net.minecraft.network.packet.s2c.play.CommandSuggestionsS2CPacket;
 import ruby.RubyClient;
 import ruby.systems.config.EnumValue;
 import ruby.systems.config.IntegerValue;
@@ -15,6 +13,8 @@ import ruby.systems.modules.ModuleType;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import net.minecraft.network.protocol.game.ClientboundCommandSuggestionsPacket;
+import net.minecraft.network.protocol.game.ServerboundCommandSuggestionPacket;
 
 public class AntiVanish extends Module {
     public final EnumValue<Mode> mode = this.config.create(new EnumValue.Builder<Mode>("Mode")
@@ -55,13 +55,13 @@ public class AntiVanish extends Module {
             if(RubyClient.client.player == null) return;
             if(!this.enabled()) return;
 
-            if(!(event.packet() instanceof CommandSuggestionsS2CPacket packet)) return;
+            if(!(event.packet() instanceof ClientboundCommandSuggestionsPacket packet)) return;
             if(this.mode.value() != Mode.CommandCompletion) return;
 
             if(!this.completionIDs.contains(packet.id())) return;
 
             List<String> prevUsernames = this.usernameCache.stream().toList();
-            this.usernameCache = packet.getSuggestions().getList().stream()
+            this.usernameCache = packet.toSuggestions().getList().stream()
                     .map(Suggestion::getText)
                     .toList();
 
@@ -93,12 +93,12 @@ public class AntiVanish extends Module {
     }
 
     private void checkLeaveMessage() {
-        if(RubyClient.client.getNetworkHandler() == null) return;
+        if(RubyClient.client.getConnection() == null) return;
         if(RubyClient.client.player == null) return;
 
         Map<UUID, String> prevPlayerMap = Map.copyOf(this.playerMap);
-        this.playerMap = RubyClient.client.getNetworkHandler()
-                .getPlayerList()
+        this.playerMap = RubyClient.client.getConnection()
+                .getOnlinePlayers()
                 .stream()
                 .collect(Collectors.toMap(
                         playerEntry -> playerEntry.getProfile().id(),
@@ -106,7 +106,7 @@ public class AntiVanish extends Module {
                 ));
 
         for(UUID uuid : prevPlayerMap.keySet()) {
-            if(RubyClient.client.player.getUuid().equals(uuid)) continue;
+            if(RubyClient.client.player.getUUID().equals(uuid)) continue;
             if(this.playerMap.containsKey(uuid)) continue;
 
             String username = prevPlayerMap.get(uuid);
@@ -123,7 +123,7 @@ public class AntiVanish extends Module {
 
         // Prevent ConcurrentModificationException
         for(UUID uuid : this.vanishMap.keySet().toArray(new UUID[0])) {
-            if(RubyClient.client.player.getUuid().equals(uuid)) continue;
+            if(RubyClient.client.player.getUUID().equals(uuid)) continue;
             if(prevPlayerMap.containsKey(uuid)) continue;
             if(!this.playerMap.containsKey(uuid)) continue;
 
@@ -144,8 +144,8 @@ public class AntiVanish extends Module {
 
     @Override
     public void tick() {
-        if(RubyClient.client.getNetworkHandler() == null) return;
-        if(RubyClient.client.world == null) {
+        if(RubyClient.client.getConnection() == null) return;
+        if(RubyClient.client.level == null) {
             this.vanishMap.clear();
             return;
         }
@@ -157,10 +157,10 @@ public class AntiVanish extends Module {
         switch(this.mode.value()) {
             case LeaveMessage -> checkLeaveMessage();
             case CommandCompletion -> {
-                int id = RubyClient.client.world.random.nextInt();
+                int id = java.util.concurrent.ThreadLocalRandom.current().nextInt();
                 this.completionIDs.add(id);
 
-                RubyClient.client.getNetworkHandler().sendPacket(new RequestCommandCompletionsC2SPacket(
+                RubyClient.client.getConnection().send(new ServerboundCommandSuggestionPacket(
                         id,
                         String.format("%s ", this.command.value())
                 ));

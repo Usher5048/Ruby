@@ -40,7 +40,7 @@ public class ConfigManager {
     }
 
     private static File configFile() {
-        return new File(RubyClient.client.runDirectory, "config/" + RubyClient.MOD_ID);
+        return new File(RubyClient.client.gameDirectory, "config/" + RubyClient.MOD_ID);
     }
 
     public static int readShort(ByteArrayInputStream s) {

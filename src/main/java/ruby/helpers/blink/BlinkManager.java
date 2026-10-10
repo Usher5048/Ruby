@@ -1,14 +1,14 @@
 package ruby.helpers.blink;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.network.ClientConnection;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
-import net.minecraft.network.packet.s2c.play.HealthUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.common.ClientboundDisconnectPacket;
+import net.minecraft.network.protocol.game.*;
+import net.minecraft.network.protocol.handshake.ClientIntentionPacket;
+import net.minecraft.network.protocol.login.ServerboundCustomQueryAnswerPacket;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.systems.events.Events;
 import ruby.systems.events.blink.BlinkPacketEvent;
@@ -59,12 +59,12 @@ public final class BlinkManager {
     private BlinkManager() {
     }
 
-    public static List<Vec3d> positions() {
-        List<Vec3d> result = new ArrayList<>();
+    public static List<Vec3> positions() {
+        List<Vec3> result = new ArrayList<>();
         for (PacketSnapshot snapshot : PACKET_QUEUE) {
             if (snapshot.origin() != Origin.OUTGOING) continue;
-            if (!(snapshot.packet() instanceof PlayerMoveC2SPacket move) || !move.changesPosition()) continue;
-            result.add(new Vec3d(move.getX(0), move.getY(0), move.getZ(0)));
+            if (!(snapshot.packet() instanceof ServerboundMovePlayerPacket move) || !move.hasPosition()) continue;
+            result.add(new Vec3(move.getX(0), move.getY(0), move.getZ(0)));
         }
         return result;
     }
@@ -101,7 +101,7 @@ public final class BlinkManager {
             PacketSnapshot snapshot = iterator.next();
             Packet<?> packet = snapshot.packet();
 
-            if (packet instanceof PlayerMoveC2SPacket move && move.changesPosition()) {
+            if (packet instanceof ServerboundMovePlayerPacket move && move.hasPosition()) {
                 counter++;
             }
 
@@ -113,13 +113,13 @@ public final class BlinkManager {
     }
 
     public static void cancel() {
-        Vec3d firstPos = positions().isEmpty() ? null : positions().getFirst();
+        Vec3 firstPos = positions().isEmpty() ? null : positions().getFirst();
         if (firstPos != null && RubyClient.client.player != null) {
-            RubyClient.client.player.setPosition(firstPos);
+            RubyClient.client.player.setPos(firstPos);
         }
 
         for (PacketSnapshot snapshot : PACKET_QUEUE) {
-            if (snapshot.packet() instanceof PlayerMoveC2SPacket) continue;
+            if (snapshot.packet() instanceof ServerboundMovePlayerPacket) continue;
             flushSnapshot(snapshot);
         }
         PACKET_QUEUE.clear();
@@ -162,9 +162,8 @@ public final class BlinkManager {
         }
 
         Packet<?> packet = event.packet();
-        if (packet instanceof BundleS2CPacket bundle) {
-            Iterator<Packet<? super net.minecraft.network.listener.ClientPlayPacketListener>> iterator =
-                    bundle.getPackets().iterator();
+        if (packet instanceof ClientboundBundlePacket bundle) {
+            Iterator<Packet<? super ClientGamePacketListener>> iterator = bundle.subPackets().iterator();
             while (iterator.hasNext()) {
                 Packet<?> bundled = iterator.next();
                 if (handleIncoming(bundled, event)) iterator.remove();
@@ -208,45 +207,44 @@ public final class BlinkManager {
 
     private static boolean shouldIgnoreOutgoing(Packet<?> packet) {
         return switch (packet) {
-            case net.minecraft.network.packet.c2s.handshake.HandshakeC2SPacket ignored -> true;
-            case net.minecraft.network.packet.c2s.query.QueryRequestC2SPacket ignored -> true;
-            case net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket ignored -> true;
-            case net.minecraft.network.packet.c2s.play.CommandExecutionC2SPacket ignored -> true;
+            case ClientIntentionPacket ignored -> true;
+            case ServerboundCustomQueryAnswerPacket ignored -> true;
+            case ServerboundChatPacket ignored -> true;
+            case ServerboundChatCommandPacket ignored -> true;
             default -> false;
         };
     }
 
     private static boolean shouldFlushIncoming(Packet<?> packet) {
         return switch (packet) {
-            case PlayerPositionLookS2CPacket ignored -> true;
-            case net.minecraft.network.packet.s2c.common.DisconnectS2CPacket ignored -> true;
-            case net.minecraft.network.packet.s2c.play.GameJoinS2CPacket ignored -> true;
-            case HealthUpdateS2CPacket health when health.getHealth() <= 0 -> true;
+            case ClientboundPlayerPositionPacket ignored -> true;
+            case ClientboundDisconnectPacket ignored -> true;
+            case ClientboundLoginPacket ignored -> true;
+            case ClientboundSetHealthPacket health when health.getHealth() <= 0 -> true;
             default -> false;
         };
     }
 
     private static void flushSnapshot(PacketSnapshot snapshot) {
-        MinecraftClient mc = RubyClient.client;
-        ClientPlayNetworkHandler handler = mc.getNetworkHandler();
+        Minecraft mc = RubyClient.client;
+        ClientPacketListener handler = mc.getConnection();
         if (handler == null) return;
 
         switch (snapshot.origin()) {
             case OUTGOING -> handler.getConnection().send(snapshot.packet());
             case INCOMING -> {
                 @SuppressWarnings("unchecked")
-                Packet<net.minecraft.network.listener.ClientPlayPacketListener> playPacket =
-                        (Packet<net.minecraft.network.listener.ClientPlayPacketListener>) snapshot.packet();
-                playPacket.apply(handler);
+                Packet<ClientPacketListener> playPacket = (Packet<ClientPacketListener>) snapshot.packet();
+                playPacket.handle(handler);
             }
         }
     }
 
     private static boolean isConnected() {
-        MinecraftClient mc = RubyClient.client;
-        ClientPlayNetworkHandler handler = mc.getNetworkHandler();
+        Minecraft mc = RubyClient.client;
+        ClientPacketListener handler = mc.getConnection();
         if (handler == null) return false;
-        ClientConnection connection = handler.getConnection();
-        return connection != null && connection.isOpen();
+        Connection connection = handler.getConnection();
+        return connection.isConnected();
     }
 }

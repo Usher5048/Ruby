@@ -1,8 +1,8 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.phys.Vec3;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -29,16 +29,16 @@ public class FastClimb extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
-        if (!player.isClimbing()) return;
+        if (!player.onClimbable()) return;
 
         // Only boost if the player is trying to go up (holding forward or jump)
-        if (player.horizontalCollision || mc.options.jumpKey.isPressed()) {
-            Vec3d velocity = player.getVelocity();
-            player.setVelocity(velocity.x, climbSpeed.value(), velocity.z);
+        if (player.horizontalCollision || mc.options.keyJump.isDown()) {
+            Vec3 velocity = player.getDeltaMovement();
+            player.setDeltaMovement(velocity.x, climbSpeed.value(), velocity.z);
         }
     }
 }

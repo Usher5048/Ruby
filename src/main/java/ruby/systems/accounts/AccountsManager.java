@@ -22,7 +22,9 @@ public final class AccountsManager implements Iterable<Account> {
         for(Account other : AccountsManager.accounts) {
             if(account.getType() != other.getType()) continue;
             if(!account.getUsername().equals(other.getUsername())) continue;
-            return;
+
+            AccountsManager.accounts.remove(other);
+            break;
         }
 
         AccountsManager.accounts.add(account);
@@ -36,7 +38,7 @@ public final class AccountsManager implements Iterable<Account> {
     }
 
     public static boolean isActive(Account account) {
-        return RubyClient.client.getSession().getUsername().equalsIgnoreCase(account.getUsername());
+        return RubyClient.client.getUser().getName().equalsIgnoreCase(account.getUsername());
     }
 
     public static void markLastUsed(Account account) {
@@ -76,12 +78,12 @@ public final class AccountsManager implements Iterable<Account> {
             return;
         }
 
-        Util.getIoWorkerExecutor().execute(() -> {
+        Util.ioPool().execute(() -> {
             if(!account.prepareAutoLogin()) {
                 RubyClient.LOGGER.warn("Failed to auto-login as {}", account.getName());
                 return;
             }
-            Util.getMainWorkerExecutor().execute(apply);
+            Util.backgroundExecutor().execute(apply);
         });
     }
 

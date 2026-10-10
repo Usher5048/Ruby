@@ -1,13 +1,13 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.mob.AmbientEntity;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.mob.WaterCreatureEntity;
-import net.minecraft.entity.passive.AnimalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Box;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.ambient.AmbientCreature;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.fish.WaterAnimal;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 import ruby.RubyClient;
 import ruby.helpers.render.RenderShapes;
 import ruby.helpers.render.Renderer;
@@ -50,7 +50,7 @@ public class Tracers extends Module {
         super("Tracers", "Displays tracer lines to specified entities.", ModuleType.RENDER);
 
         entities = config.create(new EntityTypeListValue.Builder("Entities")
-                .defaultValue(EntityType.PLAYER).build());
+                .defaultValue(EntityTypes.PLAYER).build());
         ignoreSelf = config.create(new BooleanValue.Builder("Ignore Self").defaultValue(false).build());
         ignoreFriends = config.create(new BooleanValue.Builder("Ignore Friends").defaultValue(false).build());
         showInvis = config.create(new BooleanValue.Builder("Show Invisible").defaultValue(true).build());
@@ -76,19 +76,18 @@ public class Tracers extends Module {
 
     @Override
     public void render3D() {
-        if (RubyClient.client.world == null || RubyClient.client.player == null) return;
-        if (RubyClient.client.options.hudHidden) return;
+        if (RubyClient.client.level == null || RubyClient.client.player == null) return;
 
         count = 0;
-        float tickDelta = RubyClient.client.getRenderTickCounter().getTickProgress(false);
+        float tickDelta = RubyClient.client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
-        for (Entity entity : RubyClient.client.world.getEntities()) {
+        for (Entity entity : RubyClient.client.level.entitiesForRendering()) {
             if (shouldIgnore(entity)) continue;
 
-            Box box = entity.getBoundingBox();
-            double x = entity.getLerpedPos(tickDelta).x;
-            double y = entity.getLerpedPos(tickDelta).y;
-            double z = entity.getLerpedPos(tickDelta).z;
+            AABB box = entity.getBoundingBox();
+            double x = entity.getPosition(tickDelta).x;
+            double y = entity.getPosition(tickDelta).y;
+            double z = entity.getPosition(tickDelta).z;
 
             double height = box.maxY - box.minY;
             if (target.value() == Target.Head) y += height;
@@ -109,37 +108,41 @@ public class Tracers extends Module {
 
     private boolean shouldIgnore(Entity entity) {
         if (entity == null || !entity.isAlive()) return true;
+        if(RubyClient.client.player == null) return true;
+
         Freecam freecam = ruby.systems.modules.Modules.getByClass(Freecam.class);
         if ((freecam == null || !freecam.enabled()) && entity == RubyClient.client.player) return true;
         if (!entities.value().contains(entity.getType())) return true;
         if (ignoreSelf.value() && entity == RubyClient.client.player) return true;
-        if (ignoreFriends.value() && entity instanceof PlayerEntity player && FriendsManager.isFriend(player)) return true;
+        if (ignoreFriends.value() && entity instanceof Player player && FriendsManager.isFriend(player)) return true;
         if (!showInvis.value() && entity.isInvisible()) return true;
 
         double max = maxDistance.value();
-        return max > 0 && RubyClient.client.player.squaredDistanceTo(entity) > max * max;
+        return max > 0 && RubyClient.client.player.distanceToSqr(entity) > max * max;
     }
 
     private int colorFor(Entity entity) {
+        if(RubyClient.client.player == null) return 0;
+
         if (distanceColors.value()) {
-            if (friendOverride.value() && entity instanceof PlayerEntity player && FriendsManager.isFriend(player))
+            if (friendOverride.value() && entity instanceof Player player && FriendsManager.isFriend(player))
                 return friendColor.value();
 
-            double dist = Math.sqrt(RubyClient.client.player.squaredDistanceTo(entity));
+            double dist = Math.sqrt(RubyClient.client.player.distanceToSqr(entity));
             float ratio = (float) Math.min(dist / maxDistance.value(), 1.0);
             int r = (int) (255 * ratio);
             int g = (int) (255 * (1.0 - ratio));
             return 0xFF000000 | (r << 16) | (g << 8) | 0xFF;
         }
 
-        if (entity instanceof PlayerEntity player && FriendsManager.isFriend(player))
+        if (entity instanceof Player player && FriendsManager.isFriend(player))
             return friendColor.value();
 
-        if (entity instanceof PlayerEntity) return playersColor.value();
-        if (entity instanceof AnimalEntity) return animalsColor.value();
-        if (entity instanceof WaterCreatureEntity) return waterColor.value();
-        if (entity instanceof Monster) return monstersColor.value();
-        if (entity instanceof AmbientEntity) return ambientColor.value();
+        if (entity instanceof Player) return playersColor.value();
+        if (entity instanceof Animal) return animalsColor.value();
+        if (entity instanceof WaterAnimal) return waterColor.value();
+        if (entity instanceof Enemy) return monstersColor.value();
+        if (entity instanceof AmbientCreature) return ambientColor.value();
         return miscColor.value();
     }
 }

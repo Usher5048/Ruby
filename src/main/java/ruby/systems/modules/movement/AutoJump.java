@@ -1,7 +1,7 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
@@ -47,23 +47,23 @@ public class AutoJump extends Module {
     public void tick() {
         if (!enabled()) return;
 
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.world == null || mc.currentScreen != null) return;
-        if (player.getVehicle() != null || player.isGliding() || player.isClimbing()) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.level == null || mc.gui.screen() != null) return;
+        if (player.getVehicle() != null || player.isFallFlying() || player.onClimbable()) return;
 
-        if (!player.isOnGround() || player.isSneaking() || mc.options.sneakKey.isPressed()) return;
-        if (mc.options.jumpKey.isPressed()) return;
+        if (!player.onGround() || player.isShiftKeyDown() || mc.options.keyShift.isDown()) return;
+        if (mc.options.keyJump.isDown()) return;
         if (!shouldJump(player)) return;
 
         if (mode.value() == Mode.Jump) {
-            player.jump();
+            player.jumpFromGround();
         } else {
-            player.setVelocity(player.getVelocity().x, velocityHeight.value(), player.getVelocity().z);
+            player.setDeltaMovement(player.getDeltaMovement().x, velocityHeight.value(), player.getDeltaMovement().z);
         }
     }
 
-    private boolean shouldJump(ClientPlayerEntity player) {
+    private boolean shouldJump(LocalPlayer player) {
         boolean moving = isMoving(player);
 
         return switch (jumpWhen.value()) {
@@ -73,12 +73,8 @@ public class AutoJump extends Module {
         };
     }
 
-    private boolean isMoving(ClientPlayerEntity player) {
-        if (player.input == null) {
-            return player.forwardSpeed != 0 || player.sidewaysSpeed != 0;
-        }
-
-        var input = player.input.playerInput;
+    private boolean isMoving(LocalPlayer player) {
+        var input = player.input.keyPresses;
         return input.forward() || input.backward() || input.left() || input.right();
     }
 }

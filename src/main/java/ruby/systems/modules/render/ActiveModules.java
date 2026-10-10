@@ -1,6 +1,5 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.client.MinecraftClient;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.ColorValue;
 import ruby.systems.config.EnumValue;
@@ -17,6 +16,7 @@ import ruby.systems.modules.Modules;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import net.minecraft.client.Minecraft;
 
 public class ActiveModules extends Module {
 
@@ -95,11 +95,11 @@ public class ActiveModules extends Module {
 
     @Override
     public void render2D(Render2DEvent event) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.options.hudHidden) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
 
         HudRenderer renderer = HudRenderer.INSTANCE;
-        double delta = event.getTickCounter().getDynamicDeltaTicks() / 20.0;
+        double delta = event.getTickCounter().getGameTimeDeltaTicks() / 20.0;
 
         this.collectModules();
         if (this.modules.isEmpty()) return;

@@ -1,14 +1,15 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.component.SwingAnimation;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
 import ruby.helpers.Slots;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
@@ -45,10 +46,10 @@ public class AutoPot extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if(player == null || mc.interactionManager == null || mc.world == null) return;
-        if(mc.currentScreen != null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if(player == null || mc.gameMode == null || mc.level == null) return;
+        if(mc.gui.screen() != null) return;
 
         if(this.throwTicks > 0) {
             this.throwTicks--;
@@ -57,59 +58,59 @@ public class AutoPot extends Module {
         }
 
         if(!this.needsHealing(player)) return;
-        if(!player.isOnGround()) return;
+        if(!player.onGround()) return;
 
         int slot = this.findPotionSlot(player);
         if(slot == -1) return;
 
         this.prevSlot = player.getInventory().getSelectedSlot();
         player.getInventory().setSelectedSlot(slot);
-        player.setPitch(88.0f);
+        player.setXRot(88.0f);
 
-        mc.interactionManager.interactItem(player, Hand.MAIN_HAND);
-        player.swingHand(Hand.MAIN_HAND);
+        mc.gameMode.useItem(player, InteractionHand.MAIN_HAND);
+        player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, true);
         this.throwTicks = 4;
     }
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if(mc.player != null) this.restoreSlot(mc.player);
         this.throwTicks = 0;
     }
 
-    private void restoreSlot(ClientPlayerEntity player) {
+    private void restoreSlot(LocalPlayer player) {
         if(this.prevSlot != -1) {
             player.getInventory().setSelectedSlot(this.prevSlot);
             this.prevSlot = -1;
         }
     }
 
-    private boolean needsHealing(ClientPlayerEntity player) {
+    private boolean needsHealing(LocalPlayer player) {
         float health = player.getHealth();
         if(this.considerAbsorption.value()) health += player.getAbsorptionAmount();
         return health <= player.getMaxHealth() * this.healthPercent.value().floatValue() / 100.0f;
     }
 
-    private int findPotionSlot(ClientPlayerEntity player) {
+    private int findPotionSlot(LocalPlayer player) {
         return Slots.findFirst(Slots.HOTBAR, (stack, index) -> this.isUsefulPotion(stack, player));
     }
 
-    private boolean isUsefulPotion(ItemStack stack, ClientPlayerEntity player) {
-        if(stack.isEmpty() || !stack.isOf(Items.SPLASH_POTION)) return false;
+    private boolean isUsefulPotion(ItemStack stack, LocalPlayer player) {
+        if(stack.isEmpty() || !stack.is(Items.SPLASH_POTION)) return false;
 
-        PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
+        PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
         if(contents == null) return false;
 
         float health = player.getHealth();
-        for(StatusEffectInstance effect : contents.getEffects()) {
+        for(MobEffectInstance effect : contents.getAllEffects()) {
             if(this.instantHealthOnly.value()) {
-                if(effect.getEffectType().value() == StatusEffects.INSTANT_HEALTH) return true;
+                if(effect.getEffect().value() == MobEffects.INSTANT_HEALTH.value()) return true;
                 continue;
             }
-            if(effect.getEffectType().value() == StatusEffects.INSTANT_HEALTH && health < player.getMaxHealth())
+            if(effect.getEffect().value() == MobEffects.INSTANT_HEALTH.value() && health < player.getMaxHealth())
                 return true;
-            if(effect.getEffectType().value() == StatusEffects.REGENERATION && !player.hasStatusEffect(StatusEffects.REGENERATION))
+            if(effect.getEffect().value() == MobEffects.REGENERATION.value() && !player.hasEffect(MobEffects.REGENERATION))
                 return true;
         }
         return false;

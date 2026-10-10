@@ -150,7 +150,7 @@ public final class ThemeManager {
     }
 
     private File themeFile() {
-        return new File(RubyClient.client.runDirectory, "config/ruby/theme.json");
+        return new File(RubyClient.client.gameDirectory, "config/ruby/theme.json");
     }
 
     public void setColor(ThemeColor color, int value) {

@@ -19,16 +19,16 @@ public class Zoom extends Module {
 
     @Override
     public void onEnable() {
-        this.originalFov = RubyClient.client.options.getFov().getValue();
+        this.originalFov = RubyClient.client.options.fov().get();
     }
 
     @Override
     public void tick() {
-        RubyClient.client.options.getFov().setValue(this.zoomedFOV.value());
+        RubyClient.client.options.fov().set(this.zoomedFOV.value());
     }
 
     @Override
     public void onDisable() {
-        RubyClient.client.options.getFov().setValue(this.originalFov);
+        RubyClient.client.options.fov().set(this.originalFov);
     }
 }

@@ -1,9 +1,10 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.client.option.Perspective;
-import net.minecraft.util.math.MathHelper;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.CameraType;
+import net.minecraft.util.Mth;
 import ruby.RubyClient;
+import ruby.helpers.input.InputUtils;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
@@ -26,7 +27,7 @@ public class FreeLook extends Module {
     public float cameraYaw;
     public float cameraPitch;
 
-    private Perspective prePers;
+    private CameraType prePers;
 
     public FreeLook() {
         super("FreeLook", "Allows more rotation options in third person.", ModuleType.RENDER);
@@ -50,19 +51,19 @@ public class FreeLook extends Module {
     @Override
     public void onEnable() {
         if (RubyClient.client.player == null) return;
-        cameraYaw = RubyClient.client.player.getYaw();
-        cameraPitch = RubyClient.client.player.getPitch();
-        prePers = RubyClient.client.options.getPerspective();
-        if (prePers != Perspective.THIRD_PERSON_BACK && togglePerspective.value()) {
-            RubyClient.client.options.setPerspective(Perspective.THIRD_PERSON_BACK);
+        cameraYaw = RubyClient.client.player.getYRot();
+        cameraPitch = RubyClient.client.player.getXRot();
+        prePers = RubyClient.client.options.getCameraType();
+        if (prePers != CameraType.THIRD_PERSON_BACK && togglePerspective.value()) {
+            RubyClient.client.options.setCameraType(CameraType.THIRD_PERSON_BACK);
         }
     }
 
     @Override
     public void onDisable() {
         if (prePers != null && togglePerspective.value()
-                && RubyClient.client.options.getPerspective() != prePers) {
-            RubyClient.client.options.setPerspective(prePers);
+                && RubyClient.client.options.getCameraType() != prePers) {
+            RubyClient.client.options.setCameraType(prePers);
         }
     }
 
@@ -73,29 +74,29 @@ public class FreeLook extends Module {
         if (arrows.value()) {
             for (int i = 0; i < arrowSpeed.value() * 2; i++) {
                 if (mode.value() == Mode.Player) {
-                    if (isKey(GLFW.GLFW_KEY_LEFT)) cameraYaw -= 0.5f;
-                    if (isKey(GLFW.GLFW_KEY_RIGHT)) cameraYaw += 0.5f;
-                    if (isKey(GLFW.GLFW_KEY_UP)) cameraPitch -= 0.5f;
-                    if (isKey(GLFW.GLFW_KEY_DOWN)) cameraPitch += 0.5f;
+                    if (isKey(InputConstants.KEY_LEFT)) cameraYaw -= 0.5f;
+                    if (isKey(InputConstants.KEY_RIGHT)) cameraYaw += 0.5f;
+                    if (isKey(InputConstants.KEY_UP)) cameraPitch -= 0.5f;
+                    if (isKey(InputConstants.KEY_DOWN)) cameraPitch += 0.5f;
                 } else {
-                    float yaw = RubyClient.client.player.getYaw();
-                    float pitch = RubyClient.client.player.getPitch();
-                    if (isKey(GLFW.GLFW_KEY_LEFT)) yaw -= 0.5f;
-                    if (isKey(GLFW.GLFW_KEY_RIGHT)) yaw += 0.5f;
-                    if (isKey(GLFW.GLFW_KEY_UP)) pitch -= 0.5f;
-                    if (isKey(GLFW.GLFW_KEY_DOWN)) pitch += 0.5f;
-                    RubyClient.client.player.setYaw(yaw);
-                    RubyClient.client.player.setPitch(MathHelper.clamp(pitch, -90, 90));
+                    float yaw = RubyClient.client.player.getYRot();
+                    float pitch = RubyClient.client.player.getXRot();
+                    if (isKey(InputConstants.KEY_LEFT)) yaw -= 0.5f;
+                    if (isKey(InputConstants.KEY_RIGHT)) yaw += 0.5f;
+                    if (isKey(InputConstants.KEY_UP)) pitch -= 0.5f;
+                    if (isKey(InputConstants.KEY_DOWN)) pitch += 0.5f;
+                    RubyClient.client.player.setYRot(yaw);
+                    RubyClient.client.player.setXRot(Mth.clamp(pitch, -90, 90));
                 }
             }
         }
 
-        cameraPitch = MathHelper.clamp(cameraPitch, -90, 90);
-        RubyClient.client.player.setPitch(MathHelper.clamp(RubyClient.client.player.getPitch(), -90, 90));
+        cameraPitch = Mth.clamp(cameraPitch, -90, 90);
+        RubyClient.client.player.setXRot(Mth.clamp(RubyClient.client.player.getXRot(), -90, 90));
     }
 
     public boolean playerMode() {
-        return enabled() && RubyClient.client.options.getPerspective() == Perspective.THIRD_PERSON_BACK
+        return enabled() && RubyClient.client.options.getCameraType() == CameraType.THIRD_PERSON_BACK
                 && mode.value() == Mode.Player;
     }
 
@@ -105,10 +106,10 @@ public class FreeLook extends Module {
 
     public void changeLookDirection(double deltaX, double deltaY) {
         cameraYaw += (float) (deltaX / sensitivity.value());
-        cameraPitch = MathHelper.clamp(cameraPitch + (float) (deltaY / sensitivity.value()), -90, 90);
+        cameraPitch = Mth.clamp(cameraPitch + (float) (deltaY / sensitivity.value()), -90, 90);
     }
 
     private static boolean isKey(int key) {
-        return GLFW.glfwGetKey(RubyClient.client.getWindow().getHandle(), key) == GLFW.GLFW_PRESS;
+        return InputUtils.isKeyPressed(key);
     }
 }

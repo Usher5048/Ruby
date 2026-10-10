@@ -78,7 +78,7 @@ public abstract class ListValue<T> extends Value<List<T>> {
         this.setValueSilent(next);
     }
 
-    protected static abstract class Builder<T, B extends Builder<T, B>> extends Value.Builder<List<T>, B> {
+    protected static abstract class Builder<T, B extends ruby.systems.config.ListValue.Builder<T, B>> extends Value.Builder<List<T>, B> {
         public Builder(String name) {
             super(name);
         }

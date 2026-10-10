@@ -63,7 +63,7 @@ public class IntegerValue extends Value<Integer> {
                 stream.read());
     }
 
-    public static class Builder extends Value.Builder<Integer, Builder> {
+    public static class Builder extends Value.Builder<Integer, ruby.systems.config.IntegerValue.Builder> {
         public Builder(String name) {
             super(name);
         }
@@ -71,24 +71,24 @@ public class IntegerValue extends Value<Integer> {
         private int min = Integer.MIN_VALUE;
         private int max = Integer.MAX_VALUE;
 
-        public Builder min(int min) {
+        public ruby.systems.config.IntegerValue.Builder min(int min) {
             this.min = min;
             return this;
         }
 
-        public Builder max(int max) {
+        public ruby.systems.config.IntegerValue.Builder max(int max) {
             this.max = max;
             return this;
         }
 
-        public Builder range(int min, int max) {
+        public ruby.systems.config.IntegerValue.Builder range(int min, int max) {
             this.min = min;
             this.max = max;
             return this;
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.IntegerValue.Builder self() {
             return this;
         }
 

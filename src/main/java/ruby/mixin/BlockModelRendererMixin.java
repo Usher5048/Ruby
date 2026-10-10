@@ -1,55 +1,56 @@
 package ruby.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.block.BlockModelRenderer;
-import net.minecraft.client.render.model.BlockModelPart;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.BlockRenderView;
+import com.mojang.blaze3d.vertex.QuadInstance;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 import ruby.systems.modules.Modules;
 import ruby.systems.modules.render.Xray;
 
 import java.util.List;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.BlockQuadOutput;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.state.BlockState;
 
-@Mixin(BlockModelRenderer.class)
+@Mixin(ModelBlockRenderer.class)
 public abstract class BlockModelRendererMixin {
+    @Shadow @Final private QuadInstance quadInstance;
+
     @Unique
     private final ThreadLocal<Integer> ruby$xrayAlpha = new ThreadLocal<>();
 
-    @ModifyReturnValue(method = "shouldDrawFace", at = @At("RETURN"))
-    private static boolean ruby$modifyDrawFace(
+    @ModifyReturnValue(method = "shouldRenderFace", at = @At("RETURN"))
+    private boolean ruby$modifyDrawFace(
             boolean original,
-            BlockRenderView world,
+            BlockAndTintGetter world,
             BlockState state,
-            boolean solid,
             Direction direction,
             BlockPos pos
     ) {
         Xray xray = Modules.getByClass(Xray.class);
         if (xray == null || !xray.enabled()) return original;
-        return xray.modifyDrawSide(state, world, pos.offset(direction.getOpposite()), direction, original);
+        return xray.modifyDrawSide(state, world, pos.relative(direction.getOpposite()), direction, original);
     }
 
-    @Inject(method = {"renderSmooth", "renderFlat"}, at = @At("HEAD"), cancellable = true)
+    @Inject(method = {"tesselateAmbientOcclusion", "tesselateFlat"}, at = @At("HEAD"), cancellable = true)
     private void ruby$xrayHead(
-            BlockRenderView world,
-            List<BlockModelPart> parts,
+            BlockQuadOutput output,
+            float x,
+            float y,
+            float z,
+            List<BlockStateModelPart> parts,
+            BlockAndTintGetter world,
             BlockState state,
             BlockPos pos,
-            MatrixStack matrices,
-            VertexConsumer vertexConsumer,
-            boolean cull,
-            int overlay,
             CallbackInfo ci
     ) {
         int alpha = Xray.getAlpha(state, pos);
@@ -60,20 +61,22 @@ public abstract class BlockModelRendererMixin {
         ruby$xrayAlpha.set(alpha);
     }
 
-    @Inject(method = {"renderSmooth", "renderFlat"}, at = @At("RETURN"))
+    @Inject(method = {"tesselateAmbientOcclusion", "tesselateFlat"}, at = @At("RETURN"))
     private void ruby$xrayTail(CallbackInfo ci) {
         ruby$xrayAlpha.remove();
     }
 
-    @ModifyArgs(
-            method = "renderQuad",
+    @Inject(
+            method = "putQuadWithTint",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/render/VertexConsumer;quad(Lnet/minecraft/client/util/math/MatrixStack$Entry;Lnet/minecraft/client/render/model/BakedQuad;[FFFFF[II)V"
+                    target = "Lcom/mojang/blaze3d/vertex/QuadInstance;multiplyColor(I)V",
+                    shift = At.Shift.AFTER
             )
     )
-    private void ruby$modifyAlpha(Args args) {
+    private void ruby$modifyAlpha(CallbackInfo ci) {
         Integer alpha = ruby$xrayAlpha.get();
-        args.set(6, alpha == null || alpha == -1 ? args.get(6) : alpha / 255f);
+        if (alpha == null || alpha == -1) return;
+        this.quadInstance.multiplyColor((alpha << 24) | 0x00FFFFFF);
     }
 }

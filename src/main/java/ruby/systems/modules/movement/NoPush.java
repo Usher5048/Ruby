@@ -1,12 +1,10 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.systems.config.StringListValue;
-import ruby.systems.modules.Module;
-import ruby.systems.modules.ModuleType;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
@@ -53,14 +51,14 @@ public class NoPush extends Module {
     public void tick() {
         if (!enabled() || !isSelected(PushBy.Sinking)) return;
 
-        MinecraftClient mc = RubyClient.client;
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = RubyClient.client;
+        LocalPlayer player = mc.player;
         if (player == null) return;
-        if (mc.options.jumpKey.isPressed() || mc.options.sneakKey.isPressed()) return;
+        if (mc.options.keyJump.isDown() || mc.options.keyShift.isDown()) return;
 
-        if ((player.isTouchingWater() || player.isInLava()) && player.getVelocity().y < 0) {
-            Vec3d velocity = player.getVelocity();
-            player.setVelocity(velocity.x, 0, velocity.z);
+        if ((player.isInWater() || player.isInLava()) && player.getDeltaMovement().y < 0) {
+            Vec3 velocity = player.getDeltaMovement();
+            player.setDeltaMovement(velocity.x, 0, velocity.z);
         }
     }
 }

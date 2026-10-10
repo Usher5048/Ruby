@@ -1,7 +1,7 @@
 package ruby.mixin;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -14,7 +14,7 @@ import ruby.systems.modules.Modules;
 import ruby.systems.modules.combat.KillAura;
 import ruby.systems.modules.render.Freecam;
 
-@Mixin(MinecraftClient.class)
+@Mixin(Minecraft.class)
 public class MinecraftClientMixin {
     @Inject(at = @At("HEAD"), method = "tick", cancellable = true)
     private void tickBegin(CallbackInfo info) {
@@ -28,22 +28,22 @@ public class MinecraftClientMixin {
             info.cancel();
     }
 
-    @Inject(method = "handleBlockBreaking", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
     private void ruby$noBreakingWhileAiming(boolean breaking, CallbackInfo ci) {
         KillAura killAura = Modules.getByClass(KillAura.class);
         if(breaking && killAura != null && killAura.enabled() && RotationManager.hasRotation())
             ci.cancel();
     }
 
-    @Inject(method = "setScreen", at = @At("HEAD"))
+    @Inject(method = "setScreenAndShow", at = @At("HEAD"))
     private void ruby$freecamScreen(Screen screen, CallbackInfo ci) {
         Freecam freecam = Modules.getByClass(Freecam.class);
         if (freecam != null && freecam.enabled()) freecam.onScreenOpen();
     }
 
-    @Inject(method = "doItemUse", at = @At("TAIL"))
+    @Inject(method = "startUseItem", at = @At("TAIL"))
     private void ruby$useCooldownEvent(CallbackInfo ci) {
-        MinecraftClient client = (MinecraftClient) (Object) this;
+        Minecraft client = (Minecraft) (Object) this;
         UseCooldownEvent event = new UseCooldownEvent(((MinecraftClientAccessor) client).ruby$getItemUseCooldown());
         Events.USE_COOLDOWN.fire(event);
         ((MinecraftClientAccessor) client).ruby$setItemUseCooldown(event.cooldown());

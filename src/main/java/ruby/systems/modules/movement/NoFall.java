@@ -1,8 +1,8 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -35,14 +35,14 @@ public class NoFall extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.getNetworkHandler() == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.getConnection() == null) return;
 
         if (mode.value() == Mode.Packet) {
             // Meteor's packet mode: spoof onGround when falling far enough to take damage
             if (player.fallDistance > 2.0f) {
-                mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(true, false));
+                mc.getConnection().send(new ServerboundMovePlayerPacket.StatusOnly(true, false));
             }
         }
     }

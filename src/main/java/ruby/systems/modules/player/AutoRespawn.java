@@ -1,7 +1,7 @@
 package ruby.systems.modules.player;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.DeathScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.DeathScreen;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -30,14 +30,14 @@ public class AutoRespawn extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        if (mc.currentScreen instanceof DeathScreen) {
+        if (mc.gui.screen() instanceof DeathScreen) {
             deathTimer++;
             if (deathTimer > delay.value()) {
-                mc.player.requestRespawn();
-                mc.setScreen(null);
+                mc.player.respawn();
+                mc.setScreenAndShow(null);
                 deathTimer = 0;
             }
         } else {

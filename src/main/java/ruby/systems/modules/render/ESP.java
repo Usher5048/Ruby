@@ -1,14 +1,14 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.mob.AmbientEntity;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.mob.WaterCreatureEntity;
-import net.minecraft.entity.passive.AnimalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.ambient.AmbientCreature;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.fish.WaterAnimal;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.helpers.render.NametagUtils;
 import ruby.helpers.render.Renderer;
@@ -69,7 +69,7 @@ public class ESP extends Module {
                 .visible(() -> mode.value() == Mode.Box || twoDStyle.value() == TwoDStyle.Full)
                 .build());
         entities = config.create(new EntityTypeListValue.Builder("Entities")
-                .defaultValue(EntityType.PLAYER).build());
+                .defaultValue(EntityTypes.PLAYER).build());
         ignoreSelf = config.create(new BooleanValue.Builder("Ignore Self").defaultValue(true).build());
         fillOpacity = config.create(new DoubleValue.Builder("Fill Opacity")
                 .range(0, 1, 0.05).defaultValue(0.25)
@@ -105,16 +105,16 @@ public class ESP extends Module {
 
     @Override
     public void render3D() {
-        if (mode.value() != Mode.Box || RubyClient.client.world == null || RubyClient.client.player == null) return;
+        if (mode.value() != Mode.Box || RubyClient.client.level == null || RubyClient.client.player == null) return;
 
         count = 0;
-        float tickDelta = RubyClient.client.gameRenderer.getCamera().getLastTickProgress();
+        float tickDelta = RubyClient.client.gameRenderer.mainCamera().getCameraEntityPartialTicks(RubyClient.client.getDeltaTracker());
         ShapeMode shape = shapeMode.value();
 
-        for (Entity entity : RubyClient.client.world.getEntities()) {
+        for (Entity entity : RubyClient.client.level.entitiesForRendering()) {
             if (!shouldRender(entity)) continue;
 
-            Box box = lerpBox(entity, tickDelta);
+            AABB box = lerpBox(entity, tickDelta);
             int lineColor = colorFor(entity);
             int sideColor = withAlpha(lineColor, fillOpacity.value().floatValue());
 
@@ -134,17 +134,17 @@ public class ESP extends Module {
 
     @Override
     public void render2D(Render2DEvent event) {
-        if (mode.value() != Mode.TwoD || RubyClient.client.world == null || RubyClient.client.player == null) return;
+        if (mode.value() != Mode.TwoD || RubyClient.client.level == null || RubyClient.client.player == null) return;
 
         HudRenderer hud = HudRenderer.INSTANCE;
         hud.begin(event.getContext());
 
         count = 0;
-        float tickDelta = RubyClient.client.gameRenderer.getCamera().getLastTickProgress();
+        float tickDelta = RubyClient.client.gameRenderer.mainCamera().getCameraEntityPartialTicks(RubyClient.client.getDeltaTracker());
         boolean corners = twoDStyle.value() == TwoDStyle.Corners;
         ShapeMode shape = shapeMode.value();
 
-        for (Entity entity : RubyClient.client.world.getEntities()) {
+        for (Entity entity : RubyClient.client.level.entitiesForRendering()) {
             if (!shouldRender(entity)) continue;
 
             NametagUtils.ScreenBounds bounds = NametagUtils.projectBounds(lerpBox(entity, tickDelta));
@@ -165,15 +165,15 @@ public class ESP extends Module {
         }
     }
 
-    private static void drawBox(Box box) {
-        Vec3d center = box.getCenter();
-        Vec3d size = new Vec3d(box.getLengthX(), box.getLengthY(), box.getLengthZ());
+    private static void drawBox(AABB box) {
+        Vec3 center = box.getCenter();
+        Vec3 size = new Vec3(box.getXsize(), box.getYsize(), box.getZsize());
         Renderer.cuboid(center, size);
     }
 
-    private static Box lerpBox(Entity entity, float tickDelta) {
-        Vec3d l = entity.getLerpedPos(tickDelta);
-        return entity.getBoundingBox().offset(l.x - entity.getX(), l.y - entity.getY(), l.z - entity.getZ());
+    private static AABB lerpBox(Entity entity, float tickDelta) {
+        Vec3 l = entity.getPosition(tickDelta);
+        return entity.getBoundingBox().move(l.x - entity.getX(), l.y - entity.getY(), l.z - entity.getZ());
     }
 
     private boolean shouldRender(Entity entity) {
@@ -182,7 +182,7 @@ public class ESP extends Module {
         if (!entities.value().contains(entity.getType())) return false;
 
         double maxDist = maxDistance.value();
-        if (maxDist > 0 && RubyClient.client.player.squaredDistanceTo(entity) > maxDist * maxDist) return false;
+        if (maxDist > 0 && RubyClient.client.player.distanceToSqr(entity) > maxDist * maxDist) return false;
         return fadeAlpha(entity) > 0f;
     }
 
@@ -192,24 +192,24 @@ public class ESP extends Module {
 
     private int baseColor(Entity entity) {
         if (distanceColors.value()) {
-            if(friendOverride.value() && entity instanceof PlayerEntity player && FriendsManager.isFriend(player))
+            if(friendOverride.value() && entity instanceof Player player && FriendsManager.isFriend(player))
                 return friendColor.value();
 
-            double dist = Math.sqrt(RubyClient.client.player.squaredDistanceTo(entity));
+            double dist = Math.sqrt(RubyClient.client.player.distanceToSqr(entity));
             float ratio = (float) Math.min(dist / maxDistance.value(), 1.0);
             int r = (int) (255 * ratio);
             int g = (int) (255 * (1.0 - ratio));
             return 0xFF000000 | (r << 16) | (g << 8) | 0xFF;
         }
 
-        if(entity instanceof PlayerEntity player && FriendsManager.isFriend(player))
+        if(entity instanceof Player player && FriendsManager.isFriend(player))
             return friendColor.value();
 
-        if (entity instanceof PlayerEntity) return playersColor.value();
-        if (entity instanceof AnimalEntity) return animalsColor.value();
-        if (entity instanceof WaterCreatureEntity) return waterColor.value();
-        if (entity instanceof Monster) return monstersColor.value();
-        if (entity instanceof AmbientEntity) return ambientColor.value();
+        if (entity instanceof Player) return playersColor.value();
+        if (entity instanceof Animal) return animalsColor.value();
+        if (entity instanceof WaterAnimal) return waterColor.value();
+        if (entity instanceof Enemy) return monstersColor.value();
+        if (entity instanceof AmbientCreature) return ambientColor.value();
         return miscColor.value();
     }
 
@@ -217,7 +217,7 @@ public class ESP extends Module {
         double fade = fadeDistance.value();
         if (fade <= 0) return 1f;
 
-        double dist = Math.sqrt(RubyClient.client.player.squaredDistanceTo(entity));
+        double dist = Math.sqrt(RubyClient.client.player.distanceToSqr(entity));
         if (dist <= fade) return 1f;
 
         double range = Math.max(maxDistance.value() - fade, 1.0);
@@ -226,7 +226,7 @@ public class ESP extends Module {
 
     private static int withAlpha(int color, float alpha) {
         int a = (color >>> 24) & 0xFF;
-        int scaled = Math.round(a * Math.max(0f, Math.min(1f, alpha)));
+        int scaled = Math.round(a * Math.clamp(alpha, 0f, 1f));
         return (scaled << 24) | (color & 0x00FFFFFF);
     }
 }

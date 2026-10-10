@@ -1,15 +1,16 @@
 package ruby.systems.modules.world;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.component.SwingAnimation;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -41,45 +42,45 @@ public class Scaffold extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.world == null || mc.interactionManager == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.level == null || mc.gameMode == null) return;
 
         // Check if holding a block
-        ItemStack mainHand = player.getMainHandStack();
+        ItemStack mainHand = player.getMainHandItem();
         if (!(mainHand.getItem() instanceof BlockItem)) return;
 
         // Check if moving (if setting is enabled)
-        if (onlyOnMove.value() && player.forwardSpeed == 0 && player.sidewaysSpeed == 0
-                && !mc.options.jumpKey.isPressed()) return;
+        if (onlyOnMove.value() && player.zza == 0 && player.xxa == 0
+                && !mc.options.keyJump.isDown()) return;
 
-        BlockPos below = player.getBlockPos().down();
+        BlockPos below = player.blockPosition().below();
 
         // Check if there's air below
-        BlockState belowState = mc.world.getBlockState(below);
-        if (!belowState.isReplaceable()) return;
+        BlockState belowState = mc.level.getBlockState(below);
+        if (!belowState.canBeReplaced()) return;
 
         // Find a face to place against
         Direction placeDir = findPlaceFace(mc, below);
         if (placeDir == null) return;
 
-        BlockPos neighbor = below.offset(placeDir);
+        BlockPos neighbor = below.relative(placeDir);
         BlockHitResult hitResult = new BlockHitResult(
-                Vec3d.ofCenter(neighbor),
+                Vec3.atCenterOf(neighbor),
                 placeDir.getOpposite(),
                 neighbor,
                 false
         );
 
-        mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hitResult);
-        player.swingHand(Hand.MAIN_HAND);
+        mc.gameMode.useItemOn(player, InteractionHand.MAIN_HAND, hitResult);
+        player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, true);
     }
 
-    private Direction findPlaceFace(MinecraftClient mc, BlockPos pos) {
+    private Direction findPlaceFace(Minecraft mc, BlockPos pos) {
         for (Direction dir : Direction.values()) {
-            BlockPos neighbor = pos.offset(dir);
-            BlockState state = mc.world.getBlockState(neighbor);
-            if (!state.isReplaceable() && !state.isAir()) {
+            BlockPos neighbor = pos.relative(dir);
+            BlockState state = mc.level.getBlockState(neighbor);
+            if (!state.canBeReplaced() && !state.isAir()) {
                 return dir;
             }
         }

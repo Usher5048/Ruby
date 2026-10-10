@@ -1,9 +1,5 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.block.Block;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.chunk.WorldChunk;
 import ruby.RubyClient;
 import ruby.helpers.render.RenderShapes;
 import ruby.systems.config.BlockListValue;
@@ -18,6 +14,10 @@ import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
  * Block ESP with Meteor-style merged group outlines.
@@ -73,7 +73,7 @@ public class BlockESP extends Module {
 
     @Override
     public void tick() {
-        if (RubyClient.client.world == null || RubyClient.client.player == null) return;
+        if (RubyClient.client.level == null || RubyClient.client.player == null) return;
 
         found.removeIf(pos -> !matches(pos));
 
@@ -81,25 +81,27 @@ public class BlockESP extends Module {
         scanTimer = 8;
 
         found.clear();
-        int radius = Math.min(4, RubyClient.client.options.getViewDistance().getValue());
-        ChunkPos center = RubyClient.client.player.getChunkPos();
-        int minY = Math.max(RubyClient.client.world.getBottomY(), (int) RubyClient.client.player.getY() - 48);
-        int maxY = Math.min(RubyClient.client.world.getTopYInclusive(), (int) RubyClient.client.player.getY() + 48);
+        int radius = Math.min(4, RubyClient.client.options.renderDistance().get());
+        ChunkPos center = RubyClient.client.player.chunkPosition();
+        int minY = Math.max(RubyClient.client.level.dimensionType().minY(), (int) RubyClient.client.player.getY() - 48);
+        int maxY = Math.min(
+                RubyClient.client.level.dimensionType().minY() + RubyClient.client.level.dimensionType().height() - 1,
+                (int) RubyClient.client.player.getY() + 48
+        );
 
-        for (int cx = center.x - radius; cx <= center.x + radius; cx++) {
-            for (int cz = center.z - radius; cz <= center.z + radius; cz++) {
-                WorldChunk chunk = RubyClient.client.world.getChunkManager().getWorldChunk(cx, cz);
-                if (chunk == null) continue;
+        for (int cx = center.x() - radius; cx <= center.x() + radius; cx++) {
+            for (int cz = center.z() - radius; cz <= center.z() + radius; cz++) {
+                LevelChunk chunk = RubyClient.client.level.getChunk(cx, cz);
 
                 ChunkPos cp = chunk.getPos();
-                int startX = cp.getStartX();
-                int startZ = cp.getStartZ();
+                int startX = cp.getMinBlockX();
+                int startZ = cp.getMinBlockZ();
 
                 for (int x = 0; x < 16; x++) {
                     for (int z = 0; z < 16; z++) {
                         for (int y = minY; y <= maxY; y++) {
                             BlockPos pos = new BlockPos(startX + x, y, startZ + z);
-                            if (matches(pos)) found.add(pos.toImmutable());
+                            if (matches(pos)) found.add(pos.immutable());
                         }
                     }
                 }
@@ -120,7 +122,7 @@ public class BlockESP extends Module {
         Set<BlockPos> remaining = new HashSet<>(found);
         while (!remaining.isEmpty()) {
             BlockPos start = remaining.iterator().next();
-            Block block = RubyClient.client.world.getBlockState(start).getBlock();
+            Block block = RubyClient.client.level.getBlockState(start).getBlock();
             Set<BlockPos> group = floodFill(start, block, remaining);
 
             RenderShapes.mergedGroup(group, side, line, shapeMode.value());
@@ -141,7 +143,7 @@ public class BlockESP extends Module {
     }
 
     private boolean matches(BlockPos pos) {
-        return blocks.value().contains(RubyClient.client.world.getBlockState(pos).getBlock());
+        return blocks.value().contains(RubyClient.client.level.getBlockState(pos).getBlock());
     }
 
     private Set<BlockPos> floodFill(BlockPos start, Block block, Set<BlockPos> remaining) {
@@ -155,9 +157,9 @@ public class BlockESP extends Module {
             group.add(pos);
 
             for (BlockPos offset : NEIGHBORS) {
-                BlockPos neighbor = pos.add(offset);
+                BlockPos neighbor = pos.offset(offset);
                 if (!remaining.contains(neighbor)) continue;
-                if (RubyClient.client.world.getBlockState(neighbor).getBlock() != block) continue;
+                if (RubyClient.client.level.getBlockState(neighbor).getBlock() != block) continue;
 
                 remaining.remove(neighbor);
                 queue.add(neighbor);

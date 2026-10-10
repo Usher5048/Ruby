@@ -1,8 +1,8 @@
 package ruby.systems.config;
 
-import net.minecraft.entity.EntityType;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EntityType;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -22,15 +22,15 @@ public class EntityTypeListValue extends ListValue<EntityType<?>> {
 
     @Override
     protected String toStringElement(EntityType<?> value) {
-        return value.getName().getString();
+        return value.getDescription().getString();
     }
 
     @Override
     protected EntityType<?> fromStringElement(String str) {
         if(str == null) return null;
 
-        for(EntityType<?> type : Registries.ENTITY_TYPE) {
-            if(!str.equals(type.getName().getString())) continue;
+        for(EntityType<?> type : BuiltInRegistries.ENTITY_TYPE) {
+            if(!str.equals(type.getDescription().getString())) continue;
             return type;
         }
 
@@ -39,7 +39,7 @@ public class EntityTypeListValue extends ListValue<EntityType<?>> {
 
     @Override
     protected int serializeElement(ByteArrayOutputStream stream, EntityType<?> value) {
-        String typeID = Registries.ENTITY_TYPE.getId(value).toString();
+        String typeID = BuiltInRegistries.ENTITY_TYPE.getKey(value).toString();
 
         byte[] bytes = typeID.getBytes();
         short len = (short) bytes.length;
@@ -59,16 +59,16 @@ public class EntityTypeListValue extends ListValue<EntityType<?>> {
         stream.readNBytes(bytes, 0, length);
         String typeID = new String(bytes);
 
-        return Registries.ENTITY_TYPE.get(Identifier.tryParse(typeID));
+        return BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.tryParse(typeID));
     }
 
-    public static class Builder extends ListValue.Builder<EntityType<?>, Builder> {
+    public static class Builder extends ListValue.Builder<EntityType<?>, ruby.systems.config.EntityTypeListValue.Builder> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.EntityTypeListValue.Builder self() {
             return this;
         }
 

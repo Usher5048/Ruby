@@ -1,11 +1,11 @@
 package ruby.systems.modules.player;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.FoodComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.ItemStack;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.modules.Module;
@@ -42,12 +42,12 @@ public class AutoEat extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.interactionManager == null) return;
-        if (mc.currentScreen != null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.gameMode == null) return;
+        if (mc.gui.screen() != null) return;
 
-        int hunger = player.getHungerManager().getFoodLevel();
+        int hunger = player.getFoodData().getFoodLevel();
 
         // If currently eating, keep holding use key
         if (eating) {
@@ -67,9 +67,9 @@ public class AutoEat extends Module {
 
         // Check offhand first
         if (offhand.value()) {
-            ItemStack offhandStack = player.getOffHandStack();
+            ItemStack offhandStack = player.getOffhandItem();
             if (isFood(offhandStack)) {
-                mc.interactionManager.interactItem(player, Hand.OFF_HAND);
+                mc.gameMode.useItem(player, InteractionHand.OFF_HAND);
                 eating = true;
                 return;
             }
@@ -80,10 +80,10 @@ public class AutoEat extends Module {
         int bestNutrition = 0;
 
         for (int i = 0; i < 9; i++) {
-            ItemStack stack = player.getInventory().getStack(i);
+            ItemStack stack = player.getInventory().getItem(i);
             if (!isFood(stack)) continue;
 
-            FoodComponent food = stack.get(DataComponentTypes.FOOD);
+            FoodProperties food = stack.get(DataComponents.FOOD);
             if (food != null && food.nutrition() > bestNutrition) {
                 bestNutrition = food.nutrition();
                 bestSlot = i;
@@ -93,19 +93,19 @@ public class AutoEat extends Module {
         if (bestSlot != -1) {
             prevSlot = player.getInventory().getSelectedSlot();
             player.getInventory().setSelectedSlot(bestSlot);
-            mc.interactionManager.interactItem(player, Hand.MAIN_HAND);
+            mc.gameMode.useItem(player, InteractionHand.MAIN_HAND);
             eating = true;
         }
     }
 
     private boolean isFood(ItemStack stack) {
         if (stack.isEmpty()) return false;
-        return stack.get(DataComponentTypes.FOOD) != null;
+        return stack.get(DataComponents.FOOD) != null;
     }
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && eating && prevSlot != -1) {
             mc.player.getInventory().setSelectedSlot(prevSlot);
         }

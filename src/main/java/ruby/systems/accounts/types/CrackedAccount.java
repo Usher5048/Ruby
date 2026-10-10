@@ -1,12 +1,12 @@
 package ruby.systems.accounts.types;
 
-import net.minecraft.client.session.Session;
 import ruby.systems.accounts.Account;
 import ruby.systems.accounts.AccountType;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.client.User;
 
 public class CrackedAccount extends Account {
     public CrackedAccount(String name) {
@@ -31,7 +31,7 @@ public class CrackedAccount extends Account {
 
         UUID uuid = UUID.nameUUIDFromBytes(
                 ("OfflinePlayer:" + this.name).getBytes(StandardCharsets.UTF_8));
-        Account.setSession(new Session(this.name, uuid, "", Optional.empty(), Optional.empty()));
+        Account.setSession(new User(this.name, uuid, "", Optional.empty(), Optional.empty()));
         return true;
     }
 }

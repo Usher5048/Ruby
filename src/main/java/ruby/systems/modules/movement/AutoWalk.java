@@ -1,7 +1,7 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -28,25 +28,25 @@ public class AutoWalk extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
-        if (mc.currentScreen != null) return;
+        if (mc.gui.screen() != null) return;
 
-        mc.options.forwardKey.setPressed(true);
+        mc.options.keyUp.setDown(true);
         if (autoSprint.value()) {
-            mc.options.sprintKey.setPressed(true);
+            mc.options.keySprint.setDown(true);
         }
     }
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        mc.options.forwardKey.setPressed(false);
+        mc.options.keyUp.setDown(false);
         if (autoSprint.value()) {
-            mc.options.sprintKey.setPressed(false);
+            mc.options.keySprint.setDown(false);
         }
     }
 }

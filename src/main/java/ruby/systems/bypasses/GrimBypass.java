@@ -1,18 +1,24 @@
 package ruby.systems.bypasses;
 
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.common.KeepAliveC2SPacket;
-import net.minecraft.network.packet.c2s.common.ResourcePackStatusC2SPacket;
-import net.minecraft.network.packet.c2s.play.*;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.common.ServerboundKeepAlivePacket;
+import net.minecraft.network.protocol.common.ServerboundResourcePackPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
+import net.minecraft.network.protocol.game.ServerboundChunkBatchReceivedPacket;
+import net.minecraft.network.protocol.game.ServerboundClientTickEndPacket;
+import net.minecraft.network.protocol.game.ServerboundInteractPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ServerboundMoveVehiclePacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.network.protocol.game.ServerboundPunchPacket;
+import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
+import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import ruby.RubyClient;
-import ruby.helpers.PlayerInteractEntity;
-
-import java.util.concurrent.atomic.AtomicReference;
 
 public class GrimBypass extends Bypass {
     private boolean teleportExempt;
@@ -20,33 +26,33 @@ public class GrimBypass extends Bypass {
     private boolean injectingTickEnd;
     private int lastSlot = -1;
 
-    private static PlayerMoveC2SPacket copyMove(
-            PlayerMoveC2SPacket from,
+    private static ServerboundMovePlayerPacket copyMove(
+            ServerboundMovePlayerPacket from,
             double x, double y, double z,
             float yaw, float pitch
     ) {
         boolean ground = from.isOnGround();
         boolean horizC = from.horizontalCollision();
-        if(from.changesPosition() && from.changesLook())
-            return new PlayerMoveC2SPacket.Full(x, y, z, yaw, pitch, ground, horizC);
+        if(from.hasPosition() && from.hasRotation())
+            return new ServerboundMovePlayerPacket.PosRot(x, y, z, yaw, pitch, ground, horizC);
 
-        if(from.changesPosition()) return new PlayerMoveC2SPacket.PositionAndOnGround(x, y, z, ground, horizC);
-        return new PlayerMoveC2SPacket.LookAndOnGround(yaw, pitch, ground, horizC);
+        if(from.hasPosition()) return new ServerboundMovePlayerPacket.Pos(x, y, z, ground, horizC);
+        return new ServerboundMovePlayerPacket.Rot(yaw, pitch, ground, horizC);
     }
 
     private boolean isAsync(Packet<?> packet) {
-        return packet instanceof KeepAliveC2SPacket ||
-                packet instanceof ResourcePackStatusC2SPacket ||
-                packet instanceof AcknowledgeChunksC2SPacket;
+        return packet instanceof ServerboundKeepAlivePacket ||
+                packet instanceof ServerboundResourcePackPacket ||
+                packet instanceof ServerboundChunkBatchReceivedPacket;
     }
 
     private boolean isFlying(Packet<?> packet) {
-        return packet instanceof PlayerMoveC2SPacket move &&
-                (move.changesPosition() || move.changesLook());
+        return packet instanceof ServerboundMovePlayerPacket move &&
+                (move.hasPosition() || move.hasRotation());
     }
 
     private boolean isTickPacketIncludingMovement(Packet<?> packet) {
-        if(packet instanceof ClientTickEndC2SPacket && !this.sentMovementThisTick())
+        if(packet instanceof ServerboundClientTickEndPacket && !this.sentMovementThisTick())
             return true;
 
         return this.isFlying(packet);
@@ -63,14 +69,14 @@ public class GrimBypass extends Bypass {
 
     private boolean isSequenced(Packet<?> packet) {
         if(
-                packet instanceof PlayerInteractItemC2SPacket ||
-                packet instanceof PlayerInteractBlockC2SPacket
+                packet instanceof ServerboundUseItemPacket ||
+                packet instanceof ServerboundUseItemOnPacket
         ) return true;
 
-        if(packet instanceof PlayerActionC2SPacket action) {
-            return action.getAction() == PlayerActionC2SPacket.Action.START_DESTROY_BLOCK ||
-                    action.getAction() == PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK ||
-                    action.getAction() == PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK;
+        if(packet instanceof ServerboundPlayerActionPacket action) {
+            return action.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK ||
+                    action.getAction() == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK ||
+                    action.getAction() == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK;
         }
 
         return false;
@@ -78,39 +84,39 @@ public class GrimBypass extends Bypass {
 
 
     private Packet<?> aimModulo360(Packet<?> packet) {
-        if(!(packet instanceof PlayerMoveC2SPacket move) || !move.changesLook()) return packet;
+        if(!(packet instanceof ServerboundMovePlayerPacket move) || !move.hasRotation()) return packet;
 
         // Grim only checks the range (-360, 360) for yaw so we just force outsize that range
-        float yaw = move.getYaw(this.yaw()) % 360;
+        float yaw = move.getYRot(this.yaw()) % 360;
         if(yaw < 0) yaw += 360;
         yaw += 360;
 
         return GrimBypass.copyMove(
                 move,
-                move.getX(this.position().getX()),
-                move.getY(this.position().getY()),
-                move.getZ(this.position().getZ()),
-                yaw, move.getPitch(this.pitch())
+                move.getX(this.position().x()),
+                move.getY(this.position().y()),
+                move.getZ(this.position().z()),
+                yaw, move.getXRot(this.pitch())
         );
     }
 
     private Packet<?> aimDuplicateLook(Packet<?> packet) {
-        if(!(packet instanceof PlayerMoveC2SPacket move) || !move.changesLook()) return packet;
+        if(!(packet instanceof ServerboundMovePlayerPacket move) || !move.hasRotation()) return packet;
 
         if(this.teleportExempt) {
             this.teleportExempt = false;
             return packet;
         }
 
-        if(move.getYaw(this.yaw()) != this.yaw() || move.getPitch(this.pitch()) != this.pitch())
+        if(move.getYRot(this.yaw()) != this.yaw() || move.getXRot(this.pitch()) != this.pitch())
             return packet;
 
         // Duplicate rotation: strip look but keep position. Never drop ground-only updates.
-        if(move.changesPosition()) {
-            return new PlayerMoveC2SPacket.PositionAndOnGround(
-                    move.getX(this.position().getX()),
-                    move.getY(this.position().getY()),
-                    move.getZ(this.position().getZ()),
+        if(move.hasPosition()) {
+            return new ServerboundMovePlayerPacket.Pos(
+                    move.getX(this.position().x()),
+                    move.getY(this.position().y()),
+                    move.getZ(this.position().z()),
                     move.isOnGround(), move.horizontalCollision()
             );
         }
@@ -122,59 +128,59 @@ public class GrimBypass extends Bypass {
     }
 
     private Packet<?> badPacketsA(Packet<?> packet) {
-        if(!(packet instanceof UpdateSelectedSlotC2SPacket slot)) return packet;
-        if(slot.getSelectedSlot() != this.lastSlot) return packet;
+        if(!(packet instanceof ServerboundSetCarriedItemPacket slot)) return packet;
+        if(slot.getSlot() != this.lastSlot) return packet;
         return null;
     }
 
     private Packet<?> badPacketsC(Packet<?> packet) {
-        if(RubyClient.client == null || RubyClient.client.player == null) return packet;
+        if(RubyClient.client.player == null) return packet;
         if(!RubyClient.client.player.isSleeping()) return packet;
-        if(!(packet instanceof ClientCommandC2SPacket cmd)) return packet;
-        if(cmd.getMode() != ClientCommandC2SPacket.Mode.STOP_SLEEPING) return packet;
+        if(!(packet instanceof ServerboundPlayerCommandPacket cmd)) return packet;
+        if(cmd.getAction() != ServerboundPlayerCommandPacket.Action.STOP_SLEEPING) return packet;
         return null;
     }
 
     private Packet<?> badPacketsD(Packet<?> packet) {
-        if(!(packet instanceof PlayerMoveC2SPacket move) || !move.changesLook()) return packet;
+        if(!(packet instanceof ServerboundMovePlayerPacket move) || !move.hasRotation()) return packet;
 
         // lock pitch so grim doesnt whine
         return GrimBypass.copyMove(
                 move,
-                move.getX(this.position().getX()),
-                move.getY(this.position().getY()),
-                move.getZ(this.position().getZ()),
-                move.getYaw(this.yaw()),
-                Math.clamp(move.getPitch(this.pitch()), -90, 90)
+                move.getX(this.position().x()),
+                move.getY(this.position().y()),
+                move.getZ(this.position().z()),
+                move.getYRot(this.yaw()),
+                Math.clamp(move.getXRot(this.pitch()), -90, 90)
         );
     }
 
-    private PlayerInteractItemC2SPacket queued = null;
+    private ServerboundUseItemPacket queued = null;
     private Packet<?> badPacketsJ(Packet<?> packet) {
         if(RubyClient.client.player == null) return packet;
 
-        if(packet instanceof PlayerMoveC2SPacket move && this.queued != null) {
-            if(!move.changesLook()) return packet;
-            this.connection.send(new PlayerInteractItemC2SPacket(
-                    this.queued.getHand(),
-                    this.queued.getSequence(),
-                    move.getYaw(0),
-                    move.getPitch(0)
+        if(packet instanceof ServerboundMovePlayerPacket move && this.queued != null) {
+            if(!move.hasRotation()) return packet;
+            this.connection.send(new ServerboundUseItemPacket(
+                    this.queued.hand(),
+                    this.queued.sequence(),
+                    move.getYRot(0),
+                    move.getXRot(0)
             ));
 
             this.queued = null;
             return packet;
         }
 
-        if(packet instanceof PlayerInteractItemC2SPacket interact) {
+        if(packet instanceof ServerboundUseItemPacket interact) {
             if(!this.sentMovementThisTick()) {
                 this.queued = interact;
                 return null;
             }
 
-            return new PlayerInteractItemC2SPacket(
-                    interact.getHand(),
-                    interact.getSequence(),
+            return new ServerboundUseItemPacket(
+                    interact.hand(),
+                    interact.sequence(),
                     this.yaw(),
                     this.pitch()
             );
@@ -190,29 +196,29 @@ public class GrimBypass extends Bypass {
     }
 
     private Packet<?> badPacketsL(Packet<?> packet) {
-        if(!(packet instanceof PlayerActionC2SPacket action)) return packet;
-        if(action.getAction() == PlayerActionC2SPacket.Action.START_DESTROY_BLOCK) return packet;
-        if(action.getAction() == PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK) return packet;
-        if(action.getAction() == PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK) return packet;
+        if(!(packet instanceof ServerboundPlayerActionPacket action)) return packet;
+        if(action.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) return packet;
+        if(action.getAction() == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK) return packet;
+        if(action.getAction() == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK) return packet;
 
-        return new PlayerActionC2SPacket(action.getAction(), BlockPos.ORIGIN, Direction.DOWN, 0);
+        return new ServerboundPlayerActionPacket(action.getAction(), BlockPos.ZERO, Direction.DOWN, 0);
     }
 
     private boolean isVehicleSprint(Packet<?> packet) {
-        if(RubyClient.client == null || RubyClient.client.player == null || !RubyClient.client.player.hasVehicle())
+        if(RubyClient.client.player == null || !RubyClient.client.player.canControlVehicle())
             return false;
-        if(!(packet instanceof ClientCommandC2SPacket cmd)) return false;
-        ClientCommandC2SPacket.Mode mode = cmd.getMode();
-        return mode == ClientCommandC2SPacket.Mode.START_SPRINTING
-                || mode == ClientCommandC2SPacket.Mode.STOP_SPRINTING;
+        if(!(packet instanceof ServerboundPlayerCommandPacket cmd)) return false;
+        ServerboundPlayerCommandPacket.Action mode = cmd.getAction();
+        return mode == ServerboundPlayerCommandPacket.Action.START_SPRINTING
+                || mode == ServerboundPlayerCommandPacket.Action.STOP_SPRINTING;
     }
 
     private void sendTickEnd() {
-        if(!this.flyingSinceTickEnd || this.injectingTickEnd || this.connection == null) return;
+        if(!this.flyingSinceTickEnd || this.injectingTickEnd) return;
 
         this.injectingTickEnd = true;
         try {
-            this.connection.send(ClientTickEndC2SPacket.INSTANCE);
+            this.connection.send(ServerboundClientTickEndPacket.INSTANCE);
             this.flyingSinceTickEnd = false;
         } finally {
             this.injectingTickEnd = false;
@@ -222,20 +228,18 @@ public class GrimBypass extends Bypass {
     private boolean sentAttack;
     private boolean sentSwingSinceLastAttack;
     private Packet<?> packetOrderB(Packet<?> packet) {
-        if(packet instanceof HandSwingC2SPacket) {
+        if(packet instanceof ServerboundPunchPacket) {
             this.sentSwingSinceLastAttack = true;
             this.sentAttack = false;
             return packet;
         }
 
-        if(packet instanceof PlayerInteractEntityC2SPacket interact) {
-            AtomicReference<PlayerInteractEntity.Type> type = new AtomicReference<>(null);
-            interact.handle(new PlayerInteractEntity(type));
-            if(type.get() != PlayerInteractEntity.Type.ATTACK) return packet;
+        if(packet instanceof ServerboundInteractPacket interact) {
+            if(interact.usingSecondaryAction()) return packet;
 
             this.sentAttack = true;
             if(!this.sentSwingSinceLastAttack) {
-                this.connection.send(new HandSwingC2SPacket(Hand.MAIN_HAND)); // flag
+                this.connection.send(new ServerboundPunchPacket()); // flag
                 this.sentAttack = false;
             }
 
@@ -244,7 +248,7 @@ public class GrimBypass extends Bypass {
         }
 
         if(!this.isAsync(packet) && this.sentAttack) {
-            this.connection.send(new HandSwingC2SPacket(Hand.MAIN_HAND)); // flag
+            this.connection.send(new ServerboundPunchPacket()); // flag
             this.sentAttack = false;
         }
 
@@ -252,17 +256,17 @@ public class GrimBypass extends Bypass {
     }
 
     private Packet<?> packetOrderO(Packet<?> packet) {
-        if(packet instanceof ClientTickEndC2SPacket) {
+        if(packet instanceof ServerboundClientTickEndPacket) {
             this.flyingSinceTickEnd = false;
             return packet;
         }
 
-        if(packet instanceof PlayerMoveC2SPacket) {
+        if(packet instanceof ServerboundMovePlayerPacket) {
             if(!this.teleportExempt) this.flyingSinceTickEnd = true;
             return packet;
         }
 
-        if(this.isAsync(packet) || packet instanceof VehicleMoveC2SPacket || this.isVehicleSprint(packet))
+        if(this.isAsync(packet) || packet instanceof ServerboundMoveVehiclePacket || this.isVehicleSprint(packet))
             return packet;
 
         if(this.flyingSinceTickEnd) this.sendTickEnd();
@@ -271,9 +275,9 @@ public class GrimBypass extends Bypass {
 
     @Override
     protected void onPacket(Packet<?> packet) {
-        if(packet instanceof PlayerPositionLookS2CPacket) this.teleportExempt = true;
-        if(packet instanceof UpdateSelectedSlotC2SPacket slot) this.lastSlot = slot.getSelectedSlot();
-        if(packet instanceof UpdateSelectedSlotS2CPacket slot) this.lastSlot = slot.slot();
+        if(packet instanceof ClientboundPlayerPositionPacket) this.teleportExempt = true;
+        if(packet instanceof ServerboundSetCarriedItemPacket slot) this.lastSlot = slot.getSlot();
+        if(packet instanceof ClientboundSetHeldSlotPacket(int slot)) this.lastSlot = slot;
     }
 
     @Override

@@ -1,11 +1,11 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.helpers.render.NametagBotFilter;
 import ruby.helpers.render.NametagUtils;
@@ -43,7 +43,7 @@ public class Nametags extends Module {
         super("Nametags", "Renders customizable nametags.", ModuleType.RENDER);
 
         entities = config.create(new EntityTypeListValue.Builder("Entities")
-                .defaultValue(EntityType.PLAYER).build());
+                .defaultValue(EntityTypes.PLAYER).build());
         scale = config.create(new DoubleValue.Builder("Scale").defaultValue(1.1).range(0.1, 3, 0.1).build());
         distanceScale = config.create(new BooleanValue.Builder("Distance Scale")
                 .description("Shrink nametags slightly with distance.")
@@ -82,23 +82,23 @@ public class Nametags extends Module {
 
     @Override
     public void render2D(Render2DEvent event) {
-        if (RubyClient.client.world == null || RubyClient.client.player == null) return;
-        if (RubyClient.client.options.hudHidden) return;
+        if (RubyClient.client.level == null || RubyClient.client.player == null) return;
+        if (false) return;
 
         GUIStyle style = GUIStyle.get();
-        float tickDelta = RubyClient.client.gameRenderer.getCamera().getLastTickProgress();
+        float tickDelta = RubyClient.client.gameRenderer.mainCamera().getCameraEntityPartialTicks(RubyClient.client.getDeltaTracker());
         int panelBg = withAlpha(backgroundColor.value(), backgroundOpacity.value().floatValue());
         int panelBorder = GUIStyle.withAlpha(style.borderSubtle(), backgroundOpacity.value().floatValue());
 
-        for (Entity entity : RubyClient.client.world.getEntities()) {
+        for (Entity entity : RubyClient.client.level.entitiesForRendering()) {
             if (!shouldRender(entity)) continue;
 
-            Vec3d pos = entity.getLerpedPos(tickDelta);
-            Vec3d anchor = new Vec3d(pos.x, pos.y + entity.getHeight() + 0.5, pos.z);
+            Vec3 pos = entity.getPosition(tickDelta);
+            Vec3 anchor = new Vec3(pos.x, pos.y + entity.getBbHeight() + 0.5, pos.z);
             if (!NametagUtils.to2D(anchor, scale.value(), distanceScale.value(), minScale.value())) continue;
 
-            ItemStack held = displayItems.value() && entity instanceof PlayerEntity player
-                    ? player.getMainHandStack() : ItemStack.EMPTY;
+            ItemStack held = displayItems.value() && entity instanceof Player player
+                    ? player.getMainHandItem() : ItemStack.EMPTY;
 
             RubyNametagRenderer.draw(
                     event.getContext(), style,
@@ -110,10 +110,10 @@ public class Nametags extends Module {
 
     private RubyNametagRenderer.TagData buildTag(Entity entity) {
         String name = entity.getName().getString();
-        boolean friend = entity instanceof PlayerEntity player && FriendsManager.isFriend(player);
+        boolean friend = entity instanceof Player player && FriendsManager.isFriend(player);
 
         Integer health = null;
-        if (displayHealth.value() && entity instanceof PlayerEntity player) {
+        if (displayHealth.value() && entity instanceof Player player) {
             health = Math.round(player.getHealth() + player.getAbsorptionAmount());
         }
 
@@ -123,9 +123,9 @@ public class Nametags extends Module {
         }
 
         Integer ping = null;
-        if (displayPing.value() && entity instanceof PlayerEntity player
-                && RubyClient.client.getNetworkHandler() != null) {
-            PlayerListEntry entry = RubyClient.client.getNetworkHandler().getPlayerListEntry(player.getUuid());
+        if (displayPing.value() && entity instanceof Player player
+                && RubyClient.client.getConnection() != null) {
+            PlayerInfo entry = RubyClient.client.getConnection().getPlayerInfo(player.getUUID());
             if (entry != null) ping = entry.getLatency();
         }
 
@@ -138,11 +138,11 @@ public class Nametags extends Module {
 
         Freecam freecam = Modules.getByClass(Freecam.class);
         boolean freecamActive = freecam != null && freecam.enabled();
-        boolean firstPerson = RubyClient.client.options.getPerspective().isFirstPerson();
+        boolean firstPerson = RubyClient.client.options.getCameraType().isFirstPerson();
 
         if (ignoreSelf.value() && entity == RubyClient.client.player && !freecamActive && firstPerson) return false;
-        if (ignoreFriends.value() && entity instanceof PlayerEntity player && FriendsManager.isFriend(player)) return false;
-        if (ignoreBots.value() && entity instanceof PlayerEntity player && botFilter.shouldHide(player)) return false;
+        if (ignoreFriends.value() && entity instanceof Player player && FriendsManager.isFriend(player)) return false;
+        if (ignoreBots.value() && entity instanceof Player player && botFilter.shouldHide(player)) return false;
         return true;
     }
 

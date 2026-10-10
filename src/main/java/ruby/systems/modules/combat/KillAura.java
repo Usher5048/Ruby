@@ -1,12 +1,14 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Box;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.SwingAnimation;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.helpers.ClickScheduler;
 import ruby.helpers.RotationManager;
@@ -85,7 +87,7 @@ public class KillAura extends Module {
 
     public final EntityTypeListValue targets = this.config.create(new EntityTypeListValue.Builder("Targets")
             .description("Which types of entities to target.")
-            .defaultValue(EntityType.PLAYER)
+            .defaultValue(EntityTypes.PLAYER)
             .build());
 
     public KillAura() {
@@ -98,7 +100,7 @@ public class KillAura extends Module {
 
     public boolean shouldStopSprinting(Entity target) {
         if(this.criticals.value() == CriticalsMode.Ignore) return false;
-        if(RubyClient.client.player == null || RubyClient.client.player.isOnGround()) return false;
+        if(RubyClient.client.player == null || RubyClient.client.player.onGround()) return false;
         return target != null && this.clicker.willClickAt(1);
     }
 
@@ -116,15 +118,16 @@ public class KillAura extends Module {
     }
 
     private void attackTarget() {
-        if(RubyClient.client.player == null || RubyClient.client.world == null) return;
-        if(RubyClient.client.currentScreen != null) return;
+        if(RubyClient.client.player == null || RubyClient.client.level == null) return;
+        if(RubyClient.client.gui.screen() != null) return;
+        if(RubyClient.client.gameMode == null) return;
 
         Entity target = this.currentTarget;
         if(target == null) target = RotationManager.targetEntity();
         if(target == null || !this.isValidTarget(target)) return;
 
         if(this.attackCooldown.value()
-                && RubyClient.client.player.getAttackCooldownProgress(0.5f) < 1.0f)
+                && RubyClient.client.player.getAttackStrengthScale(0f) < 1f)
             return;
 
         if(!this.clicker.shouldClick()) return;
@@ -142,8 +145,8 @@ public class KillAura extends Module {
             RubyClient.client.player.setSprinting(false);
         Criticals.onAttack();
 
-        RubyClient.client.interactionManager.attackEntity(RubyClient.client.player, target);
-        RubyClient.client.player.swingHand(Hand.MAIN_HAND);
+        RubyClient.client.gameMode.attack(RubyClient.client.player, target);
+        RubyClient.client.player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, true);
     }
 
     public static void updateRotations() {
@@ -152,19 +155,19 @@ public class KillAura extends Module {
             RotationManager.reset();
             return;
         }
-        if(RubyClient.client.player == null || RubyClient.client.world == null) {
+        if(RubyClient.client.player == null || RubyClient.client.level == null) {
             killAura.currentTarget = null;
             RotationManager.reset();
             return;
         }
-        if(RubyClient.client.currentScreen != null) {
+        if(RubyClient.client.gui.screen() != null) {
             killAura.currentTarget = null;
             RotationManager.clearTarget();
             return;
         }
 
         killAura.currentTarget = killAura.findTarget();
-        if(killAura.currentTarget != null && killAura.processTarget(killAura.currentTarget)) return;
+        if(killAura.processTarget(killAura.currentTarget)) return;
         RotationManager.clearTarget();
     }
 
@@ -180,14 +183,18 @@ public class KillAura extends Module {
     }
 
     private Entity findTarget() {
+        if(RubyClient.client.level == null) return null;
+
         var player = RubyClient.client.player;
+        if(player == null) return null;
+
         double maxRange = this.range.value() + this.scanRange.value();
-        Box box = player.getBoundingBox().expand(maxRange);
+        AABB box = player.getBoundingBox().inflate(maxRange);
 
         Entity best = null;
         double bestScore = Double.MAX_VALUE;
 
-        for(Entity entity : RubyClient.client.world.getOtherEntities(player, box, this::isValidTarget)) {
+        for(Entity entity : RubyClient.client.level.getEntities(player, box, this::isValidTarget)) {
             double distSq = RotationRaycast.squaredBoxedDistanceTo(entity);
             if(distSq > maxRange * maxRange) continue;
             if(!RotationRaycast.inFov(entity, this.fov.value().floatValue())) continue;
@@ -213,24 +220,26 @@ public class KillAura extends Module {
 
     private boolean isValidTarget(Entity entity) {
         if(!(entity instanceof LivingEntity living)) return false;
-        if(living.isDead()) return false;
+        if(living.isDeadOrDying()) return false;
         if(living.hurtTime > this.hurtTime.value()) return false;
         if(!this.targets.value().contains(entity.getType())) return false;
 
-        if(!this.ignoreShield.value() && entity instanceof PlayerEntity player)
-            return !player.isUsingItem() || !player.getActiveItem().isOf(Items.SHIELD);
+        if(!this.ignoreShield.value() && entity instanceof Player player)
+            return !player.isUsingItem() || !player.getActiveItem().is(Items.SHIELD);
 
         return true;
     }
 
     private double angleToCrosshair(Entity entity) {
         var player = RubyClient.client.player;
-        var look = player.getRotationVector();
-        var toTarget = entity.getBoundingBox().getCenter().subtract(player.getEyePos());
-        if(toTarget.lengthSquared() < 1.0E-7) return 0;
+        if(player == null) return Double.NaN;
 
-        double dot = look.normalize().dotProduct(toTarget.normalize());
-        dot = Math.max(-1.0, Math.min(1.0, dot));
+        var look = Vec3.directionFromRotation(player.getRotationVector());
+        var toTarget = entity.getBoundingBox().getCenter().subtract(player.getEyePosition());
+        if(toTarget.lengthSqr() < 1.0E-7) return 0;
+
+        double dot = look.normalize().dot(toTarget.normalize());
+        dot = Math.clamp(dot, -1.0, 1.0);
         return Math.toDegrees(Math.acos(dot));
     }
 }

@@ -1,17 +1,19 @@
 package ruby.systems.accounts;
 
 import com.mojang.authlib.minecraft.UserApiService;
-import com.mojang.authlib.yggdrasil.ServicesKeyType;
-import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
-import net.minecraft.client.network.SocialInteractionsManager;
-import net.minecraft.client.session.ProfileKeys;
-import net.minecraft.client.session.Session;
-import net.minecraft.client.session.report.AbuseReportContext;
-import net.minecraft.client.session.report.ReporterEnvironment;
-import net.minecraft.client.texture.PlayerSkinProvider;
-import net.minecraft.client.texture.PlayerSkinTextureDownloader;
-import net.minecraft.util.ApiServices;
-import net.minecraft.network.encryption.SignatureVerifier;
+import com.mojang.authlib.services.FriendsService;
+import com.mojang.authlib.services.MinecraftServicesDiscoveryService;
+import com.mojang.authlib.services.ServicesKeyType;
+import net.minecraft.client.User;
+import net.minecraft.client.gui.screens.social.PlayerSocialManager;
+import net.minecraft.client.gui.screens.social.RemoteFriendListUpdateHandler;
+import net.minecraft.client.multiplayer.ProfileKeyPairManager;
+import net.minecraft.client.multiplayer.chat.report.ReportEnvironment;
+import net.minecraft.client.multiplayer.chat.report.ReportingContext;
+import net.minecraft.client.renderer.texture.SkinTextureDownloader;
+import net.minecraft.client.resources.SkinManager;
+import net.minecraft.server.Services;
+import net.minecraft.util.SignatureValidator;
 import net.minecraft.util.Util;
 import ruby.RubyClient;
 import ruby.mixin.MinecraftClientSessionAccessor;
@@ -45,8 +47,8 @@ public abstract class Account {
     }
 
     public boolean login() {
-        YggdrasilAuthenticationService authService =
-                new YggdrasilAuthenticationService(RubyClient.client.getNetworkProxy());
+        MinecraftServicesDiscoveryService authService =
+                MinecraftServicesDiscoveryService.create(RubyClient.client.getProxy());
         Account.applyLoginEnvironment(authService);
         return true;
     }
@@ -67,42 +69,45 @@ public abstract class Account {
         return this.name;
     }
 
-    public static void setSession(Session session) {
+    public static void setSession(User session) {
         MinecraftClientSessionAccessor mc = (MinecraftClientSessionAccessor) RubyClient.client;
         mc.ruby$setSession(session);
 
-        YggdrasilAuthenticationService authService =
-                new YggdrasilAuthenticationService(RubyClient.client.getNetworkProxy());
+        MinecraftServicesDiscoveryService authService =
+                MinecraftServicesDiscoveryService.create(RubyClient.client.getProxy());
         UserApiService apiService = authService.createUserApiService(session.getAccessToken());
 
-        mc.ruby$setUserApiService(apiService);
-        mc.ruby$setSocialInteractionsManager(new SocialInteractionsManager(RubyClient.client, apiService));
-        mc.ruby$setProfileKeys(ProfileKeys.create(apiService, session, RubyClient.client.runDirectory.toPath()));
-        mc.ruby$setAbuseReportContext(AbuseReportContext.create(ReporterEnvironment.ofIntegratedServer(), apiService));
+        FriendsService fs = authService.createFriendsService(session.getAccessToken());
+        RemoteFriendListUpdateHandler rfluh = new RemoteFriendListUpdateHandler(fs, RubyClient.client);
 
-        UUID uuid = session.getUuidOrNull();
+        mc.ruby$setUserApiService(apiService);
+        mc.ruby$setSocialInteractionsManager(new PlayerSocialManager(RubyClient.client, apiService, fs, rfluh));
+        mc.ruby$setProfileKeys(ProfileKeyPairManager.create(apiService, session, RubyClient.client.gameDirectory.toPath()));
+        mc.ruby$setAbuseReportContext(ReportingContext.create(ReportEnvironment.local(), apiService));
+
+        UUID uuid = session.getProfileId();
         mc.ruby$setGameProfileFuture(CompletableFuture.supplyAsync(
-                () -> RubyClient.client.getApiServices().sessionService().fetchProfile(uuid, true),
-                Util.getIoWorkerExecutor()
+                () -> RubyClient.client.services().sessionService().fetchProfile(uuid, true),
+                Util.ioPool()
         ));
     }
 
-    public static void applyLoginEnvironment(YggdrasilAuthenticationService authService) {
+    public static void applyLoginEnvironment(MinecraftServicesDiscoveryService authService) {
         MinecraftClientSessionAccessor mc = (MinecraftClientSessionAccessor) RubyClient.client;
-        SignatureVerifier.create(authService.getServicesKeySet(), ServicesKeyType.PROFILE_KEY);
+        SignatureValidator.from(authService.getServicesKeySet(), ServicesKeyType.PROFILE_KEY);
 
-        Path skinCacheDirectory = RubyClient.client.runDirectory.toPath();
+        Path skinCacheDirectory = RubyClient.client.gameDirectory.toPath();
 
-        mc.ruby$setApiServices(ApiServices.create(authService, RubyClient.client.runDirectory));
-        mc.ruby$setSkinProvider(new PlayerSkinProvider(
+        mc.ruby$setApiServices(Services.create(authService, RubyClient.client.gameDirectory));
+        mc.ruby$setSkinProvider(new SkinManager(
                 skinCacheDirectory,
-                RubyClient.client.getApiServices(),
-                new PlayerSkinTextureDownloader(
-                        RubyClient.client.getNetworkProxy(),
+                RubyClient.client.services(),
+                new SkinTextureDownloader(
+                        RubyClient.client.getProxy(),
                         RubyClient.client.getTextureManager(),
                         RubyClient.client
                 ),
-                Util.getMainWorkerExecutor()
+                Util.backgroundExecutor()
         ));
     }
 

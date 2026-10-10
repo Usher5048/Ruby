@@ -1,8 +1,8 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.attribute.EntityAttributeInstance;
-import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -30,10 +30,10 @@ public class Step extends Module {
 
     @Override
     public void onEnable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        EntityAttributeInstance stepAttr = mc.player.getAttributeInstance(EntityAttributes.STEP_HEIGHT);
+        AttributeInstance stepAttr = mc.player.getAttribute(Attributes.STEP_HEIGHT);
         if (stepAttr != null) {
             prevStepHeight = stepAttr.getBaseValue();
             stepAttr.setBaseValue(height.value());
@@ -42,10 +42,10 @@ public class Step extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        EntityAttributeInstance stepAttr = mc.player.getAttributeInstance(EntityAttributes.STEP_HEIGHT);
+        AttributeInstance stepAttr = mc.player.getAttribute(Attributes.STEP_HEIGHT);
         if (stepAttr != null) {
             stepAttr.setBaseValue(height.value());
         }
@@ -53,10 +53,10 @@ public class Step extends Module {
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        EntityAttributeInstance stepAttr = mc.player.getAttributeInstance(EntityAttributes.STEP_HEIGHT);
+        AttributeInstance stepAttr = mc.player.getAttribute(Attributes.STEP_HEIGHT);
         if (stepAttr != null) {
             stepAttr.setBaseValue(prevStepHeight);
         }

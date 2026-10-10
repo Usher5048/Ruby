@@ -1,19 +1,19 @@
 package ruby.systems.events.packet;
 
-import net.minecraft.network.ClientConnection;
-import net.minecraft.network.packet.Packet;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
 import ruby.systems.events.Event;
 
 public class PacketEvent extends Event {
-    private final ClientConnection connection;
+    private final Connection connection;
     private Packet<?> packet;
 
-    public PacketEvent(ClientConnection connection, Packet<?> packet) {
+    public PacketEvent(Connection connection, Packet<?> packet) {
         this.connection = connection;
         this.packet = packet;
     }
 
-    public ClientConnection connection() {
+    public Connection connection() {
         return this.connection;
     }
     public void setPacket(Packet<?> packet) {

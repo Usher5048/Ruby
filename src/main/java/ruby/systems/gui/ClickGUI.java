@@ -1,9 +1,9 @@
 package ruby.systems.gui;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
 import ruby.RubyClient;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.gui.windows.ClickGuiLayoutWindow;
@@ -26,15 +26,15 @@ public class ClickGUI extends WindowedScreen {
         super.init();
         this.closing = false;
         this.openProgress = 0f;
-        if (ClickGUI.sharedLayout == null) {
-            ClickGUI.sharedLayout = new ClickGuiLayoutWindow();
-        }
+
+        if(ClickGUI.sharedLayout == null) ClickGUI.sharedLayout = new ClickGuiLayoutWindow();
         ClickGUI.sharedLayout.prepareForOpen();
+
         this.addWindow(ClickGUI.sharedLayout);
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int width = RubyClient.client.getWindow().getWidth();
         int height = RubyClient.client.getWindow().getHeight();
 
@@ -43,7 +43,7 @@ public class ClickGUI extends WindowedScreen {
         if (Math.abs(this.openProgress - target) < 0.005f) this.openProgress = target;
 
         if (this.closing && this.openProgress <= 0.01f) {
-            RubyClient.client.setScreen(null);
+            RubyClient.client.setScreenAndShow(null);
             return;
         }
 
@@ -52,58 +52,58 @@ public class ClickGUI extends WindowedScreen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-        float sf = RubyClient.client.getWindow().getScaleFactor();
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
+        float sf = RubyClient.client.getWindow().getGuiScale();
 
-        context.getMatrices().pushMatrix();
-        context.getMatrices().scale(1f / sf, 1f / sf);
+        context.pose().pushMatrix();
+        context.pose().scale(1f / sf, 1f / sf);
         this.onRender(context, mouseX, mouseY);
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
 
         float scale = this.openProgress;
         for (Window window : this.windows()) {
-            context.getMatrices().pushMatrix();
+            context.pose().pushMatrix();
 
             float cx = window.getX() / sf + (window.getWidth() / sf) / 2f;
             float cy = window.getY() / sf + (window.getHeight() / sf) / 2f;
 
-            context.getMatrices().translate(cx, cy);
-            context.getMatrices().scale(scale, scale);
-            context.getMatrices().translate(-cx, -cy);
+            context.pose().translate(cx, cy);
+            context.pose().scale(scale, scale);
+            context.pose().translate(-cx, -cy);
 
-            window.render(context, mouseX, mouseY, tickDelta);
-            context.getMatrices().popMatrix();
+            window.extractRenderState(context, mouseX, mouseY, tickDelta);
+            context.pose().popMatrix();
         }
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (input.key() == GLFW.GLFW_KEY_RIGHT_SHIFT) {
-            this.close();
+    public boolean keyPressed(KeyEvent input) {
+        if(input.key() == InputConstants.KEY_RSHIFT) {
+            this.onClose();
             return true;
         }
-        if (super.keyPressed(input)) return true;
+        if(super.keyPressed(input)) return true;
         return ClickGUI.sharedLayout != null && ClickGUI.sharedLayout.handleSearchKey(input);
     }
 
     @Override
-    public boolean charTyped(CharInput input) {
+    public boolean charTyped(CharacterEvent input) {
         if (super.charTyped(input)) return true;
         return ClickGUI.sharedLayout != null && ClickGUI.sharedLayout.handleSearchChar(input);
     }
 
     @Override
-    public void close() {
-        if (this.closing) return;
-        if (ClickGUI.sharedLayout != null) {
-            ClickGUI.sharedLayout.persistPosition();
-        }
+    public void onClose() {
+        if(this.closing) return;
+
+        if(ClickGUI.sharedLayout != null) ClickGUI.sharedLayout.persistPosition();
         ConfigManager.saveState();
+
         this.closing = true;
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

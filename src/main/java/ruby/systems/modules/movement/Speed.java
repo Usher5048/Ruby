@@ -1,9 +1,9 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.phys.Vec3;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
@@ -89,8 +89,8 @@ public class Speed extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
         if (shouldStop(mc, player)) return;
@@ -101,36 +101,36 @@ public class Speed extends Module {
         }
     }
 
-    private void tickVanilla(MinecraftClient mc, ClientPlayerEntity player) {
-        if (vanillaOnGround.value() && !player.isOnGround()) return;
+    private void tickVanilla(Minecraft mc, LocalPlayer player) {
+        if (vanillaOnGround.value() && !player.onGround()) return;
         if (!isMoving(player)) return;
 
         double bps = vanillaSpeed.value();
 
-        float yaw = player.getYaw();
-        Vec3d forward = Vec3d.fromPolar(0, yaw);
-        Vec3d right = Vec3d.fromPolar(0, yaw + 90);
+        float yaw = player.getYRot();
+        Vec3 forward = Vec3.directionFromRotation(0, yaw);
+        Vec3 right = Vec3.directionFromRotation(0, yaw + 90);
         double velX = 0, velZ = 0;
 
         boolean fwd = false;
-        if (player.input.playerInput.forward()) {
+        if (player.input.keyPresses.forward()) {
             velX += forward.x / 20 * bps;
             velZ += forward.z / 20 * bps;
             fwd = true;
         }
-        if (player.input.playerInput.backward()) {
+        if (player.input.keyPresses.backward()) {
             velX -= forward.x / 20 * bps;
             velZ -= forward.z / 20 * bps;
             fwd = true;
         }
 
         boolean side = false;
-        if (player.input.playerInput.right()) {
+        if (player.input.keyPresses.right()) {
             velX += right.x / 20 * bps;
             velZ += right.z / 20 * bps;
             side = true;
         }
-        if (player.input.playerInput.left()) {
+        if (player.input.keyPresses.left()) {
             velX -= right.x / 20 * bps;
             velZ -= right.z / 20 * bps;
             side = true;
@@ -144,20 +144,20 @@ public class Speed extends Module {
         }
 
         // Apply speed effect boost
-        if (player.hasStatusEffect(StatusEffects.SPEED)) {
-            double value = (player.getStatusEffect(StatusEffects.SPEED).getAmplifier() + 1) * 0.205;
+        if (player.hasEffect(MobEffects.SPEED)) {
+            double value = (player.getEffect(MobEffects.SPEED).getAmplifier() + 1) * 0.205;
             velX += velX * value;
             velZ += velZ * value;
         }
 
-        player.setVelocity(velX, player.getVelocity().y, velZ);
+        player.setDeltaMovement(velX, player.getDeltaMovement().y, velZ);
     }
 
-    private void tickStrafe(MinecraftClient mc, ClientPlayerEntity player) {
+    private void tickStrafe(Minecraft mc, LocalPlayer player) {
         // Update distance traveled
         distance = Math.sqrt(
-                (player.getX() - player.lastX) * (player.getX() - player.lastX) +
-                (player.getZ() - player.lastZ) * (player.getZ() - player.lastZ)
+                (player.getX() - player.xo) * (player.getX() - player.xo) +
+                (player.getZ() - player.zo) * (player.getZ() - player.zo)
         );
 
         if (!isMoving(player)) {
@@ -173,8 +173,8 @@ public class Speed extends Module {
                 stage++;
             }
             case 1 -> { // Jump
-                if (!player.isOnGround()) break;
-                player.setVelocity(player.getVelocity().x, getHop(player, 0.40123128), player.getVelocity().z);
+                if (!player.onGround()) break;
+                player.setDeltaMovement(player.getDeltaMovement().x, getHop(player, 0.40123128), player.getDeltaMovement().z);
                 speed *= strafeSpeed.value();
                 stage++;
             }
@@ -197,9 +197,9 @@ public class Speed extends Module {
         }
 
         // Apply strafe movement
-        float forward = Math.signum(player.forwardSpeed);
-        float sideways = Math.signum(player.sidewaysSpeed);
-        float yaw = player.getYaw();
+        float forward = Math.signum(player.zza);
+        float sideways = Math.signum(player.xxa);
+        float yaw = player.getYRot();
 
         if (forward == 0 && sideways == 0) return;
 
@@ -213,37 +213,37 @@ public class Speed extends Module {
         double moveX = -Math.sin(yawRad) * speed;
         double moveZ = Math.cos(yawRad) * speed;
 
-        player.setVelocity(moveX, player.getVelocity().y, moveZ);
+        player.setDeltaMovement(moveX, player.getDeltaMovement().y, moveZ);
     }
 
-    private double getDefaultSpeed(ClientPlayerEntity player) {
+    private double getDefaultSpeed(LocalPlayer player) {
         double defaultSpeed = 0.2873;
-        if (player.hasStatusEffect(StatusEffects.SPEED)) {
-            int amp = player.getStatusEffect(StatusEffects.SPEED).getAmplifier();
+        if (player.hasEffect(MobEffects.SPEED)) {
+            int amp = player.getEffect(MobEffects.SPEED).getAmplifier();
             defaultSpeed *= 1.0 + 0.2 * (amp + 1);
         }
-        if (player.hasStatusEffect(StatusEffects.SLOWNESS)) {
-            int amp = player.getStatusEffect(StatusEffects.SLOWNESS).getAmplifier();
+        if (player.hasEffect(MobEffects.SLOWNESS)) {
+            int amp = player.getEffect(MobEffects.SLOWNESS).getAmplifier();
             defaultSpeed /= 1.0 + 0.2 * (amp + 1);
         }
         return defaultSpeed;
     }
 
-    private double getHop(ClientPlayerEntity player, double height) {
-        if (player.hasStatusEffect(StatusEffects.JUMP_BOOST)) {
-            height += (player.getStatusEffect(StatusEffects.JUMP_BOOST).getAmplifier() + 1) * 0.1;
+    private double getHop(LocalPlayer player, double height) {
+        if (player.hasEffect(MobEffects.JUMP_BOOST)) {
+            height += (player.getEffect(MobEffects.JUMP_BOOST).getAmplifier() + 1) * 0.1;
         }
         return height;
     }
 
-    private boolean isMoving(ClientPlayerEntity player) {
-        return player.forwardSpeed != 0 || player.sidewaysSpeed != 0;
+    private boolean isMoving(LocalPlayer player) {
+        return player.zza != 0 || player.xxa != 0;
     }
 
-    private boolean shouldStop(MinecraftClient mc, ClientPlayerEntity player) {
-        if (player.isGliding() || player.isClimbing() || player.getVehicle() != null) return true;
-        if (!whenSneaking.value() && player.isSneaking()) return true;
-        return !inLiquids.value() && (player.isTouchingWater() || player.isInLava());
+    private boolean shouldStop(Minecraft mc, LocalPlayer player) {
+        if (player.isFallFlying() || player.onClimbable() || player.getVehicle() != null) return true;
+        if (!whenSneaking.value() && player.isShiftKeyDown()) return true;
+        return !inLiquids.value() && (player.isInWater() || player.isInLava());
     }
 
     @Override

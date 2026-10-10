@@ -1,10 +1,9 @@
 package ruby.helpers.render;
 
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-
 import java.util.Set;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Shape-mode box rendering using the client {@link Renderer}.
@@ -36,7 +35,7 @@ public final class RenderShapes {
 
         for (BlockPos pos : group) {
             for (Direction dir : Direction.values()) {
-                if (group.contains(pos.offset(dir))) continue;
+                if (group.contains(pos.relative(dir))) continue;
 
                 if (lines && sides) {
                     Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);
@@ -56,8 +55,8 @@ public final class RenderShapes {
 
     public static void box(double x1, double y1, double z1, double x2, double y2, double z2,
                            int sideColor, int lineColor, ShapeMode mode) {
-        Vec3d center = new Vec3d((x1 + x2) / 2.0, (y1 + y2) / 2.0, (z1 + z2) / 2.0);
-        Vec3d size = new Vec3d(x2 - x1, y2 - y1, z2 - z1);
+        Vec3 center = new Vec3((x1 + x2) / 2.0, (y1 + y2) / 2.0, (z1 + z2) / 2.0);
+        Vec3 size = new Vec3(x2 - x1, y2 - y1, z2 - z1);
 
         if (mode == ShapeMode.Sides || mode == ShapeMode.Both) {
             Renderer.setMode(Renderer.Mode.FILL_ALWAYS_ON_TOP);
@@ -72,12 +71,12 @@ public final class RenderShapes {
         }
     }
 
-    public static void box(Vec3d min, Vec3d max, int sideColor, int lineColor, ShapeMode mode) {
+    public static void box(Vec3 min, Vec3 max, int sideColor, int lineColor, ShapeMode mode) {
         box(min.x, min.y, min.z, max.x, max.y, max.z, sideColor, lineColor, mode);
     }
 
     public static void lineToCenter(double x, double y, double z, int color) {
-        Vec3d center = Renderer.getScreenCenter();
+        Vec3 center = Renderer.getScreenCenter();
         Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);
         Renderer.color(color);
         Renderer.line(center.x, center.y, center.z, x, y, z);
@@ -85,7 +84,7 @@ public final class RenderShapes {
 
     public static int scaleAlpha(int color, double factor) {
         int a = (color >>> 24) & 0xFF;
-        int scaled = (int) Math.round(a * Math.max(0, Math.min(1, factor)));
+        int scaled = (int) Math.round(a * Math.clamp(factor, 0, 1));
         return (scaled << 24) | (color & 0x00FFFFFF);
     }
 }

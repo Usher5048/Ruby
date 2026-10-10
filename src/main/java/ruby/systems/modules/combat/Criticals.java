@@ -1,10 +1,10 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.block.Blocks;
-import net.minecraft.util.math.Box;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 import ruby.RubyClient;
 import ruby.helpers.RotationRaycast;
 import ruby.systems.config.BooleanValue;
@@ -80,14 +80,14 @@ public class Criticals extends Module {
     public static boolean shouldForceJump() {
         Criticals criticals = Modules.getByClass(Criticals.class);
         if(criticals == null || !criticals.enabled() || criticals.mode.value() != Mode.Jump) return false;
-        if(RubyClient.client.player == null || RubyClient.client.world == null) return false;
-        if(RubyClient.client.currentScreen != null) return false;
+        if(RubyClient.client.player == null || RubyClient.client.level == null) return false;
+        if(RubyClient.client.gui.screen() != null) return false;
         if(!criticals.isJumpModeActive()) return false;
         if(!allowsCriticalHit(true)) return false;
         if(criticals.optimizeForCooldown.value() && criticals.shouldWaitForJump()) return false;
 
-        ClientPlayerEntity player = RubyClient.client.player;
-        if(!player.isOnGround()) return false;
+        LocalPlayer player = RubyClient.client.player;
+        if(!player.onGround()) return false;
         if(!criticals.hasEnemyInRange(criticals.range.value())) return false;
 
         criticals.adjustNextJump = true;
@@ -98,25 +98,24 @@ public class Criticals extends Module {
         if(!this.adjustNextJump || Math.abs(motionY - 0.42f) > 0.001f) return;
         if(RubyClient.client.player == null) return;
 
-        RubyClient.client.player.setVelocity(
-                RubyClient.client.player.getVelocity().x,
+        RubyClient.client.player.setDeltaMovement(
+                RubyClient.client.player.getDeltaMovement().x,
                 this.jumpHeight.value(),
-                RubyClient.client.player.getVelocity().z
+                RubyClient.client.player.getDeltaMovement().z
         );
         this.adjustNextJump = false;
     }
 
     public static boolean allowsCriticalHit(boolean ignoreOnGround) {
         if(RubyClient.client.player == null) return false;
-        ClientPlayerEntity player = RubyClient.client.player;
+        LocalPlayer player = RubyClient.client.player;
 
-        if(player.isTouchingWater() || player.isInLava() || player.hasVehicle()) return false;
-        if(player.isClimbing() || player.hasNoGravity()) return false;
+        if(player.isInWater() || player.isInLava() || player.isPassenger()) return false;
+        if(player.onClimbable() || player.isNoGravity()) return false;
         if(player.getAbilities().flying) return false;
-        if(player.isGliding()) return false;
-        if(player.getBlockStateAtPos().isOf(Blocks.COBWEB)) return false;
-        if(!ignoreOnGround && player.isOnGround()) return false;
-        return true;
+        if(player.isFallFlying()) return false;
+        if(player.getInBlockState().is(Blocks.COBWEB)) return false;
+        return ignoreOnGround || !player.onGround();
     }
 
     public static boolean wouldDoCriticalHit() {
@@ -125,9 +124,9 @@ public class Criticals extends Module {
 
     public static boolean wouldDoCriticalHit(boolean ignoreSprint) {
         if(RubyClient.client.player == null) return false;
-        ClientPlayerEntity player = RubyClient.client.player;
+        LocalPlayer player = RubyClient.client.player;
         return allowsCriticalHit(false)
-                && player.getAttackCooldownProgress(0.5f) > 0.9f
+                && player.getAttackStrengthScale(0.5f) > 0.9f
                 && (ignoreSprint || !player.isSprinting())
                 && player.fallDistance > 0.0f;
     }
@@ -138,21 +137,21 @@ public class Criticals extends Module {
         if(!ignoreState && (!criticals.enabled() || !criticals.isJumpModeActive())) return false;
         if(RubyClient.client.player == null || target == null) return false;
 
-        ClientPlayerEntity player = RubyClient.client.player;
-        if(player.isGliding()) return false;
+        LocalPlayer player = RubyClient.client.player;
+        if(player.isFallFlying()) return false;
         if(!allowsCriticalHit(false)) return false;
-        if(player.getVelocity().y < -0.08) return false;
+        if(player.getDeltaMovement().y < -0.08) return false;
         if(wouldDoCriticalHit(false)) return false;
 
         float nextPossibleCrit = calculateTicksUntilNextCrit(player);
-        float ticksTillFall = Math.max(0.0f, (float) (player.getVelocity().y / 0.08));
+        float ticksTillFall = Math.max(0.0f, (float) (player.getDeltaMovement().y / 0.08));
         float ticksTillCrit = Math.max(nextPossibleCrit, ticksTillFall);
 
         float damageOnCrit = 0.5f * 0.75f;
         if(damageOnCrit <= getCooldownDamageFactor(player, ticksTillCrit)) return false;
 
-        if(player.isOnGround() && criticals.hasEnemyInRange(criticals.range.value())) return true;
-        return !player.isOnGround() && player.fallDistance <= 0.0f && player.getVelocity().y >= -0.08;
+        if(player.onGround() && criticals.hasEnemyInRange(criticals.range.value())) return true;
+        return !player.onGround() && player.fallDistance <= 0.0f && player.getDeltaMovement().y >= -0.08;
     }
 
     public static boolean isCriticalHitAllowed(KillAura.CriticalsMode mode, Entity target) {
@@ -197,20 +196,20 @@ public class Criticals extends Module {
     }
 
     private boolean hasEnemyInRange(double range) {
-        if(RubyClient.client.player == null || RubyClient.client.world == null) return false;
+        if(RubyClient.client.player == null || RubyClient.client.level == null) return false;
 
         KillAura killAura = Modules.getByClass(KillAura.class);
         Entity target = killAura != null ? killAura.currentTarget() : null;
         if(target != null && target.isAlive()) {
             if(RotationRaycast.squaredBoxedDistanceTo(target) <= range * range) {
-                if(!this.canBeSeen.value() || RubyClient.client.player.canSee(target)) return true;
+                if(!this.canBeSeen.value() || RubyClient.client.player.hasLineOfSight(target)) return true;
             }
         }
 
-        Box box = RubyClient.client.player.getBoundingBox().expand(range);
-        for(Entity entity : RubyClient.client.world.getOtherEntities(RubyClient.client.player, box, e -> e instanceof LivingEntity living && living.isAlive())) {
+        AABB box = RubyClient.client.player.getBoundingBox().inflate(range);
+        for(Entity entity : RubyClient.client.level.getEntities(RubyClient.client.player, box, e -> e instanceof LivingEntity living && living.isAlive())) {
             if(RotationRaycast.squaredBoxedDistanceTo(entity) > range * range) continue;
-            if(this.canBeSeen.value() && !RubyClient.client.player.canSee(entity)) continue;
+            if(this.canBeSeen.value() && !RubyClient.client.player.hasLineOfSight(entity)) continue;
             return true;
         }
         return false;
@@ -228,19 +227,19 @@ public class Criticals extends Module {
         return ticksTillFall + 1.0f < nextPossibleCrit;
     }
 
-    private static float calculateTicksUntilNextCrit(ClientPlayerEntity player) {
-        float progress = player.getAttackCooldownProgress(0.0f);
+    private static float calculateTicksUntilNextCrit(LocalPlayer player) {
+        float progress = player.getAttackStrengthScale(0.0f);
         if(progress >= 1.0f) return 0.0f;
         return (1.0f - progress) * attackCooldownTicks(player);
     }
 
-    private static float attackCooldownTicks(ClientPlayerEntity player) {
-        float progress = player.getAttackCooldownProgress(0.0f);
+    private static float attackCooldownTicks(LocalPlayer player) {
+        float progress = player.getAttackStrengthScale(0.0f);
         if(progress <= 0.0f) return 20.0f;
         return Math.max(1.0f, 1.0f / progress);
     }
 
-    private static float getCooldownDamageFactor(ClientPlayerEntity player, float tickDelta) {
+    private static float getCooldownDamageFactor(LocalPlayer player, float tickDelta) {
         float delay = attackCooldownTicks(player);
         float base = (tickDelta + 0.5f) / delay;
         return Math.min(1.0f, 0.2f + base * base * 0.8f);

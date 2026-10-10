@@ -1,11 +1,11 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -45,38 +45,38 @@ public class Jesus extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.world == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.level == null) return;
 
         // Don't activate while flying, swimming, in vehicles, or sneaking (if dip-on-sneak)
         if (player.getAbilities().flying || player.isSwimming() || player.getVehicle() != null) return;
-        if (dipOnSneak.value() && mc.options.sneakKey.isPressed()) return;
+        if (dipOnSneak.value() && mc.options.keyShift.isDown()) return;
 
-        boolean inWater = player.isTouchingWater();
+        boolean inWater = player.isInWater();
         boolean inLava = player.isInLava();
 
         if (inWater && water.value()) {
-            player.setVelocity(player.getVelocity().x, 0.11, player.getVelocity().z);
+            player.setDeltaMovement(player.getDeltaMovement().x, 0.11, player.getDeltaMovement().z);
             return;
         }
 
         if (inLava && lava.value()) {
-            player.setVelocity(player.getVelocity().x, 0.11, player.getVelocity().z);
+            player.setDeltaMovement(player.getDeltaMovement().x, 0.11, player.getDeltaMovement().z);
             return;
         }
 
         // When just above the liquid surface, stabilize
-        BlockPos below = player.getBlockPos().down();
-        BlockState blockBelow = mc.world.getBlockState(below);
+        BlockPos below = player.blockPosition().below();
+        BlockState blockBelow = mc.level.getBlockState(below);
 
-        boolean waterBelow = blockBelow.getFluidState().getFluid() == Fluids.WATER ||
-                blockBelow.getFluidState().getFluid() == Fluids.FLOWING_WATER;
-        boolean lavaBelow = blockBelow.isOf(Blocks.LAVA);
+        boolean waterBelow = blockBelow.getFluidState().getType() == Fluids.WATER ||
+                blockBelow.getFluidState().getType() == Fluids.FLOWING_WATER;
+        boolean lavaBelow = blockBelow.is(Blocks.LAVA);
 
         if ((waterBelow && water.value()) || (lavaBelow && lava.value())) {
-            if (player.getVelocity().y < 0) {
-                player.setVelocity(player.getVelocity().x, 0, player.getVelocity().z);
+            if (player.getDeltaMovement().y < 0) {
+                player.setDeltaMovement(player.getDeltaMovement().x, 0, player.getDeltaMovement().z);
             }
         }
     }

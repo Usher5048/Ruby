@@ -1,9 +1,5 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import ruby.helpers.Slots;
 import ruby.helpers.inventory.*;
 import ruby.systems.config.BooleanValue;
@@ -14,6 +10,9 @@ import ruby.systems.modules.ModuleType;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
 
 public class AutoArmor extends Module {
     private final IntegerValue startDelay;
@@ -68,7 +67,7 @@ public class AutoArmor extends Module {
     private void onSchedule(ScheduleInventoryActionEvent event) {
         if(!this.enabled()) return;
 
-        ClientPlayerEntity player = mc();
+        LocalPlayer player = mc();
         if(player == null || player.isSpectator()) return;
         if(InventoryManager.isOperating()) return;
 
@@ -93,9 +92,9 @@ public class AutoArmor extends Module {
             event.schedule(constraints, actions, InventoryPriority.IMPORTANT);
     }
 
-    private List<InventoryAction> buildActions(ClientPlayerEntity player, ArmorPiece piece) {
+    private List<InventoryAction> buildActions(LocalPlayer player, ArmorPiece piece) {
         EquipmentSlot armorSlot = piece.slot();
-        ItemStack equipped = player.getEquippedStack(armorSlot);
+        ItemStack equipped = player.getItemBySlot(armorSlot);
         if(ArmorEvaluation.isElytra(equipped)) return List.of();
 
         int sourceId = Slots.indexToID(piece.inventorySlot());
@@ -120,9 +119,9 @@ public class AutoArmor extends Module {
         return actions;
     }
 
-    private boolean hasInventorySpace(ClientPlayerEntity player) {
+    private boolean hasInventorySpace(LocalPlayer player) {
         for(int i = 0; i < 36; i++) {
-            if(player.getInventory().getStack(i).isEmpty()) return true;
+            if(player.getInventory().getItem(i).isEmpty()) return true;
         }
         return false;
     }
@@ -137,7 +136,7 @@ public class AutoArmor extends Module {
         };
     }
 
-    private static ClientPlayerEntity mc() {
+    private static LocalPlayer mc() {
         return ruby.RubyClient.client.player;
     }
 }

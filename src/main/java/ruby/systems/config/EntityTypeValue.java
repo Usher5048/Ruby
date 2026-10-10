@@ -1,13 +1,12 @@
 package ruby.systems.config;
 
-import net.minecraft.entity.EntityType;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EntityType;
 
 public class EntityTypeValue extends Value<EntityType<?>> {
     protected EntityTypeValue(
@@ -21,15 +20,15 @@ public class EntityTypeValue extends Value<EntityType<?>> {
 
     @Override
     public String toString() {
-        return this.value().getName().getString();
+        return this.value().getDescription().getString();
     }
 
     @Override
     public boolean fromString(String str) {
         if(str == null) return false;
 
-        for(EntityType<?> type : Registries.ENTITY_TYPE) {
-            if(!str.equals(type.getName().getString())) continue;
+        for(EntityType<?> type : BuiltInRegistries.ENTITY_TYPE) {
+            if(!str.equals(type.getDescription().getString())) continue;
             return true;
         }
 
@@ -38,7 +37,7 @@ public class EntityTypeValue extends Value<EntityType<?>> {
 
     @Override
     public int serialize(ByteArrayOutputStream stream) {
-        String typeID = Registries.ENTITY_TYPE.getId(this.value()).toString();
+        String typeID = BuiltInRegistries.ENTITY_TYPE.getKey(this.value()).toString();
 
         byte[] bytes = typeID.getBytes();
         short len = (short) bytes.length;
@@ -58,16 +57,16 @@ public class EntityTypeValue extends Value<EntityType<?>> {
         stream.readNBytes(bytes, 0, length);
         String typeID = new String(bytes);
 
-        this.setValue(Registries.ENTITY_TYPE.get(Identifier.tryParse(typeID)));
+        this.setValue(BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.tryParse(typeID)));
     }
 
-    public static class Builder extends Value.Builder<EntityType<?>, Builder> {
+    public static class Builder extends Value.Builder<EntityType<?>, ruby.systems.config.EntityTypeValue.Builder> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.EntityTypeValue.Builder self() {
             return this;
         }
 

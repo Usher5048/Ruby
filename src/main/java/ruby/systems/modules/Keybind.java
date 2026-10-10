@@ -1,8 +1,8 @@
 package ruby.systems.modules;
 
-import net.minecraft.client.util.InputUtil;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import ruby.RubyClient;
+import ruby.helpers.input.InputUtils;
 
 public class Keybind {
     public static final int UNKNOWN = Keybind.CODE_MASK;
@@ -39,8 +39,8 @@ public class Keybind {
         code = code & Keybind.CODE_MASK;
         if(code == Keybind.UNKNOWN) return false;
 
-        if(isKey) return code != GLFW.GLFW_KEY_ESCAPE;
-        return code != GLFW.GLFW_MOUSE_BUTTON_LEFT && code != GLFW.GLFW_MOUSE_BUTTON_RIGHT;
+        if(isKey) return code != InputConstants.KEY_ESCAPE;
+        return code != InputConstants.MOUSE_BUTTON_LEFT && code != InputConstants.MOUSE_BUTTON_RIGHT;
     }
 
     public void unbind() {
@@ -73,19 +73,22 @@ public class Keybind {
         return this.code == Keybind.UNKNOWN;
     }
     public boolean isHeld() {
-        if(this.code < 0) return false;
+        if(this.isUnbound() || RubyClient.client.gui.screen() != null) return false;
 
-        if(!this.isKey) {
-            return GLFW.glfwGetMouseButton(RubyClient.client.getWindow().getHandle(), this.code) == GLFW.GLFW_PRESS
-                    && RubyClient.client.currentScreen == null;
+        if(!this.isKey) return InputUtils.isMousePressed(this.code);
+        return InputUtils.isKeyPressed(this.code) || Keybind.isScanDown(this.code);
+    }
+
+    private static boolean isScanDown(int code) {
+        try {
+            return InputConstants.isKeyDown(code);
+        } catch (IndexOutOfBoundsException ignored) {
+            return false;
         }
-
-        return InputUtil.isKeyPressed(RubyClient.client.getWindow(), this.code)
-                && RubyClient.client.currentScreen == null;
     }
 
     public boolean isPressed() {
-        if(RubyClient.client.currentScreen != null) return false;
+        if(RubyClient.client.gui.screen() != null) return false;
         if(this.code < 0) return false;
 
         boolean isHeld = this.isHeld();
@@ -100,7 +103,7 @@ public class Keybind {
     }
 
     public boolean wasPressed() {
-        if(RubyClient.client.currentScreen != null) return false;
+        if(RubyClient.client.gui.screen() != null) return false;
         if(this.code < 0) return false;
 
         boolean isHeld = this.isHeld();
@@ -116,14 +119,14 @@ public class Keybind {
 
     @Override
     public String toString() {
-        if (this.isUnbound()) return "None";
+        if(this.isUnbound()) return "None";
+        if(!this.isKey) return "MB" + this.code;
 
-        if (this.isKey) {
-            String keyname = GLFW.glfwGetKeyName(this.code, GLFW.glfwGetKeyScancode(this.code));
-            if (keyname != null) return keyname.toUpperCase(java.util.Locale.ROOT);
+        InputConstants.Key key = InputConstants.Type.KEYBOARD.getOrCreate(this.code);
+        String name = key.getDisplayName().getString();
+        if(name.isBlank() || name.equals(key.getName()) || name.startsWith("key."))
             return "KEY." + this.code;
-        }
 
-        return "MB" + (this.code + 1);
+        return name;
     }
 }

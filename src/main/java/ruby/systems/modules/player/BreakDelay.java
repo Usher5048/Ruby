@@ -43,7 +43,7 @@ public class BreakDelay extends Module {
 
     @Override
     public void tick() {
-        if (noInstaBreak.value() && RubyClient.client.options.attackKey.isPressed()) {
+        if (noInstaBreak.value() && RubyClient.client.options.keyAttack.isDown()) {
             breakBlockCooldown = true;
         }
     }

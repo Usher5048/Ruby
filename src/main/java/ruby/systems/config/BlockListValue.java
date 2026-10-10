@@ -1,8 +1,8 @@
 package ruby.systems.config;
 
-import net.minecraft.block.Block;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -29,7 +29,7 @@ public class BlockListValue extends ListValue<Block> {
     protected Block fromStringElement(String str) {
         if(str == null) return null;
 
-        for(Block block : Registries.BLOCK) {
+        for(Block block : BuiltInRegistries.BLOCK) {
             if(!str.equals(block.getName().getString())) continue;
             return block;
         }
@@ -39,7 +39,7 @@ public class BlockListValue extends ListValue<Block> {
 
     @Override
     protected int serializeElement(ByteArrayOutputStream stream, Block value) {
-        String blockID = Registries.BLOCK.getId(value).toString();
+        String blockID = BuiltInRegistries.BLOCK.getKey(value).toString();
 
         byte[] bytes = blockID.getBytes();
         short len = (short) bytes.length;
@@ -59,16 +59,16 @@ public class BlockListValue extends ListValue<Block> {
         stream.readNBytes(bytes, 0, length);
         String blockID = new String(bytes);
 
-        return Registries.BLOCK.get(Identifier.tryParse(blockID));
+        return BuiltInRegistries.BLOCK.getValue(Identifier.tryParse(blockID));
     }
 
-    public static class Builder extends ListValue.Builder<Block, Builder> {
+    public static class Builder extends ListValue.Builder<Block, ruby.systems.config.BlockListValue.Builder> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.BlockListValue.Builder self() {
             return this;
         }
 

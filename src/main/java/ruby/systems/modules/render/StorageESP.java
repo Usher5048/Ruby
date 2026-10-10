@@ -1,9 +1,18 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.block.entity.*;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import net.minecraft.world.level.block.entity.BarrelBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BrewingStandBlockEntity;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.DispenserBlockEntity;
+import net.minecraft.world.level.block.entity.EnderChestBlockEntity;
+import net.minecraft.world.level.block.entity.HopperBlockEntity;
+import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
+import net.minecraft.world.level.block.entity.TrappedChestBlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 import ruby.RubyClient;
 import ruby.helpers.render.RenderShapes;
 import ruby.systems.config.BooleanValue;
@@ -59,15 +68,15 @@ public class StorageESP extends Module {
 
     @Override
     public void render3D() {
-        if (RubyClient.client.world == null || RubyClient.client.player == null) return;
+        if (RubyClient.client.level == null || RubyClient.client.player == null) return;
 
         count = 0;
         for (BlockEntity blockEntity : collectBlockEntities()) {
             int line = colorFor(blockEntity);
             if (line == 0) continue;
 
-            BlockPos pos = blockEntity.getPos();
-            double dist = RubyClient.client.player.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            BlockPos pos = blockEntity.getBlockPos();
+            double dist = RubyClient.client.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
             double fade = fadeDistance.value();
             double alpha = fade <= 0 ? 1 : Math.max(0.075, dist <= fade * fade ? dist / (fade * fade) : 1);
 
@@ -93,14 +102,16 @@ public class StorageESP extends Module {
     }
 
     private List<BlockEntity> collectBlockEntities() {
-        List<BlockEntity> entities = new ArrayList<>();
-        int radius = Math.min(RubyClient.client.options.getViewDistance().getValue(), 8);
-        ChunkPos center = RubyClient.client.player.getChunkPos();
+        if(RubyClient.client.level == null) return List.of();
+        if(RubyClient.client.player == null) return List.of();
 
-        for (int cx = center.x - radius; cx <= center.x + radius; cx++) {
-            for (int cz = center.z - radius; cz <= center.z + radius; cz++) {
-                WorldChunk chunk = RubyClient.client.world.getChunkManager().getWorldChunk(cx, cz);
-                if (chunk == null) continue;
+        List<BlockEntity> entities = new ArrayList<>();
+        int radius = Math.min(RubyClient.client.options.renderDistance().get(), 8);
+        ChunkPos center = RubyClient.client.player.chunkPosition();
+
+        for (int cx = center.x() - radius; cx <= center.x() + radius; cx++) {
+            for (int cz = center.z() - radius; cz <= center.z() + radius; cz++) {
+                LevelChunk chunk = RubyClient.client.level.getChunk(cx, cz);
                 entities.addAll(chunk.getBlockEntities().values());
             }
         }
@@ -125,7 +136,7 @@ public class StorageESP extends Module {
 
     private static int multiplyAlpha(int color, float alpha) {
         int a = (color >>> 24) & 0xFF;
-        int scaled = Math.round(a * Math.max(0f, Math.min(1f, alpha)));
+        int scaled = Math.round(a * Math.clamp(alpha, 0f, 1f));
         return (scaled << 24) | (color & 0x00FFFFFF);
     }
 }

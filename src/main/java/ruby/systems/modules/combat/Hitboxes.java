@@ -1,18 +1,6 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.command.argument.EntityAnchorArgumentType;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.PlayerInput;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
 import ruby.RubyClient;
-import ruby.helpers.PlayerInteractEntity;
 import ruby.helpers.Rotations;
 import ruby.helpers.render.Renderer;
 import ruby.systems.config.BooleanValue;
@@ -29,6 +17,16 @@ import ruby.systems.social.FriendsManager;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
+import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.network.protocol.game.ServerboundPunchPacket;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 
 public class Hitboxes extends Module {
     public final DoubleValue expand = this.config.create(new DoubleValue.Builder("Expand")
@@ -39,7 +37,7 @@ public class Hitboxes extends Module {
 
     public final EntityTypeListValue targets = this.config.create(new EntityTypeListValue.Builder("Targets")
             .description("Which types of entities to expand.")
-            .defaultValue(EntityType.PLAYER)
+            .defaultValue(EntityTypes.PLAYER)
             .build());
 
     public final BooleanValue ignoreFriends = this.config.create(new BooleanValue.Builder("Ignore Friends")
@@ -60,7 +58,7 @@ public class Hitboxes extends Module {
     private final Queue<EntityEvent> eventQueue = new ArrayDeque<>();
     private boolean ignoreNextInteract = false;
     private boolean cancelNextSwing = false;
-    private PlayerInput lastInput = null;
+    private Input lastInput = null;
     private float prevPitch = Float.NaN;
     private boolean subTicking = false;
     private float prevYaw = Float.NaN;
@@ -71,7 +69,7 @@ public class Hitboxes extends Module {
         Events.PACKET.register(PacketEvents.SEND, event -> {
             if(!this.enabled()) return;
             if(!this.cancelNextSwing) return;
-            if(!(event.packet() instanceof HandSwingC2SPacket)) return;
+            if(!(event.packet() instanceof ServerboundPunchPacket)) return;
 
             event.setCancelled(true);
             this.cancelNextSwing = false;
@@ -84,7 +82,7 @@ public class Hitboxes extends Module {
                 return;
             }
 
-            if(event.type() == PlayerInteractEntity.Type.ATTACK)
+            if(!event.wasSecondary())
                 this.cancelNextSwing = true;
 
             event.setCancelled(true);
@@ -96,7 +94,7 @@ public class Hitboxes extends Module {
         if(!this.enabled()) return 0;
         if(entity.equals(RubyClient.client.player)) return 0;
 
-        if(this.ignoreFriends.value() && entity instanceof PlayerEntity player && FriendsManager.isFriend(player))
+        if(this.ignoreFriends.value() && entity instanceof Player player && FriendsManager.isFriend(player))
             return 0;
 
         if(this.targets.value().contains(entity.getType())) return this.expand.value();
@@ -106,8 +104,8 @@ public class Hitboxes extends Module {
     @Override
     public void tick() {
         if(RubyClient.client.player == null) return;
-        if(RubyClient.client.interactionManager == null) return;
-        if(RubyClient.client.getNetworkHandler() == null) return;
+        if(RubyClient.client.gameMode == null) return;
+        if(RubyClient.client.getConnection() == null) return;
 
         if(!this.subTicking) {
             this.lastInput = null;
@@ -120,56 +118,43 @@ public class Hitboxes extends Module {
         Entity entity = event.entity();
         if(entity == null) return;
 
-        Box box = entity.getBoundingBox();
-        Vec3d eye = RubyClient.client.player.getEyePos();
-        double x = MathHelper.clamp(eye.getX(), box.minX, box.maxX);
-        double y = MathHelper.clamp(eye.getY(), box.minY, box.maxY);
-        double z = MathHelper.clamp(eye.getZ(), box.minZ, box.maxZ);
-        if(RubyClient.client.player.getEyePos().squaredDistanceTo(x, y, z) > 9) return;
+        AABB box = entity.getBoundingBox();
+        Vec3 eye = RubyClient.client.player.getEyePosition();
+        double x = Mth.clamp(eye.x(), box.minX, box.maxX);
+        double y = Mth.clamp(eye.y(), box.minY, box.maxY);
+        double z = Mth.clamp(eye.z(), box.minZ, box.maxZ);
+        if(RubyClient.client.player.getEyePosition().distanceToSqr(x, y, z) > 9) return;
 
         if(!this.subTicking) {
-            this.lastInput = RubyClient.client.player.input.playerInput;
-            RubyClient.client.player.input.playerInput = new PlayerInput(
+            this.lastInput = RubyClient.client.player.input.keyPresses;
+            RubyClient.client.player.input.keyPresses = new Input(
                     false, false, false, false,
-                    RubyClient.client.player.input.playerInput.jump(),
-                    RubyClient.client.player.input.playerInput.sneak(),
+                    RubyClient.client.player.input.keyPresses.jump(),
+                    RubyClient.client.player.input.keyPresses.shift(),
                     false
             );
 
-            this.prevYaw = RubyClient.client.player.getYaw();
-            this.prevPitch = RubyClient.client.player.getPitch();
+            this.prevYaw = RubyClient.client.player.getYRot();
+            this.prevPitch = RubyClient.client.player.getXRot();
 
-            float[] angles = Rotations.rotationTo(EntityAnchorArgumentType.EntityAnchor.FEET, entity.getEntityPos());
-            RubyClient.client.player.setAngles(angles[0], angles[1]);
+            float[] angles = Rotations.rotationTo(EntityAnchorArgument.Anchor.FEET, entity.position());
+            RubyClient.client.player.setYRot(angles[0]);
+            RubyClient.client.player.setXRot(angles[1]);
         }
 
         this.ignoreNextInteract = true;
-        switch(event.type()) {
-            case ATTACK -> {
-                RubyClient.client.interactionManager.attackEntity(RubyClient.client.player, entity);
-                RubyClient.client.getNetworkHandler().sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
-            }
-
-            case INTERACT -> RubyClient.client.interactionManager.interactEntity(
-                    RubyClient.client.player,
-                    entity, event.hand()
-            );
-
-            case INTERACT_AT -> RubyClient.client.interactionManager.interactEntityAtLocation(
+        if(!event.wasSecondary()) {
+            RubyClient.client.gameMode.attack(RubyClient.client.player, entity);
+            RubyClient.client.getConnection().send(ServerboundPunchPacket.INSTANCE);
+        } else {
+            RubyClient.client.gameMode.interact(
                     RubyClient.client.player,
                     entity,
-                    new EntityHitResult(entity, entity.getEyePos()),
+                    event.hitResult() != null
+                            ? event.hitResult()
+                            : new EntityHitResult(entity, entity.getEyePosition()),
                     event.hand()
             );
-        }
-
-        // Minecraft sends 4 packets per interact, interact + interact_at, one for each hand
-        // sent in this order: interact_at(main), interact(main), interact_at(off), interact(off)
-        // if we get the first one, just drain the other three
-        if(event.type() == PlayerInteractEntity.Type.INTERACT_AT && event.hand() == Hand.MAIN_HAND) {
-            this.subTicking = true;
-            this.tick(); this.tick(); this.tick();
-            this.subTicking = false;
         }
     }
 
@@ -178,12 +163,13 @@ public class Hitboxes extends Module {
         if(RubyClient.client.player == null) return;
 
         if(!Float.isNaN(this.prevYaw) && !Float.isNaN(this.prevPitch)) {
-            RubyClient.client.player.setAngles(this.prevYaw, this.prevPitch);
+            RubyClient.client.player.setYRot(this.prevYaw);
+            RubyClient.client.player.setXRot(this.prevPitch);
             this.prevYaw = Float.NaN; this.prevPitch = Float.NaN;
         }
 
         if(this.lastInput != null) {
-            RubyClient.client.player.input.playerInput = this.lastInput;
+            RubyClient.client.player.input.keyPresses = this.lastInput;
             this.lastInput = null;
         }
     }
@@ -246,24 +232,24 @@ public class Hitboxes extends Module {
 //            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
 //        }
 
-        if(RubyClient.client.world == null) return;
+        if(RubyClient.client.level == null) return;
         if(!this.renderHitboxes.value()) return;
 
         Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);
         Renderer.color(this.hitboxColor.opaque());
 
-        for(Entity e : RubyClient.client.world.getEntities()) {
+        for(Entity e : RubyClient.client.level.entitiesForRendering()) {
             double expand = this.getEntityValue(e);
             if(expand == 0) continue;
 
-            Vec3d size = new Vec3d(
-                    e.getWidth() + 2 * expand,
-                    e.getHeight() + 2 * expand,
-                    e.getWidth() + 2 * expand
+            Vec3 size = new Vec3(
+                    e.getBbWidth() + 2 * expand,
+                    e.getBbHeight() + 2 * expand,
+                    e.getBbWidth() + 2 * expand
             );
 
             Renderer.cuboid(
-                    e.getEntityPos().add(0, e.getHeight() / 2, 0),
+                    e.position().add(0, e.getBbHeight() / 2, 0),
                     size
             );
         }

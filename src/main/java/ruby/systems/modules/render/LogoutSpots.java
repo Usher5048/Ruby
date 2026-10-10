@@ -1,9 +1,5 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.entity.player.PlayerEntity;
 import ruby.RubyClient;
 import ruby.helpers.render.NametagUtils;
 import ruby.helpers.render.RenderShapes;
@@ -22,6 +18,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Logout spots for players that disconnect nearby.
@@ -37,8 +37,8 @@ public class LogoutSpots extends Module {
     private final ColorValue nameBackgroundColor;
 
     private final List<Entry> players = new ArrayList<>();
-    private final List<PlayerListEntry> lastPlayerList = new ArrayList<>();
-    private final List<PlayerEntity> lastPlayers = new ArrayList<>();
+    private final List<PlayerInfo> lastPlayerList = new ArrayList<>();
+    private final List<Player> lastPlayers = new ArrayList<>();
     private String serverKey;
     private int timer;
 
@@ -75,8 +75,8 @@ public class LogoutSpots extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient client = RubyClient.client;
-        if (client.world == null || client.getNetworkHandler() == null) {
+        Minecraft client = RubyClient.client;
+        if (client.level == null || client.getConnection() == null) {
             if (serverKey != null) {
                 serverKey = null;
                 players.clear();
@@ -88,15 +88,15 @@ public class LogoutSpots extends Module {
 
         syncServerSession();
 
-        Collection<PlayerListEntry> online = client.getNetworkHandler().getPlayerList();
+        Collection<PlayerInfo> online = client.getConnection().getOnlinePlayers();
         if (online.size() != lastPlayerList.size()) {
-            for (PlayerListEntry entry : lastPlayerList) {
+            for (PlayerInfo entry : lastPlayerList) {
                 boolean stillOnline = online.stream()
                         .anyMatch(e -> e.getProfile().equals(entry.getProfile()));
                 if (stillOnline) continue;
 
-                for (PlayerEntity player : lastPlayers) {
-                    if (player.getUuid().equals(entry.getProfile().id())) {
+                for (Player player : lastPlayers) {
+                    if (player.getUUID().equals(entry.getProfile().id())) {
                         add(new Entry(player));
                     }
                 }
@@ -112,20 +112,20 @@ public class LogoutSpots extends Module {
             timer = 10;
         }
 
-        for (PlayerEntity player : client.world.getPlayers()) {
-            players.removeIf(entry -> entry.uuid.equals(player.getUuid()));
+        for (Player player : client.level.players()) {
+            players.removeIf(entry -> entry.uuid.equals(player.getUUID()));
         }
     }
 
     private String resolveServerKey() {
-        MinecraftClient client = RubyClient.client;
-        if (client.isInSingleplayer()) {
-            if (client.world == null) return null;
-            return "sp:" + client.world.getRegistryKey().getValue();
+        Minecraft client = RubyClient.client;
+        if (client.isLocalServer()) {
+            if (client.level == null) return null;
+            return "sp:" + client.level.dimension().identifier();
         }
 
-        ServerInfo entry = client.getCurrentServerEntry();
-        return entry != null ? entry.address : null;
+        ServerData entry = client.getCurrentServer();
+        return entry != null ? entry.ip : null;
     }
 
     private void syncServerSession() {
@@ -137,8 +137,8 @@ public class LogoutSpots extends Module {
         lastPlayerList.clear();
         lastPlayers.clear();
 
-        if (key != null && RubyClient.client.getNetworkHandler() != null) {
-            lastPlayerList.addAll(RubyClient.client.getNetworkHandler().getPlayerList());
+        if (key != null && RubyClient.client.getConnection() != null) {
+            lastPlayerList.addAll(RubyClient.client.getConnection().getOnlinePlayers());
         }
         updateLastPlayers();
         timer = 10;
@@ -146,8 +146,8 @@ public class LogoutSpots extends Module {
 
     private void updateLastPlayers() {
         lastPlayers.clear();
-        if (RubyClient.client.world != null) {
-            lastPlayers.addAll(RubyClient.client.world.getPlayers());
+        if (RubyClient.client.level != null) {
+            lastPlayers.addAll(RubyClient.client.level.players());
         }
     }
 
@@ -185,15 +185,15 @@ public class LogoutSpots extends Module {
         final String name;
         final int health;
 
-        Entry(PlayerEntity entity) {
-            halfWidth = entity.getWidth() / 2.0;
+        Entry(Player entity) {
+            halfWidth = entity.getBbWidth() / 2.0;
             x = entity.getX() - halfWidth;
             y = entity.getY();
             z = entity.getZ() - halfWidth;
-            xWidth = entity.getBoundingBox().getLengthX();
-            zWidth = entity.getBoundingBox().getLengthZ();
-            height = entity.getBoundingBox().getLengthY();
-            uuid = entity.getUuid();
+            xWidth = entity.getBoundingBox().getXsize();
+            zWidth = entity.getBoundingBox().getZsize();
+            height = entity.getBoundingBox().getYsize();
+            uuid = entity.getUUID();
             name = entity.getName().getString();
             health = Math.round(entity.getHealth() + entity.getAbsorptionAmount());
         }
@@ -208,8 +208,8 @@ public class LogoutSpots extends Module {
             }
         }
 
-        void render2D(net.minecraft.client.gui.DrawContext ctx, GUIStyle style, int panelBg, int panelBorder) {
-            if (!NametagUtils.to2D(new net.minecraft.util.math.Vec3d(x + halfWidth, y + height + 0.5, z + halfWidth), scale.value())) {
+        void render2D(net.minecraft.client.gui.GuiGraphicsExtractor ctx, GUIStyle style, int panelBg, int panelBorder) {
+            if (!NametagUtils.to2D(new net.minecraft.world.phys.Vec3(x + halfWidth, y + height + 0.5, z + halfWidth), scale.value())) {
                 return;
             }
 
@@ -224,7 +224,7 @@ public class LogoutSpots extends Module {
                     panelBg,
                     panelBorder,
                     true,
-                    net.minecraft.item.ItemStack.EMPTY
+                    net.minecraft.world.item.ItemStack.EMPTY
             );
         }
     }

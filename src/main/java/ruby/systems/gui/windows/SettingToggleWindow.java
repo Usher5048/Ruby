@@ -1,8 +1,8 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.gui.GUIStyle;
 
@@ -18,7 +18,7 @@ public class SettingToggleWindow extends SettingWindow {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         GUIStyle style = GUIStyle.get();
         int h = this.getHeight();
         int w = this.getWidth();
@@ -58,8 +58,8 @@ public class SettingToggleWindow extends SettingWindow {
     }
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
-        if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
         ((BooleanValue) this.value).setValue(!(boolean) this.value.value());
         return true;
     }

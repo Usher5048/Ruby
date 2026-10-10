@@ -1,14 +1,15 @@
 package ruby.systems.modules.world;
 
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.SwingAnimation;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.modules.Module;
@@ -30,42 +31,44 @@ public class AirPlace extends Module {
 
     @Override
     public void tick() {
-        if (RubyClient.client.player == null || RubyClient.client.world == null
-                || RubyClient.client.interactionManager == null) return;
-        if (RubyClient.client.currentScreen != null) return;
-        if (!RubyClient.client.options.useKey.isPressed()) return;
+        if (RubyClient.client.player == null || RubyClient.client.level == null
+                || RubyClient.client.gameMode == null) return;
+        if (RubyClient.client.gui.screen() != null) return;
+        if (!RubyClient.client.options.keyUse.isDown()) return;
 
-        ItemStack stack = RubyClient.client.player.getMainHandStack();
+        ItemStack stack = RubyClient.client.player.getMainHandItem();
         if (!(stack.getItem() instanceof BlockItem)) return;
 
-        if (RubyClient.client.crosshairTarget != null
-                && RubyClient.client.crosshairTarget.getType() == HitResult.Type.BLOCK) {
+        if (RubyClient.client.hitResult != null
+                && RubyClient.client.hitResult.getType() == HitResult.Type.BLOCK) {
             return;
         }
 
-        Vec3d eyes = RubyClient.client.player.getEyePos();
-        Vec3d look = RubyClient.client.player.getRotationVector();
-        Vec3d end = eyes.add(look.multiply(range.value()));
+        Vec3 eyes = RubyClient.client.player.getEyePosition();
+        Vec3 look = Vec3.directionFromRotation(RubyClient.client.player.getRotationVector());
+        Vec3 end = eyes.add(look.scale(range.value()));
 
-        BlockHitResult hit = RubyClient.client.world.raycast(new RaycastContext(
+        BlockHitResult hit = RubyClient.client.level.clip(new ClipContext(
                 eyes, end,
-                RaycastContext.ShapeType.OUTLINE,
-                RaycastContext.FluidHandling.NONE,
+                ClipContext.Block.OUTLINE,
+                ClipContext.Fluid.NONE,
                 RubyClient.client.player
         ));
 
         if (hit.getType() == HitResult.Type.MISS) {
-            BlockPos neighbor = BlockPos.ofFloored(end).down();
-            if (!RubyClient.client.world.getBlockState(neighbor).isAir()) {
-                hit = new BlockHitResult(Vec3d.ofCenter(neighbor), Direction.UP, neighbor, false);
+            BlockPos neighbor = BlockPos.containing(end).below();
+            if (!RubyClient.client.level.getBlockState(neighbor).isAir()) {
+                hit = new BlockHitResult(Vec3.atCenterOf(neighbor), Direction.UP, neighbor, false);
             } else {
                 return;
             }
         }
 
-        var result = RubyClient.client.interactionManager.interactBlock(
-                RubyClient.client.player, Hand.MAIN_HAND, hit
+        var result = RubyClient.client.gameMode.useItemOn(RubyClient.client.player, InteractionHand.MAIN_HAND, hit);
+        if (result.consumesAction()) RubyClient.client.player.swing(
+                InteractionHand.MAIN_HAND,
+                SwingAnimation.DEFAULT,
+                true
         );
-        if (result.isAccepted()) RubyClient.client.player.swingHand(Hand.MAIN_HAND);
     }
 }

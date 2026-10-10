@@ -1,8 +1,8 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.phys.Vec3;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -29,19 +29,19 @@ public class Dolphin extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
-        if (!player.isTouchingWater() && !player.isSubmergedInWater()) return;
+        if (!player.isInWater() && !player.isUnderWater()) return;
 
-        Vec3d velocity = player.getVelocity();
+        Vec3 velocity = player.getDeltaMovement();
 
         // Boost horizontal velocity while in water
         double factor = speed.value() / 20.0;
-        float yaw = player.getYaw();
-        double forward = player.forwardSpeed;
-        double sideways = player.sidewaysSpeed;
+        float yaw = player.getYRot();
+        double forward = player.zza;
+        double sideways = player.xxa;
 
         if (forward == 0 && sideways == 0) return;
 
@@ -51,9 +51,9 @@ public class Dolphin extends Module {
 
         // Vertical control
         double my = velocity.y;
-        if (mc.options.jumpKey.isPressed()) my = factor;
-        else if (mc.options.sneakKey.isPressed()) my = -factor;
+        if (mc.options.keyJump.isDown()) my = factor;
+        else if (mc.options.keyShift.isDown()) my = -factor;
 
-        player.setVelocity(mx, my, mz);
+        player.setDeltaMovement(mx, my, mz);
     }
 }

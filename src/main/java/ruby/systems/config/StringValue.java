@@ -47,13 +47,13 @@ public class StringValue extends Value<String> {
         this.setValue(new String(bytes));
     }
 
-    public static class Builder extends Value.Builder<String, Builder> {
+    public static class Builder extends Value.Builder<String, ruby.systems.config.StringValue.Builder> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.StringValue.Builder self() {
             return this;
         }
 

@@ -1,14 +1,13 @@
 package ruby.mixin;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.client.util.math.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.state.OptionsRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.state.level.PlayerRenderState;
 import org.joml.Matrix4f;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -22,48 +21,52 @@ import ruby.systems.modules.render.Freecam;
 
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
-    @Shadow @Final private Camera camera;
-    @Shadow @Final private MinecraftClient client;
+    @Shadow private void bobHurt(CameraRenderState cameraState, PoseStack matrices) {}
+    @Shadow private void bobView(CameraRenderState cameraState, PoseStack matrices) {}
 
-    @Shadow protected abstract void bobView(MatrixStack matrices, float tickDelta);
-    @Shadow protected abstract void tiltViewWhenHurt(MatrixStack matrices, float tickDelta);
-
-    @Unique private final MatrixStack matrices = new MatrixStack();
+    @Unique private final PoseStack matrices = new PoseStack();
 
     @Inject(
-            method = "renderWorld",
+            method = "render3dHud",
             at = @At(
                     value = "INVOKE_STRING",
-                    target = "Lnet/minecraft/util/profiler/Profiler;swap(Ljava/lang/String;)V",
+                    target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V",
                     args = {"ldc=hand"}
             )
     )
     private void callRenderEvent(
-            RenderTickCounter tickCounter, CallbackInfo info,
-            @Local(ordinal = 0) Matrix4f projection, @Local(ordinal = 1) Matrix4f position,
-            @Local MatrixStack matrixStack
+            CameraRenderState cameraState,
+            PlayerRenderState playerState,
+            OptionsRenderState optionsState,
+            boolean renderHand,
+            CallbackInfo info
     ) {
-        RenderSystem.getModelViewStack().pushMatrix().mul(position);
+        // Walk bob and hurt tilt are multiplied into the projection, not the view.
+        Matrix4f view = new Matrix4f(cameraState.viewRotationMatrix);
+        Matrix4f projection = new Matrix4f(cameraState.projectionMatrix);
 
-        this.matrices.push();
-        this.tiltViewWhenHurt(this.matrices, this.camera.getLastTickProgress());
-        if(this.client.options.getBobView().getValue())
-            this.bobView(this.matrices, this.camera.getLastTickProgress());
+        this.matrices.pushPose();
+        this.bobHurt(cameraState, this.matrices);
+        if (optionsState.bobView) this.bobView(cameraState, this.matrices);
+        projection.mul(this.matrices.last().pose());
+        this.matrices.popPose();
 
-        Matrix4f inverseBob = new Matrix4f(this.matrices.peek().getPositionMatrix()).invert();
-        RenderSystem.getModelViewStack().mul(inverseBob);
-        this.matrices.pop();
-
-        Renderer.updateMatrices(projection, position);
+        RenderSystem.getModelViewStack().pushMatrix().mul(view);
+        Renderer.updateMatrices(projection, view);
 
         Renderer.begin();
         Events.RENDER3D.fire(Events.GenericEvent.get());
-        Renderer.end(matrixStack);
+        Renderer.end(this.matrices);
         RenderSystem.getModelViewStack().popMatrix();
     }
 
-    @Inject(method = "renderHand", at = @At("HEAD"), cancellable = true)
-    private void ruby$freecamHands(float tickDelta, boolean sleeping, org.joml.Matrix4f matrix, CallbackInfo ci) {
+    @Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
+    private void ruby$freecamHands(
+            CameraRenderState cameraState,
+            PlayerRenderState playerState,
+            GpuTextureView lightmap,
+            CallbackInfo ci
+    ) {
         Freecam freecam = Modules.getByClass(Freecam.class);
         if (freecam != null && freecam.enabled() && !freecam.renderHands()) {
             ci.cancel();

@@ -1,8 +1,8 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 import ruby.systems.gui.GuiEasing;
 import ruby.systems.gui.GuiTime;
 
@@ -71,18 +71,18 @@ public abstract class CollapsibleWindow extends Window {
         return this.headerHeight;
     }
 
-    public abstract void drawHeader(DrawContext context);
+    public abstract void drawHeader(GuiGraphicsExtractor context);
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
-        if(click.button() != GLFW.GLFW_MOUSE_BUTTON_RIGHT) return false;
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
+        if(click.button() != InputConstants.MOUSE_BUTTON_RIGHT) return false;
         if(click.y() >= this.headerHeight) return false;
         this.expanded = !this.expanded;
         return true;
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         this.drawHeader(context);
 
         this.handleChildren = this.expandProgress > 0;

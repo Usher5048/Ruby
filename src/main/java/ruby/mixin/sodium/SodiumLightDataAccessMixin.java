@@ -1,9 +1,9 @@
 package ruby.mixin.sodium;
 
 import net.caffeinemc.mods.sodium.client.model.light.data.LightDataAccess;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.BlockRenderView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -18,8 +18,8 @@ public abstract class SodiumLightDataAccessMixin {
     @Unique
     private static final int FULL_LIGHT = 15 | 15 << 4 | 15 << 8;
 
-    @Shadow protected BlockRenderView level;
-    @Shadow @Final private BlockPos.Mutable pos;
+    @Shadow protected BlockAndTintGetter level;
+    @Shadow @Final private BlockPos.MutableBlockPos pos;
 
     @ModifyVariable(method = "compute", at = @At(value = "TAIL"), name = "bl", remap = false)
     private int ruby$fullBrightOres(int light) {
@@ -27,7 +27,7 @@ public abstract class SodiumLightDataAccessMixin {
         if (xray == null || !xray.enabled()) return light;
 
         BlockState state = this.level.getBlockState(this.pos);
-        if (!xray.isBlocked(state.getBlock(), this.pos.toImmutable(), this.level)) {
+        if (!xray.isBlocked(state.getBlock(), this.pos.immutable(), this.level)) {
             return FULL_LIGHT;
         }
 

@@ -1,16 +1,16 @@
 package ruby.mixin;
 
-import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.client.DeltaTracker;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ruby.systems.modules.world.Timer;
 
-@Mixin(RenderTickCounter.Dynamic.class)
+@Mixin(DeltaTracker.Timer.class)
 public abstract class RenderTickCounterDynamicMixin {
-    @Inject(method = "beginRenderTick(JZ)I", at = @At("RETURN"))
-    private void ruby$timer(long timeMillis, boolean tick, CallbackInfoReturnable<Integer> cir) {
+    @Inject(method = "advanceGameTime(J)I", at = @At("RETURN"))
+    private void ruby$timer(long timeMillis, CallbackInfoReturnable<Integer> cir) {
         double multiplier = Timer.getMultiplier();
         if(multiplier == 1.0) return;
 

@@ -1,13 +1,12 @@
 package ruby.systems.config;
 
-import net.minecraft.block.Block;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
 
 public class BlockValue extends Value<Block> {
     protected BlockValue(
@@ -27,7 +26,7 @@ public class BlockValue extends Value<Block> {
     public boolean fromString(String str) {
         if(str == null) return false;
 
-        for(Block block : Registries.BLOCK) {
+        for(Block block : BuiltInRegistries.BLOCK) {
             if(!str.equals(block.getName().getString())) continue;
             return true;
         }
@@ -37,7 +36,7 @@ public class BlockValue extends Value<Block> {
 
     @Override
     public int serialize(ByteArrayOutputStream stream) {
-        String blockID = Registries.BLOCK.getId(this.value()).toString();
+        String blockID = BuiltInRegistries.BLOCK.getKey(this.value()).toString();
 
         byte[] bytes = blockID.getBytes();
         short len = (short) bytes.length;
@@ -57,16 +56,16 @@ public class BlockValue extends Value<Block> {
         stream.readNBytes(bytes, 0, length);
         String blockID = new String(bytes);
 
-        this.setValue(Registries.BLOCK.get(Identifier.tryParse(blockID)));
+        this.setValue(BuiltInRegistries.BLOCK.getValue(Identifier.tryParse(blockID)));
     }
 
-    public static class Builder extends Value.Builder<Block, Builder> {
+    public static class Builder extends Value.Builder<Block, ruby.systems.config.BlockValue.Builder> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.BlockValue.Builder self() {
             return this;
         }
 

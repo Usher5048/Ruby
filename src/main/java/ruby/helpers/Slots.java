@@ -1,9 +1,14 @@
 package ruby.helpers;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.*;
-import net.minecraft.screen.slot.SlotActionType;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.world.inventory.AnvilMenu;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.CraftingMenu;
+import net.minecraft.world.inventory.MerchantMenu;
+import net.minecraft.world.inventory.ShulkerBoxMenu;
+import net.minecraft.world.inventory.SmithingMenu;
+import net.minecraft.world.item.ItemStack;
 import ruby.RubyClient;
 
 import java.util.ArrayList;
@@ -33,27 +38,27 @@ public class Slots {
     public static int indexToID(int slotIndex) {
         if(RubyClient.client.player == null) return Slots.INVALID_SLOT;
 
-        if(RubyClient.client.player.currentScreenHandler instanceof AnvilScreenHandler) {
+        if(RubyClient.client.player.containerMenu instanceof AnvilMenu) {
             return Slots.HOTBAR.contains(slotIndex) ? slotIndex + 30 :
                     Slots.MAIN.contains(slotIndex) ? 3 + slotIndex - 9:
                     Slots.INVALID_SLOT;
-        } else if(RubyClient.client.player.currentScreenHandler instanceof SmithingScreenHandler) {
+        } else if(RubyClient.client.player.containerMenu instanceof SmithingMenu) {
             return Slots.HOTBAR.contains(slotIndex) ? slotIndex + 31 :
                     Slots.MAIN.contains(slotIndex) ? 4 + slotIndex - 9 :
                     Slots.INVALID_SLOT;
-        } else if(RubyClient.client.player.currentScreenHandler instanceof ShulkerBoxScreenHandler) {
+        } else if(RubyClient.client.player.containerMenu instanceof ShulkerBoxMenu) {
             return Slots.HOTBAR.contains(slotIndex) ? slotIndex + 54 :
                     Slots.MAIN.contains(slotIndex) ? 27 + slotIndex - 9 :
                     Slots.INVALID_SLOT;
-        } else if(RubyClient.client.player.currentScreenHandler instanceof CraftingScreenHandler) {
+        } else if(RubyClient.client.player.containerMenu instanceof CraftingMenu) {
             return Slots.HOTBAR.contains(slotIndex) ? slotIndex + 37 :
                     Slots.MAIN.contains(slotIndex) ? slotIndex + 1 :
                     Slots.INVALID_SLOT;
-        } else if(RubyClient.client.player.currentScreenHandler instanceof GenericContainerScreenHandler h) {
-            return Slots.HOTBAR.contains(slotIndex) ? (h.getRows() + 3) * 9 + slotIndex :
-                    Slots.MAIN.contains(slotIndex) ? h.getRows() * 9 + slotIndex - 9 :
+        } else if(RubyClient.client.player.containerMenu instanceof ChestMenu h) {
+            return Slots.HOTBAR.contains(slotIndex) ? (h.getRowCount() + 3) * 9 + slotIndex :
+                    Slots.MAIN.contains(slotIndex) ? h.getRowCount() * 9 + slotIndex - 9 :
                     Slots.INVALID_SLOT;
-        } else if(RubyClient.client.player.currentScreenHandler instanceof MerchantScreenHandler) {
+        } else if(RubyClient.client.player.containerMenu instanceof MerchantMenu) {
             return Slots.HOTBAR.contains(slotIndex) ? 30 + slotIndex :
                     Slots.MAIN.contains(slotIndex) ? 3 + (slotIndex - 9) :
                     Slots.INVALID_SLOT;
@@ -85,7 +90,7 @@ public class Slots {
         HashMap<Integer, Double> slots = new HashMap<>();
 
         for(int i = range.end(); i >= range.start(); i--) {
-            ItemStack stack = RubyClient.client.player.getInventory().getStack(i);
+            ItemStack stack = RubyClient.client.player.getInventory().getItem(i);
             slots.put(i, criteria.apply(stack, i));
         }
 
@@ -109,7 +114,7 @@ public class Slots {
         ArrayList<Integer> slotIndices = new ArrayList<>();
 
         for(int i = range.end(); i >= range.start(); i--) {
-            ItemStack stack = RubyClient.client.player.getInventory().getStack(i);
+            ItemStack stack = RubyClient.client.player.getInventory().getItem(i);
             if(!filter.apply(stack, i)) continue;
 
             slotIndices.add(i);
@@ -127,48 +132,48 @@ public class Slots {
 
     public static void swap(int source, int destination) {
         if(RubyClient.client.player == null) return;
-        if(RubyClient.client.interactionManager == null) return;
+        if(RubyClient.client.gameMode == null) return;
 
         if(source == Slots.INVALID_SLOT) return;
         if(destination == Slots.INVALID_SLOT) return;
         if(source == destination) return;
 
-        RubyClient.client.interactionManager.clickSlot(
-                RubyClient.client.player.currentScreenHandler.syncId,
+        RubyClient.client.gameMode.handleContainerInput(
+                RubyClient.client.player.containerMenu.containerId,
                 source,
-                GLFW.GLFW_MOUSE_BUTTON_LEFT,
-                SlotActionType.PICKUP,
+                InputConstants.MOUSE_BUTTON_LEFT,
+                ContainerInput.PICKUP,
                 RubyClient.client.player
         );
 
-        RubyClient.client.interactionManager.clickSlot(
-                RubyClient.client.player.currentScreenHandler.syncId,
+        RubyClient.client.gameMode.handleContainerInput(
+                RubyClient.client.player.containerMenu.containerId,
                 destination,
-                GLFW.GLFW_MOUSE_BUTTON_LEFT,
-                SlotActionType.PICKUP,
+                InputConstants.MOUSE_BUTTON_LEFT,
+                ContainerInput.PICKUP,
                 RubyClient.client.player
         );
 
-        if(RubyClient.client.player.currentScreenHandler.getCursorStack().isEmpty()) return;
+        if(RubyClient.client.player.containerMenu.getCarried().isEmpty()) return;
 
-        RubyClient.client.interactionManager.clickSlot(
-                RubyClient.client.player.currentScreenHandler.syncId,
+        RubyClient.client.gameMode.handleContainerInput(
+                RubyClient.client.player.containerMenu.containerId,
                 source,
-                GLFW.GLFW_MOUSE_BUTTON_LEFT,
-                SlotActionType.PICKUP,
+                InputConstants.MOUSE_BUTTON_LEFT,
+                ContainerInput.PICKUP,
                 RubyClient.client.player
         );
     }
 
     public static void drop(int slotID, boolean dropAll) {
         if(RubyClient.client.player == null) return;
-        if(RubyClient.client.interactionManager == null) return;
+        if(RubyClient.client.gameMode == null) return;
 
-        RubyClient.client.interactionManager.clickSlot(
-                RubyClient.client.player.currentScreenHandler.syncId,
+        RubyClient.client.gameMode.handleContainerInput(
+                RubyClient.client.player.containerMenu.containerId,
                 slotID,
                 dropAll ? 2 : 1,
-                SlotActionType.THROW,
+                ContainerInput.THROW,
                 RubyClient.client.player
         );
     }
@@ -177,14 +182,14 @@ public class Slots {
     // only works with hotbar or offhand slots
     public static void bind(int slotID, int hotbarSlot) {
         if(RubyClient.client.player == null) return;
-        if(RubyClient.client.interactionManager == null) return;
+        if(RubyClient.client.gameMode == null) return;
         if(slotID == Slots.indexToID(hotbarSlot)) return;
 
-        RubyClient.client.interactionManager.clickSlot(
-                RubyClient.client.player.currentScreenHandler.syncId,
+        RubyClient.client.gameMode.handleContainerInput(
+                RubyClient.client.player.containerMenu.containerId,
                 slotID,
                 hotbarSlot,
-                SlotActionType.SWAP,
+                ContainerInput.SWAP,
                 RubyClient.client.player
         );
     }

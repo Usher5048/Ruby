@@ -1,15 +1,15 @@
 package ruby.systems.gui;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
 import ruby.RubyClient;
 import ruby.systems.gui.text.FontRenderer;
 import ruby.systems.gui.windows.WindowedOverlay;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 
 // TODO: Possibly redo this to be less intrusive and use less busy waiting
 public class LoadingOverlay extends WindowedOverlay {
@@ -21,7 +21,7 @@ public class LoadingOverlay extends WindowedOverlay {
     private static FontRenderer welcomeFont = null;
 
     private final Thread loadThread;
-    private final List<Text> logs = new ArrayList<>();
+    private final List<Component> logs = new ArrayList<>();
     private final List<Integer> logRemoveTimers = new ArrayList<>();
     private final List<Long> logSlideTimers = new ArrayList<>();
 
@@ -52,7 +52,7 @@ public class LoadingOverlay extends WindowedOverlay {
         this.log(str, 0xFFFFFFFF);
     }
     public void log(String str, int color) {
-        this.logs.add(Text.literal(str).withColor(color));
+        this.logs.add(Component.literal(str).withColor(color));
         this.logRemoveTimers.add(100); // 100 ticks = 5 seconds
         this.logSlideTimers.add(System.currentTimeMillis());
 
@@ -106,7 +106,7 @@ public class LoadingOverlay extends WindowedOverlay {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         if(!this.ranLoadThread && this.welcomeOpacity >= 0xFF) {
             this.loadThread.start();
             this.welcomeOpacity = 0xFF;
@@ -114,7 +114,7 @@ public class LoadingOverlay extends WindowedOverlay {
         }
 
         if(this.opacity <= 0) {
-            RubyClient.client.setOverlay(null);
+            RubyClient.client.gui.setOverlay(null);
             return;
         }
 
@@ -133,8 +133,8 @@ public class LoadingOverlay extends WindowedOverlay {
         }
 
         String text = "Welcome";
-        if(RubyClient.client.getSession().getXuid().isPresent())
-            text += ", " + RubyClient.client.getSession().getUsername();
+        if(RubyClient.client.getUser().getXuid().isPresent())
+            text += ", " + RubyClient.client.getUser().getName();
 
         LoadingOverlay.welcomeFont.draw(
                 context, text,
@@ -154,8 +154,8 @@ public class LoadingOverlay extends WindowedOverlay {
 
         int y = 1;
         for(int i = 0; i < this.logs.size(); i++) {
-            Text log = this.logs.get(i);
-            int color = log.getStyle().getColor().getRgb();
+            Component log = this.logs.get(i);
+            int color = log.getStyle().getColor().getValue();
 
             if(this.logRemoveTimers.get(i) == 0) {
                 this.logRemoveTimers.set(i, -1);
@@ -167,10 +167,10 @@ public class LoadingOverlay extends WindowedOverlay {
             t = this.timingFunction(Math.min(t, 1), 2.3);
 
             int textWidth = LoadingOverlay.logFont.getWidth(log.getString());
-            double x = MathHelper.lerp(t, -textWidth, 1);
+            double x = Mth.lerp(t, -textWidth, 1);
 
             if(this.logRemoveTimers.get(i) <= 0)
-                x = MathHelper.lerp(t, 1, -textWidth);
+                x = Mth.lerp(t, 1, -textWidth);
 
             LoadingOverlay.logFont.draw(
                     context,

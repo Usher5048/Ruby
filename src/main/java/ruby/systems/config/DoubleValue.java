@@ -84,7 +84,7 @@ public class DoubleValue extends Value<Double> {
         ));
     }
 
-    public static class Builder extends Value.Builder<Double, Builder> {
+    public static class Builder extends Value.Builder<Double, ruby.systems.config.DoubleValue.Builder> {
         public Builder(String name) {
             super(name);
         }
@@ -93,28 +93,28 @@ public class DoubleValue extends Value<Double> {
         private double max  =  Double.MAX_VALUE;
         private double step = 0.1;
 
-        public Builder min(double min) {
+        public ruby.systems.config.DoubleValue.Builder min(double min) {
             this.min = min;
             return this;
         }
 
-        public Builder max(double max) {
+        public ruby.systems.config.DoubleValue.Builder max(double max) {
             this.max = max;
             return this;
         }
 
-        public Builder step(double step) {
+        public ruby.systems.config.DoubleValue.Builder step(double step) {
             this.step = step;
             return this;
         }
 
-        public Builder range(double min, double max) {
+        public ruby.systems.config.DoubleValue.Builder range(double min, double max) {
             this.min = min;
             this.max = max;
             return this;
         }
 
-        public Builder range(double min, double max, double step) {
+        public ruby.systems.config.DoubleValue.Builder range(double min, double max, double step) {
             this.min = min;
             this.max = max;
             this.step = step;
@@ -122,13 +122,13 @@ public class DoubleValue extends Value<Double> {
         }
 
         // Allows auto converting integers to doubles without casts
-        public Builder defaultValue(double defaultValue) {
+        public ruby.systems.config.DoubleValue.Builder defaultValue(double defaultValue) {
             this.defaultValue = defaultValue;
             return this;
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.DoubleValue.Builder self() {
             return this;
         }
 

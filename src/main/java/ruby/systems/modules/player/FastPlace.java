@@ -1,8 +1,8 @@
 package ruby.systems.modules.player;
 
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ProjectileItem;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ProjectileItem;
 import ruby.RubyClient;
 import ruby.helpers.RandomUtils;
 import ruby.systems.config.IntegerValue;
@@ -79,13 +79,13 @@ public class FastPlace extends Module {
         var player = RubyClient.client.player;
         if (player == null) return;
 
-        Item mainHand = player.getMainHandStack().getItem();
-        Item offHand = player.getOffHandStack().getItem();
+        Item mainHand = player.getMainHandItem().getItem();
+        Item offHand = player.getOffhandItem().getItem();
         boolean matches = applyTo.value().stream()
                 .anyMatch(tag -> ApplyTo.matches(tag, mainHand) || ApplyTo.matches(tag, offHand));
         if (!matches) return;
 
-        if (startDelay.value() > 0 && !RubyClient.client.options.useKey.isPressed()) return;
+        if (startDelay.value() > 0 && !RubyClient.client.options.keyUse.isDown()) return;
 
         event.setCooldown(RandomUtils.randomInt(cooldownMin.value(), cooldownMax.value()));
     }

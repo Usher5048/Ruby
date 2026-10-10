@@ -1,8 +1,8 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.phys.Vec3;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
@@ -46,29 +46,29 @@ public class LongJump extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
-        boolean onGround = player.isOnGround();
+        boolean onGround = player.onGround();
 
         // Detect the jump frame: was on ground, now airborne with positive Y velocity
-        if (wasOnGround && !onGround && player.getVelocity().y > 0) {
-            Vec3d velocity = player.getVelocity();
+        if (wasOnGround && !onGround && player.getDeltaMovement().y > 0) {
+            Vec3 velocity = player.getDeltaMovement();
 
             switch (mode.value()) {
                 case Vanilla -> {
-                    player.setVelocity(
+                    player.setDeltaMovement(
                             velocity.x * boostFactor.value(),
                             velocity.y,
                             velocity.z * boostFactor.value()
                     );
                 }
                 case Boost -> {
-                    float yaw = player.getYaw();
+                    float yaw = player.getYRot();
                     double rad = Math.toRadians(yaw);
                     double boost = (boostFactor.value() - 1.0) * 0.2;
-                    player.setVelocity(
+                    player.setDeltaMovement(
                             velocity.x + (-Math.sin(rad) * boost),
                             velocity.y,
                             velocity.z + (Math.cos(rad) * boost)

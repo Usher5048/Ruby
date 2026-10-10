@@ -1,12 +1,5 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
 import ruby.RubyClient;
 import ruby.helpers.world.BlockUtils;
 import ruby.helpers.world.ChunkReloadHelper;
@@ -17,6 +10,13 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
 import java.util.List;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.Shapes;
 
 /**
  * Xray — based on Meteor Client 1.21.11.
@@ -77,25 +77,25 @@ public class Xray extends Module {
     public boolean isBlocked(Block block, BlockPos pos) {
         if (!blocks.value().contains(block)) return true;
         if (!exposedOnly.value()) return false;
-        if (pos == null || RubyClient.client.world == null) return false;
-        return !BlockUtils.isExposed(pos, RubyClient.client.world);
+        if (pos == null || RubyClient.client.level == null) return false;
+        return !BlockUtils.isExposed(pos, RubyClient.client.level);
     }
 
-    public boolean isBlocked(Block block, BlockPos pos, BlockView view) {
+    public boolean isBlocked(Block block, BlockPos pos, BlockGetter view) {
         if (!blocks.value().contains(block)) return true;
         if (!exposedOnly.value()) return false;
         if (pos == null || view == null) return false;
         return !BlockUtils.isExposed(pos, view);
     }
 
-    public boolean modifyDrawSide(BlockState state, BlockView view, BlockPos pos, Direction facing, boolean original) {
+    public boolean modifyDrawSide(BlockState state, BlockGetter view, BlockPos pos, Direction facing, boolean original) {
         if (original || isBlocked(state.getBlock(), pos, view)) return original;
 
-        BlockPos adjPos = pos.offset(facing);
+        BlockPos adjPos = pos.relative(facing);
         BlockState adjState = view.getBlockState(adjPos);
-        return adjState.getCullingFace(facing.getOpposite()) != VoxelShapes.fullCube()
+        return adjState.getFaceOcclusionShape(facing.getOpposite()) != Shapes.block()
                 || adjState.getBlock() != state.getBlock()
-                || !adjState.isOpaqueFullCube()
+                || !adjState.isSolidRender()
                 || isBlocked(adjState.getBlock(), adjPos, view);
     }
 
@@ -103,7 +103,7 @@ public class Xray extends Module {
         return getAlpha(state, pos, null);
     }
 
-    public static int getAlpha(BlockState state, BlockPos pos, BlockView view) {
+    public static int getAlpha(BlockState state, BlockPos pos, BlockGetter view) {
         Xray xray = ruby.systems.modules.Modules.getByClass(Xray.class);
         if (xray == null || !xray.enabled()) return -1;
 

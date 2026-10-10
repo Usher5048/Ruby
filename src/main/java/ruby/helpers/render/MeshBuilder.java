@@ -1,15 +1,21 @@
 package ruby.helpers.render;
 
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.util.math.Vec3d;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.commands.CommandEncoder;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.system.MemoryUtil;
 import ruby.RubyClient;
 
 import java.awt.*;
 import java.nio.ByteBuffer;
+import java.util.Objects;
+
+import net.minecraft.world.phys.Vec3;
 
 public class MeshBuilder {
     private final VertexFormat format;
@@ -27,15 +33,15 @@ public class MeshBuilder {
     private int indexIndex;
 
     private boolean building = false;
-    private Vec3d cameraPos;
+    private Vec3 cameraPos;
 
     public MeshBuilder(RenderPipeline pipeline) {
-        this(pipeline.getVertexFormat(), pipeline.getVertexFormatMode());
+        this(Objects.requireNonNull(pipeline.getVertexFormatBinding(0)), pipeline.getPrimitiveTopology());
     }
-    public MeshBuilder(VertexFormat format, VertexFormat.DrawMode drawMode) {
+    public MeshBuilder(VertexFormat format, PrimitiveTopology drawMode) {
         this.format = format;
         this.vertexSize = format.getVertexSize();
-        this.indexCount = drawMode.firstVertexCount;
+        this.indexCount = drawMode.primitiveLength;
     }
 
     public void begin() {
@@ -46,13 +52,13 @@ public class MeshBuilder {
         this.vertexIndex = 0;
         this.indexIndex = 0;
 
-        this.cameraPos = RubyClient.client.gameRenderer.getCamera().getCameraPos();
+        this.cameraPos = RubyClient.client.gameRenderer.mainCamera().position();
     }
 
     public MeshBuilder vec3(double x, double y, double z) {
-        MemoryUtil.memPutFloat(this.vertexBufPtr + 0, (float) (x - this.cameraPos.getX()));
-        MemoryUtil.memPutFloat(this.vertexBufPtr + 4, (float) (y - this.cameraPos.getY()));
-        MemoryUtil.memPutFloat(this.vertexBufPtr + 8, (float) (z - this.cameraPos.getZ()));
+        MemoryUtil.memPutFloat(this.vertexBufPtr + 0, (float) (x - this.cameraPos.x()));
+        MemoryUtil.memPutFloat(this.vertexBufPtr + 4, (float) (y - this.cameraPos.y()));
+        MemoryUtil.memPutFloat(this.vertexBufPtr + 8, (float) (z - this.cameraPos.z()));
 
         this.vertexBufPtr += 12;
         return this;
@@ -188,12 +194,30 @@ public class MeshBuilder {
 
     public GpuBuffer getVertexBuffer() {
         this.vertexBuf.limit((int) (this.vertexBufPtr - this.vertexBufStart));
-        return this.format.uploadImmediateVertexBuffer(this.vertexBuf);
+        return RenderSystem.getDevice().createBuffer(
+                () -> "Mesh vertex buffer",
+                GpuBuffer.USAGE_VERTEX,
+                this.vertexBuf
+        );
     }
 
     public GpuBuffer getIndexBuffer() {
         this.indexBuf.limit(this.indexIndex * Integer.BYTES);
-        return this.format.uploadImmediateIndexBuffer(this.indexBuf);
+        return RenderSystem.getDevice().createBuffer(
+                () -> "Mesh index buffer",
+                GpuBuffer.USAGE_INDEX,
+                this.indexBuf
+        );
+    }
+
+    public GpuBufferSlice uploadVertexBuffer(CommandEncoder encoder) {
+        this.vertexBuf.limit((int) (this.vertexBufPtr - this.vertexBufStart));
+        return encoder.transientMemory().uploadGpu(this.vertexBuf, this.vertexSize, GpuBuffer.USAGE_VERTEX);
+    }
+
+    public GpuBufferSlice uploadIndexBuffer(CommandEncoder encoder) {
+        this.indexBuf.limit(this.indexIndex * Integer.BYTES);
+        return encoder.transientMemory().uploadGpu(this.indexBuf, Integer.BYTES, GpuBuffer.USAGE_INDEX);
     }
 
     public int indexCount() {

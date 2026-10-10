@@ -1,11 +1,12 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.util.Util;
-import org.lwjgl.glfw.GLFW;
+import ruby.RubyClient;
 import ruby.systems.accounts.Account;
 import ruby.systems.accounts.AccountsManager;
 import ruby.systems.accounts.MicrosoftLogin;
@@ -79,11 +80,11 @@ public class AccountsPanelContent extends Window {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         this.drawContent(context, mouseX, mouseY);
     }
 
-    private void drawContent(DrawContext context, int mouseX, int mouseY) {
+    private void drawContent(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         GUIStyle style = GUIStyle.get();
         int w = this.getWidth();
         int innerR = w - INNER_L;
@@ -117,7 +118,7 @@ public class AccountsPanelContent extends Window {
         }
     }
 
-    private int drawAddButton(DrawContext context, GUIStyle style, int innerR, int y, int mx, int my) {
+    private int drawAddButton(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my) {
         int btnR = innerR - PAD;
         int by = y + 10;
         int bh = 24;
@@ -130,7 +131,7 @@ public class AccountsPanelContent extends Window {
         return y + ADD_BTN_ROW_H;
     }
 
-    private int drawTypePicker(DrawContext context, GUIStyle style, int innerR, int y, int mx, int my) {
+    private int drawTypePicker(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my) {
         y = this.drawAddButton(context, style, innerR, y, mx, my);
         String[] labels = {"Cracked", "Microsoft", "Session"};
         for (int i = 0; i < labels.length; i++) {
@@ -150,12 +151,12 @@ public class AccountsPanelContent extends Window {
         return y;
     }
 
-    private int drawSingleInput(DrawContext context, GUIStyle style, int innerR, int y, int mx, int my,
+    private int drawSingleInput(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my,
                                 String placeholder, String value, boolean primary) {
         return this.drawInputRow(context, style, innerR, y, mx, my, placeholder, value, primary, false);
     }
 
-    private int drawDualInput(DrawContext context, GUIStyle style, int innerR, int y, int mx, int my) {
+    private int drawDualInput(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my) {
         int rowY = y + 8;
         int inputH = 24;
         int contentR = innerR - PAD;
@@ -179,7 +180,7 @@ public class AccountsPanelContent extends Window {
         return y + SESSION_INPUT_ROW_H;
     }
 
-    private int drawInputRow(DrawContext context, GUIStyle style, int innerR, int y, int mx, int my,
+    private int drawInputRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my,
                              String placeholder, String value, boolean primary, boolean unused) {
         int rowY = y + 8;
         int inputH = 24;
@@ -199,7 +200,7 @@ public class AccountsPanelContent extends Window {
         return y + INPUT_ROW_H;
     }
 
-    private void drawInputText(DrawContext context, GUIStyle style, int x, int rowY, int inputH,
+    private void drawInputText(GuiGraphicsExtractor context, GUIStyle style, int x, int rowY, int inputH,
                                String placeholder, String value, boolean focused) {
         String display = value.isEmpty() ? placeholder : value;
         int col = value.isEmpty() ? style.textMuted() : style.text();
@@ -212,7 +213,7 @@ public class AccountsPanelContent extends Window {
         }
     }
 
-    private int drawAccountRow(DrawContext context, GUIStyle style, int innerR, int y, int mx, int my,
+    private int drawAccountRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my,
                                Account account, boolean last) {
         boolean hovered = mx >= INNER_L && my >= y && mx < innerR && my < y + ROW_H;
         if (hovered) {
@@ -262,7 +263,7 @@ public class AccountsPanelContent extends Window {
         return y + ROW_H;
     }
 
-    private void drawPlayerHead(DrawContext context, GUIStyle style, String username, int x, int y) {
+    private void drawPlayerHead(GuiGraphicsExtractor context, GUIStyle style, String username, int x, int y) {
         if (PlayerHeadCache.getSkin(username) != null) {
             PlayerHeadCache.drawHead(context, username, x, y, HEAD_SIZE);
         } else {
@@ -280,9 +281,9 @@ public class AccountsPanelContent extends Window {
 
     private void tryLogin(Account account) {
         this.statusMessage = "Logging in...";
-        Util.getIoWorkerExecutor().execute(() -> {
+        Util.ioPool().execute(() -> {
             boolean ok = account.fetchInfo() && account.login();
-            Util.getMainWorkerExecutor().execute(() -> {
+            Util.backgroundExecutor().execute(() -> {
                 if (ok) {
                     AccountsManager.markLastUsed(account);
 //                    AccountsManager.save();
@@ -295,8 +296,8 @@ public class AccountsPanelContent extends Window {
     }
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
-        if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         int w = this.getWidth();
         int innerR = w - INNER_L;
@@ -322,7 +323,7 @@ public class AccountsPanelContent extends Window {
                 y += TYPE_ROW_H;
                 if (click.y() >= y && click.y() < y + TYPE_ROW_H) {
                     this.statusMessage = "Check your browser...";
-                    MicrosoftLogin.requestRefreshToken(token -> Util.getMainWorkerExecutor().execute(() -> {
+                    MicrosoftLogin.requestRefreshToken(token -> Util.backgroundExecutor().execute(() -> {
                         if (token == null) {
                             this.statusMessage = "Microsoft login cancelled";
                             return;
@@ -335,6 +336,7 @@ public class AccountsPanelContent extends Window {
                         } else {
                             this.statusMessage = "Microsoft login failed";
                         }
+                        RubyClient.log(this.statusMessage);
                     }));
                     this.resetAddState();
                     return true;
@@ -419,14 +421,14 @@ public class AccountsPanelContent extends Window {
     }
 
     @Override
-    public boolean onKeyPress(KeyInput input) {
+    public boolean onKeyPress(KeyEvent input) {
         if (this.addMode != AddMode.CRACKED && this.addMode != AddMode.SESSION) return false;
 
-        if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (input.key() == InputConstants.KEY_ESCAPE) {
             this.resetAddState();
             return true;
         }
-        if (input.key() == GLFW.GLFW_KEY_BACKSPACE) {
+        if (input.key() == InputConstants.KEY_BACKSPACE) {
             if (this.focusPrimary && !this.inputPrimary.isEmpty()) {
                 this.inputPrimary = this.inputPrimary.substring(0, this.inputPrimary.length() - 1);
             } else if (!this.focusPrimary && !this.inputSecondary.isEmpty()) {
@@ -434,7 +436,7 @@ public class AccountsPanelContent extends Window {
             }
             return true;
         }
-        if (input.key() == GLFW.GLFW_KEY_ENTER) {
+        if (input.key() == InputConstants.KEY_RETURN) {
             if (this.addMode == AddMode.CRACKED && !this.inputPrimary.isBlank()) {
                 AccountsManager.add(new CrackedAccount(this.inputPrimary.trim()));
                 this.statusMessage = "Added " + this.inputPrimary.trim();
@@ -451,7 +453,7 @@ public class AccountsPanelContent extends Window {
             }
             return true;
         }
-        if (this.addMode == AddMode.SESSION && input.key() == GLFW.GLFW_KEY_TAB) {
+        if (this.addMode == AddMode.SESSION && input.key() == InputConstants.KEY_TAB) {
             this.focusPrimary = !this.focusPrimary;
             return true;
         }
@@ -459,7 +461,7 @@ public class AccountsPanelContent extends Window {
     }
 
     @Override
-    public boolean onCharTyped(CharInput input) {
+    public boolean onCharTyped(CharacterEvent input) {
         if (this.addMode != AddMode.CRACKED && this.addMode != AddMode.SESSION) return false;
         char c = (char) input.codepoint();
         if (c < 32 || c >= 127) return false;

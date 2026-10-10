@@ -1,16 +1,17 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import ruby.RubyClient;
+import ruby.helpers.input.InputUtils;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.config.ProfileManager;
 import ruby.systems.gui.GUIStyle;
 
 import java.util.List;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 
 public class ProfilesPanelContent extends Window {
     private static final int PAD = 14;
@@ -64,7 +65,7 @@ public class ProfilesPanelContent extends Window {
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         if (this.savedFlash > 0f) {
             this.savedFlash = Math.max(0f, this.savedFlash - dt * 0.15f);
         }
@@ -74,7 +75,7 @@ public class ProfilesPanelContent extends Window {
         this.drawContent(context, mouseX, mouseY);
     }
 
-    private void drawContent(DrawContext context, int mouseX, int mouseY) {
+    private void drawContent(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         GUIStyle style = GUIStyle.get();
         int innerR = this.getWidth() - INNER_L;
         int y = 0;
@@ -153,7 +154,7 @@ public class ProfilesPanelContent extends Window {
     }
 
     private int drawOutlineButton(
-            DrawContext context, GUIStyle style, int innerR, int by,
+            GuiGraphicsExtractor context, GUIStyle style, int innerR, int by,
             int mx, int my, String label, boolean saved
     ) {
         int btnR = innerR - PAD;
@@ -166,7 +167,7 @@ public class ProfilesPanelContent extends Window {
         return by + BTN_H;
     }
 
-    private int drawCreateInput(DrawContext context, GUIStyle style, int innerR, int y, int mx, int my) {
+    private int drawCreateInput(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my) {
         int rowY = y + 8;
         int inputH = 24;
         int contentR = innerR - PAD;
@@ -211,14 +212,13 @@ public class ProfilesPanelContent extends Window {
     }
 
     private boolean isControlDown() {
-        long handle = RubyClient.client.getWindow().getHandle();
-        return GLFW.glfwGetKey(handle, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(handle, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
+        return InputUtils.isKeyPressed(InputConstants.KEY_LCONTROL) ||
+                InputUtils.isKeyPressed(InputConstants.KEY_RCONTROL);
     }
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
-        if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         int innerR = this.getWidth() - INNER_L;
         List<String> profiles = ProfileManager.profiles();
@@ -264,7 +264,7 @@ public class ProfilesPanelContent extends Window {
                         && click.y() >= shareY && click.y() < shareY + BTN_H) {
                     String code = ProfileManager.exportProfile(name);
                     if (code != null) {
-                        RubyClient.client.keyboard.setClipboard(code);
+                        RubyClient.client.keyboardHandler.setClipboard(code);
                         this.copiedProfile = name;
                         this.copiedFlash = 1f;
                     }
@@ -288,26 +288,26 @@ public class ProfilesPanelContent extends Window {
     }
 
     @Override
-    public boolean onKeyPress(KeyInput input) {
+    public boolean onKeyPress(KeyEvent input) {
         if (!this.showCreateInput) return false;
 
-        if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (input.key() == InputConstants.KEY_ESCAPE) {
             this.showCreateInput = false;
             this.inputText = "";
             return true;
         }
-        if (input.key() == GLFW.GLFW_KEY_BACKSPACE && !this.inputText.isEmpty()) {
+        if (input.key() == InputConstants.KEY_BACKSPACE && !this.inputText.isEmpty()) {
             this.inputText = this.inputText.substring(0, this.inputText.length() - 1);
             return true;
         }
-        if (input.key() == GLFW.GLFW_KEY_V && this.isControlDown()) {
-            String clip = RubyClient.client.keyboard.getClipboard();
-            if (clip != null && !clip.isBlank()) {
+        if (input.key() == InputConstants.KEY_V && this.isControlDown()) {
+            String clip = RubyClient.client.keyboardHandler.getClipboard();
+            if (!clip.isBlank()) {
                 this.appendInput(clip.trim());
             }
             return true;
         }
-        if (input.key() == GLFW.GLFW_KEY_ENTER) {
+        if (input.key() == InputConstants.KEY_RETURN) {
             this.submitInput();
             return true;
         }
@@ -315,7 +315,7 @@ public class ProfilesPanelContent extends Window {
     }
 
     @Override
-    public boolean onCharTyped(CharInput input) {
+    public boolean onCharTyped(CharacterEvent input) {
         if (!this.showCreateInput) return false;
         char c = (char) input.codepoint();
         if (c < 32 || c >= 127) return false;

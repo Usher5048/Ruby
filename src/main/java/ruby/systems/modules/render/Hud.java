@@ -1,10 +1,5 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
 import ruby.RubyClient;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.events.Events;
@@ -16,6 +11,11 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 
 import java.util.ArrayList;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
+import net.minecraft.world.phys.Vec3;
 
 public class Hud extends Module {
     public final BooleanValue showFPS = this.config.create(new BooleanValue.Builder("Show FPS")
@@ -51,7 +51,7 @@ public class Hud extends Module {
         super("Hud", "Shows various info on your HUD.", ModuleType.RENDER);
 
         Events.PACKET.register(PacketEvents.RECEIVE, event -> {
-            if(!(event.packet() instanceof WorldTimeUpdateS2CPacket)) return;
+            if(!(event.packet() instanceof ClientboundSetTimePacket)) return;
             this.lastPacketTime = System.currentTimeMillis();
         });
     }
@@ -82,40 +82,40 @@ public class Hud extends Module {
     @Override
     public void render2D(Render2DEvent event) {
         if(RubyClient.client.player == null) return;
-        if(RubyClient.client.getNetworkHandler() == null) return;
+        if(RubyClient.client.getConnection() == null) return;
 
         int padding = 2;
 
         FontRenderer textRenderer = GUIStyle.get().monospaceFont();
-        DrawContext context = event.getContext();
+        GuiGraphicsExtractor context = event.getContext();
 
         ArrayList<String> left = new ArrayList<>();
         ArrayList<String> right = new ArrayList<>();
 
         if(this.showFPS.value())
-            left.add(String.format("%d FPS", RubyClient.client.getCurrentFps()));
+            left.add(String.format("%d FPS", RubyClient.client.getFps()));
 
-        Vec3d p = RubyClient.client.player.getEntityPos();
+        Vec3 p = RubyClient.client.player.position();
         if(this.showCoords.value())
             left.add(String.format("XYZ: %.3f, %.3f, %.3f", p.x, p.y, p.z));
 
-        String direction = RubyClient.client.player.getFacing().asString();
-        String axisDir = RubyClient.client.player.getFacing().getAxis().asString().toUpperCase();
-        boolean positive = RubyClient.client.player.getFacing().getDirection() == Direction.AxisDirection.POSITIVE;
+        String direction = RubyClient.client.player.getDirection().getSerializedName();
+        String axisDir = RubyClient.client.player.getDirection().getAxis().getSerializedName().toUpperCase();
+        boolean positive = RubyClient.client.player.getDirection().getAxisDirection() == Direction.AxisDirection.POSITIVE;
         if(this.showFacing.value())
             left.add(String.format("Facing: %s; %c%s", direction, positive ? '+' : '-', axisDir));
 
         if(this.showSpeed.value()) {
-            Vec3d velocity = RubyClient.client.player.getEntityPos().subtract(
-                    RubyClient.client.player.lastX,
-                    RubyClient.client.player.lastY,
-                    RubyClient.client.player.lastZ
+            Vec3 velocity = RubyClient.client.player.position().subtract(
+                    RubyClient.client.player.xo,
+                    RubyClient.client.player.yo,
+                    RubyClient.client.player.zo
             );
 
             left.add(String.format("%.3f m/s", velocity.length() * 20));
         }
 
-        PlayerListEntry entry = RubyClient.client.getNetworkHandler().getPlayerListEntry(RubyClient.client.player.getUuid());
+        PlayerInfo entry = RubyClient.client.getConnection().getPlayerInfo(RubyClient.client.player.getUUID());
         if(entry != null && this.showPing.value())
             right.add(String.format("Latency: %d ms", entry.getLatency()));
 
@@ -169,7 +169,7 @@ public class Hud extends Module {
             y += padding + textRenderer.fontHeight;
         }
 
-        int guiScale = RubyClient.client.getWindow().getScaleFactor();
+        int guiScale = RubyClient.client.getWindow().getGuiScale();
         int sHeight = RubyClient.client.getWindow().getHeight();
         long milliDiff = System.currentTimeMillis() - this.lastPacketTime;
         if(milliDiff > 3000) {
@@ -184,7 +184,7 @@ public class Hud extends Module {
                     0xFF111111
             );
 
-            context.drawStrokedRectangle(
+            context.outline(
                     sWidth / 2 - 2 * padding - textWidth / 2,
                     sHeight - padding - 61 * guiScale,
                     2 * padding + textWidth + 2 * padding,

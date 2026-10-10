@@ -1,29 +1,29 @@
 package ruby.systems.hud;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix3x2fStack;
 import ruby.systems.gui.text.FontRenderer;
 
 /**
- * HUD draw helpers for quads, lines, and 2D ESP boxes on {@link DrawContext}.
+ * HUD draw helpers for quads, lines, and 2D ESP boxes on {@link GuiGraphicsExtractor}.
  */
 public final class HudRenderer {
     public static final HudRenderer INSTANCE = new HudRenderer();
 
     private static final int SHADOW_COLOR = 0x80000000;
 
-    private DrawContext context;
+    private GuiGraphicsExtractor context;
     private FontRenderer font;
     public double delta;
 
     private HudRenderer() {}
 
-    public void begin(DrawContext context) {
+    public void begin(GuiGraphicsExtractor context) {
         this.context = context;
     }
 
-    public void begin(DrawContext context, FontRenderer font, double delta) {
+    public void begin(GuiGraphicsExtractor context, FontRenderer font, double delta) {
         this.context = context;
         this.font = font;
         this.delta = delta;
@@ -122,7 +122,7 @@ public final class HudRenderer {
         x += 0.5 * scale;
         y += 0.5 * scale;
 
-        Matrix3x2fStack matrices = this.context.getMatrices();
+        Matrix3x2fStack matrices = this.context.pose();
         matrices.pushMatrix();
         matrices.scale((float) scale, (float) scale);
 
@@ -143,15 +143,15 @@ public final class HudRenderer {
         if (this.font != null) {
             return (this.font.getWidth(text) + (shadow ? 1 : 0)) * scale + (shadow ? 1 : 0);
         }
-        var vanilla = MinecraftClient.getInstance().textRenderer;
-        return (vanilla.getWidth(text) + (shadow ? 1 : 0)) * scale + (shadow ? 1 : 0);
+        var vanilla = Minecraft.getInstance().font;
+        return (vanilla.width(text) + (shadow ? 1 : 0)) * scale + (shadow ? 1 : 0);
     }
 
     public double textHeight(boolean shadow, double scale) {
         if (this.font != null) {
             return (this.font.fontHeight + (shadow ? 1 : 0)) * scale;
         }
-        return (MinecraftClient.getInstance().textRenderer.fontHeight + (shadow ? 1 : 0)) * scale;
+        return (Minecraft.getInstance().font.lineHeight + (shadow ? 1 : 0)) * scale;
     }
 
     private void drawHorizontalGradient(int x1, int y1, int x2, int y2, int leftColor, int rightColor) {

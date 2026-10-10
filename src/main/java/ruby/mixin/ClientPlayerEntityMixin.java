@@ -1,7 +1,7 @@
 package ruby.mixin;
 
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.PlayerInput;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Input;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -15,7 +15,7 @@ import ruby.systems.modules.combat.KillAura;
 import ruby.systems.modules.movement.NoPush;
 import ruby.systems.modules.render.Freecam;
 
-@Mixin(ClientPlayerEntity.class)
+@Mixin(LocalPlayer.class)
 public abstract class ClientPlayerEntityMixin {
     @Inject(method = "tick", at = @At("HEAD"))
     private void ruby$updateRotations(CallbackInfo ci) {
@@ -26,86 +26,98 @@ public abstract class ClientPlayerEntityMixin {
     }
 
     @Redirect(
-            method = {"sendMovementPackets", "tick"},
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getYaw()F")
+            method = {"sendPosition", "sendChanges", "applyInput"},
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getYRot()F")
     )
-    private float ruby$silentYaw(ClientPlayerEntity instance) {
+    private float ruby$silentYaw(LocalPlayer instance) {
         if(RotationManager.hasRotation() && (Object) this == instance)
             return RotationManager.rotationYaw();
-        return instance.getYaw();
+        return instance.getYRot();
     }
 
     @Redirect(
-            method = {"sendMovementPackets", "tick"},
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getPitch()F")
+            method = {"sendPosition", "sendChanges", "applyInput"},
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getXRot()F")
     )
-    private float ruby$silentPitch(ClientPlayerEntity instance) {
+    private float ruby$silentPitch(LocalPlayer instance) {
         if(RotationManager.hasRotation() && (Object) this == instance)
             return RotationManager.rotationPitch();
-        return instance.getPitch();
+        return instance.getXRot();
     }
 
     @Inject(
-            method = "tickMovement",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/input/Input;tick()V", shift = At.Shift.AFTER)
+            method = "aiStep",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/ClientInput;tick()V", shift = At.Shift.AFTER)
     )
     private void ruby$syncSprintFromInput(CallbackInfo ci) {
-        ClientPlayerEntity player = (ClientPlayerEntity) (Object) this;
+        LocalPlayer player = (LocalPlayer) (Object) this;
         if(Criticals.blocksSprintInput()) {
             player.setSprinting(false);
             return;
         }
         if(!RotationManager.hasRotation()) return;
-        player.setSprinting(RotationManager.shouldSprint(player.input.playerInput));
+        player.setSprinting(RotationManager.shouldSprint(player.input.keyPresses));
     }
 
     @Redirect(
-            method = "tickMovement",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;canStartSprinting()Z")
+            method = "aiStep",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;canStartSprinting()Z")
     )
-    private boolean ruby$canStartSprinting(ClientPlayerEntity instance) {
+    private boolean ruby$canStartSprinting(LocalPlayer instance) {
         if(Criticals.blocksSprintInput()) return false;
         if(!RotationManager.hasRotation() || (Object) this != instance)
             return ((ClientPlayerEntityAccessor) instance).ruby$canStartSprinting();
         return ((ClientPlayerEntityAccessor) instance).ruby$canStartSprinting()
-                && RotationManager.shouldSprint(instance.input.playerInput);
+                && RotationManager.shouldSprint(instance.input.keyPresses);
     }
 
     @Redirect(
-            method = "tickMovement",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;shouldStopSprinting()Z")
+            method = "aiStep",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;shouldStopRunSprinting()Z")
     )
-    private boolean ruby$tickMovementStopSprint(ClientPlayerEntity instance) {
+    private boolean ruby$stopRunSprinting(LocalPlayer instance) {
+        return ruby$stopSprint(instance, ((ClientPlayerEntityAccessor) instance).ruby$shouldStopRunSprinting());
+    }
+
+    @Redirect(
+            method = "aiStep",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;shouldStopSwimSprinting()Z")
+    )
+    private boolean ruby$stopSwimSprinting(LocalPlayer instance) {
+        return ruby$stopSprint(instance, ((ClientPlayerEntityAccessor) instance).ruby$shouldStopSwimSprinting());
+    }
+
+    private boolean ruby$stopSprint(LocalPlayer instance, boolean originalStop) {
         if(Criticals.blocksSprintInput()) return true;
-        if(((ClientPlayerEntityAccessor) instance).ruby$shouldStopSprinting()) return true;
+        if(originalStop) return true;
         if(!RotationManager.hasRotation() || (Object) this != instance) return false;
-        return !RotationManager.shouldSprint(instance.input.playerInput);
+        return !RotationManager.shouldSprint(instance.input.keyPresses);
     }
 
     @Redirect(
-            method = "tickMovement",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/util/PlayerInput;sprint()Z")
+            method = "aiStep",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Input;sprint()Z")
     )
-    private boolean ruby$inputSprint(PlayerInput input) {
+    private boolean ruby$inputSprint(Input input) {
         if(Criticals.blocksSprintInput()) return false;
         if(!RotationManager.hasRotation()) return input.sprint();
         return RotationManager.shouldSprint(input);
     }
 
     @Redirect(
-            method = "sendSprintingPacket",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isSprinting()Z")
+            method = "sendIsSprintingIfNeeded",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isSprinting()Z")
     )
-    private boolean ruby$networkSprint(ClientPlayerEntity instance) {
+    private boolean ruby$networkSprint(LocalPlayer instance) {
         if(Criticals.blocksNetworkSprint()) return false;
         if(!RotationManager.hasRotation() || (Object) this != instance)
             return instance.isSprinting();
-        if(!RotationManager.shouldSprint(instance.input.playerInput))
+        if(!RotationManager.shouldSprint(instance.input.keyPresses))
             return false;
         return instance.isSprinting();
     }
 
-    @Inject(method = "shouldStopSprinting", at = @At("RETURN"), cancellable = true)
+    @Inject(method = {"shouldStopRunSprinting", "shouldStopSwimSprinting"}, at = @At("RETURN"), cancellable = true)
     private void ruby$forceStopSprint(CallbackInfoReturnable<Boolean> cir) {
         if(cir.getReturnValue()) return;
         if(Criticals.blocksSprintInput()) {
@@ -114,32 +126,32 @@ public abstract class ClientPlayerEntityMixin {
         }
         if(!RotationManager.hasRotation()) return;
 
-        ClientPlayerEntity player = (ClientPlayerEntity) (Object) this;
-        if(!RotationManager.shouldSprint(player.input.playerInput))
+        LocalPlayer player = (LocalPlayer) (Object) this;
+        if(!RotationManager.shouldSprint(player.input.keyPresses))
             cir.setReturnValue(true);
     }
 
-    @Inject(method = "pushOutOfBlocks", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "moveTowardsClosestSpace", at = @At("HEAD"), cancellable = true)
     private void ruby$noBlockPush(double x, double z, CallbackInfo ci) {
         if (!NoPush.canPush(NoPush.PushBy.Blocks)) {
             ci.cancel();
         }
     }
 
-    @Inject(method = "tickMovement", at = @At("HEAD"))
+    @Inject(method = "aiStep", at = @At("HEAD"))
     private void ruby$freecamSneak(CallbackInfo ci) {
         Freecam freecam = ruby.systems.modules.Modules.getByClass(Freecam.class);
         if (freecam != null && freecam.staySneaking()) {
-            ClientPlayerEntity player = (ClientPlayerEntity) (Object) this;
-            player.setSneaking(true);
+            LocalPlayer player = (LocalPlayer) (Object) this;
+            player.setShiftKeyDown(true);
         }
     }
 
     @Inject(
-            method = "sendMovementPackets",
+            method = "sendPosition",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/network/ClientPlayNetworkHandler;sendPacket(Lnet/minecraft/network/packet/Packet;)V"
+                    target = "Lnet/minecraft/client/multiplayer/ClientPacketListener;send(Lnet/minecraft/network/protocol/Packet;)V"
             )
     )
     private void updateLastSent(CallbackInfo info) {

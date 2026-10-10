@@ -1,22 +1,21 @@
 package ruby.systems.modules.player;
 
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.MaceItem;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Vec3d;
-import ruby.helpers.PlayerInteractEntity;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.MaceItem;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import ruby.mixin.ClientPlayerInteractionManagerAccessor;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.EnumValue;
@@ -39,20 +38,20 @@ public class AutoTool extends Module {
     private static final int SELECTION_WIDTH = 24;
     private static final int SELECTION_HEIGHT = 23;
 
-    public static void renderHotbarSelection(DrawContext context, RenderPipeline pipeline, Identifier texture,
+    public static void renderHotbarSelection(GuiGraphicsExtractor context, RenderPipeline pipeline, Identifier texture,
                                              int x, int y, int width, int height) {
         boolean dual = shouldUseMiningSlot() && miningSlot != visualSlot;
 
-        context.drawGuiTexture(pipeline, texture, x, y, width, height);
+        context.blitSprite(pipeline, texture, x, y, width, height);
 
         if (!dual) return;
 
-        int mx = context.getScaledWindowWidth() / 2 - 92 + miningSlot * SLOT_SPACING;
-        int my = context.getScaledWindowHeight() - SELECTION_HEIGHT;
+        int mx = context.guiWidth() / 2 - 92 + miningSlot * SLOT_SPACING;
+        int my = context.guiHeight() - SELECTION_HEIGHT;
 
-        int hotbarX = context.getScaledWindowWidth() / 2 - 91;
-        int hotbarY = context.getScaledWindowHeight() - 22;
-        Identifier hotbarTexture = Identifier.ofVanilla("hud/hotbar");
+        int hotbarX = context.guiWidth() / 2 - 91;
+        int hotbarY = context.guiHeight() - 22;
+        Identifier hotbarTexture = Identifier.withDefaultNamespace("hud/hotbar");
 
         int x1 = mx + 2;
         int x2 = mx + SELECTION_WIDTH - 2;
@@ -60,7 +59,7 @@ public class AutoTool extends Module {
         if(visualSlot - miningSlot == 1) x2--;
 
         context.enableScissor(x1, my, x2, my + SELECTION_HEIGHT);
-        context.drawGuiTexture(pipeline, hotbarTexture, hotbarX, hotbarY, 182, 22, GUIStyle.get().rubyHover());
+        context.blitSprite(pipeline, hotbarTexture, hotbarX, hotbarY, 182, 22, GUIStyle.get().rubyHover());
         context.disableScissor();
     }
 
@@ -113,7 +112,7 @@ public class AutoTool extends Module {
 
         Events.ENTITY.register(EntityEvents.BEFORE_INTERACT, event -> {
             if (!this.enabled() || !this.autoWeapon.value()) return;
-            if(event.type() != PlayerInteractEntity.Type.ATTACK) return;
+            if(event.wasSecondary()) return; // not attacking
             if (!(event.entity() instanceof LivingEntity target)) return;
             if (isWeaponBusy()) return;
             this.selectWeaponOnAttack(target);
@@ -133,8 +132,8 @@ public class AutoTool extends Module {
     }
 
     private static void clearMiningState() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
 
         int display = visualSlot;
         boolean wasSilent = silentSwapped;
@@ -149,15 +148,15 @@ public class AutoTool extends Module {
     }
 
     private boolean isWeaponBusy() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return true;
-        return player.isUsingItem() && !player.getActiveItem().isEmpty();
+        return player.isUsingItem() && !player.getUseItem().isEmpty();
     }
 
     private void selectWeaponOnAttack(LivingEntity target) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
         int weaponSlot = determineWeaponSlot(target);
@@ -175,8 +174,8 @@ public class AutoTool extends Module {
     }
 
     private int determineWeaponSlot(LivingEntity target) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return -1;
 
         boolean requiresShield = autoShieldBreak.value() && wouldBlockHit(target);
@@ -185,11 +184,11 @@ public class AutoTool extends Module {
         int preferredSlot = -1;
 
         for (int i = 0; i < 9; i++) {
-            ItemStack stack = player.getInventory().getStack(i);
+            ItemStack stack = player.getInventory().getItem(i);
             if (stack.isEmpty()) continue;
 
             if (requiresMace && stack.getItem() instanceof MaceItem) return i;
-            if (requiresShield && stack.isIn(ItemTags.AXES)) return i;
+            if (requiresShield && stack.is(ItemTags.AXES)) return i;
 
             if (matchesPreferred(stack)) preferredSlot = i;
         }
@@ -199,27 +198,27 @@ public class AutoTool extends Module {
 
     private boolean matchesPreferred(ItemStack stack) {
         return switch (preferredWeapon.value()) {
-            case Sword -> stack.isIn(ItemTags.SWORDS);
-            case Axe -> stack.isIn(ItemTags.AXES);
-            case Mace -> stack.isOf(Items.MACE);
-            case Any -> stack.isIn(ItemTags.SWORDS) || stack.isIn(ItemTags.AXES) || stack.isOf(Items.MACE);
+            case Sword -> stack.is(ItemTags.SWORDS);
+            case Axe -> stack.is(ItemTags.AXES);
+            case Mace -> stack.is(Items.MACE);
+            case Any -> stack.is(ItemTags.SWORDS) || stack.is(ItemTags.AXES) || stack.is(Items.MACE);
         };
     }
 
-    private static boolean canMaceSmash(ClientPlayerEntity player) {
-        return MaceItem.shouldDealAdditionalDamage(player);
+    private static boolean canMaceSmash(LocalPlayer player) {
+        return MaceItem.canSmashAttack(player);
     }
 
     private static boolean wouldBlockHit(LivingEntity target) {
-        if (!(target instanceof PlayerEntity player)) return false;
-        if (!player.isUsingItem() || !player.getActiveItem().isOf(Items.SHIELD)) return false;
+        if (!(target instanceof Player player)) return false;
+        if (!player.isUsingItem() || !player.getUseItem().is(Items.SHIELD)) return false;
 
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return false;
 
-        Vec3d look = player.getRotationVector(player.getPitch(), player.getBodyYaw());
-        Vec3d distVec = mc.player.getEntityPos().subtract(player.getEntityPos()).normalize();
-        return look.dotProduct(distVec) > 0;
+        Vec3 look = player.calculateViewVector(player.getXRot(), player.getVisualRotationYInDegrees());
+        Vec3 distVec = mc.player.position().subtract(player.position()).normalize();
+        return look.dot(distVec) > 0;
     }
 
     private void tickWeaponRestore() {
@@ -228,8 +227,8 @@ public class AutoTool extends Module {
         weaponRestoreTicks--;
         if (weaponRestoreTicks > 0) return;
 
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player != null) {
             AutoToolServerSlot.restoreVisualSlot(player, weaponRestoreSlot);
         }
@@ -238,8 +237,8 @@ public class AutoTool extends Module {
 
     private void clearWeaponState() {
         if (weaponRestoreSlot >= 0) {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            ClientPlayerEntity player = mc.player;
+            Minecraft mc = Minecraft.getInstance();
+            LocalPlayer player = mc.player;
             if (player != null) {
                 AutoToolServerSlot.restoreVisualSlot(player, weaponRestoreSlot);
             }
@@ -250,32 +249,32 @@ public class AutoTool extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.world == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.level == null) return;
 
         tickWeaponRestore();
-        if (mc.currentScreen != null) return;
+        if (mc.gui.screen() != null) return;
 
         if (!silentSwapped) {
             visualSlot = player.getInventory().getSelectedSlot();
         }
 
-        if (!mc.options.attackKey.isPressed()) {
+        if (!mc.options.keyAttack.isDown()) {
             clearMiningState();
             return;
         }
 
-        if (!(mc.crosshairTarget instanceof BlockHitResult blockHit)) {
+        if (!(mc.hitResult instanceof BlockHitResult blockHit)) {
             clearMiningState();
             return;
         }
-        if (mc.crosshairTarget.getType() != HitResult.Type.BLOCK) {
+        if (mc.hitResult.getType() != HitResult.Type.BLOCK) {
             clearMiningState();
             return;
         }
 
-        BlockState state = mc.world.getBlockState(blockHit.getBlockPos());
+        BlockState state = mc.level.getBlockState(blockHit.getBlockPos());
         if (state.isAir()) {
             clearMiningState();
             return;
@@ -285,14 +284,14 @@ public class AutoTool extends Module {
         double bestSpeed = -1;
 
         for (int i = 0; i < 9; i++) {
-            ItemStack stack = player.getInventory().getStack(i);
+            ItemStack stack = player.getInventory().getItem(i);
             if (stack.isEmpty()) continue;
 
-            if (antiBreak.value() && stack.isDamageable()) {
-                if (stack.getMaxDamage() - stack.getDamage() <= 3) continue;
+            if (antiBreak.value() && stack.isDamageableItem()) {
+                if (stack.getMaxDamage() - stack.getDamageValue() <= 3) continue;
             }
 
-            double speed = stack.getMiningSpeedMultiplier(state);
+            double speed = stack.getDestroySpeed(state);
             if (speed > bestSpeed) {
                 bestSpeed = speed;
                 bestSlot = i;
@@ -300,7 +299,7 @@ public class AutoTool extends Module {
         }
 
         int displaySlot = visualSlot >= 0 ? visualSlot : player.getInventory().getSelectedSlot();
-        double displaySpeed = player.getInventory().getStack(displaySlot).getMiningSpeedMultiplier(state);
+        double displaySpeed = player.getInventory().getItem(displaySlot).getDestroySpeed(state);
 
         if (bestSlot == -1 || displaySpeed >= bestSpeed) {
             if (silentSwapped) {
@@ -339,10 +338,10 @@ public class AutoTool extends Module {
         }
 
         /** Keeps the real selected slot (and server sync) on the mining tool. */
-        public static void applyMiningSlot(ClientPlayerEntity player, int slot) {
+        public static void applyMiningSlot(LocalPlayer player, int slot) {
             if (player == null || slot < 0 || slot > 8) return;
 
-            PlayerInventory inv = player.getInventory();
+            Inventory inv = player.getInventory();
             if (inv.getSelectedSlot() == slot) return;
 
             applyingMiningSlot = true;
@@ -356,10 +355,10 @@ public class AutoTool extends Module {
         }
 
         /** Restores the player's visible slot to the server when mining ends. */
-        public static void restoreVisualSlot(ClientPlayerEntity player, int slot) {
+        public static void restoreVisualSlot(LocalPlayer player, int slot) {
             if (player == null || slot < 0 || slot > 8) return;
 
-            PlayerInventory inv = player.getInventory();
+            Inventory inv = player.getInventory();
             if (inv.getSelectedSlot() == slot) {
                 syncSelectedSlot();
                 return;
@@ -376,9 +375,9 @@ public class AutoTool extends Module {
         }
 
         private static void syncSelectedSlot() {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.interactionManager != null) {
-                ((ClientPlayerInteractionManagerAccessor) mc.interactionManager).ruby$syncSelectedSlot();
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.gameMode != null) {
+                ((ClientPlayerInteractionManagerAccessor) mc.gameMode).ruby$syncSelectedSlot();
             }
         }
     }
@@ -409,10 +408,10 @@ public class AutoTool extends Module {
         public static int beginVisualSwap() {
             if (!silentSwapped || visualSlot < 0) return -1;
 
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc.player == null) return -1;
 
-            PlayerInventory inv = mc.player.getInventory();
+            Inventory inv = mc.player.getInventory();
             int savedSlot = inv.getSelectedSlot();
             inv.setSelectedSlot(visualSlot);
             return savedSlot;
@@ -421,7 +420,7 @@ public class AutoTool extends Module {
         public static void endVisualSwap(int savedSlot) {
             if (savedSlot < 0) return;
 
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc.player == null) return;
 
             mc.player.getInventory().setSelectedSlot(savedSlot);

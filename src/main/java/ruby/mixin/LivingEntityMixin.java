@@ -1,9 +1,9 @@
 package ruby.mixin;
 
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -19,24 +19,24 @@ import ruby.systems.modules.world.Scaffold;
 
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityMixin {
-    @Inject(method = "jump", at = @At("TAIL"))
+    @Inject(method = "jumpFromGround", at = @At("TAIL"))
     private void ruby$critJumpMotion(CallbackInfo ci) {
-        if(!((Object) this instanceof ClientPlayerEntity)) return;
+        if(!((Object) this instanceof LocalPlayer)) return;
         Criticals criticals = Modules.getByClass(Criticals.class);
         if(criticals != null) criticals.onPlayerJump(0.42f);
     }
 
-    @Inject(method = "getMainHandStack", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getMainHandItem", at = @At("RETURN"), cancellable = true)
     private void ruby$spoofMainHandStack(CallbackInfoReturnable<ItemStack> cir) {
-        if (!((Object) this instanceof ClientPlayerEntity player)) return;
+        if (!((Object) this instanceof LocalPlayer player)) return;
         if (!AutoTool.shouldSpoofVisualSlot()) return;
 
-        cir.setReturnValue(player.getInventory().getStack(AutoTool.visualSlot));
+        cir.setReturnValue(player.getInventory().getItem(AutoTool.visualSlot));
     }
 
-    @Inject(method = "tickMovement", at = @At("HEAD"))
+    @Inject(method = "aiStep", at = @At("HEAD"))
     private void ruby$noJumpDelay(CallbackInfo ci) {
-        if (!((Object) this instanceof ClientPlayerEntity)) return;
+        if (!((Object) this instanceof LocalPlayer)) return;
 
         NoJumpDelay noJumpDelay = Modules.getByClass(NoJumpDelay.class);
         if (noJumpDelay == null || !noJumpDelay.enabled()) return;
@@ -50,9 +50,9 @@ public abstract class LivingEntityMixin {
         ((LivingEntityAccessor) this).ruby$setJumpingCooldown(0);
     }
 
-    @Inject(method = "pushAwayFrom", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "push", at = @At("HEAD"), cancellable = true)
     private void ruby$noEntityPush(Entity entity, CallbackInfo ci) {
-        if (!((Object) this instanceof ClientPlayerEntity)) return;
+        if (!((Object) this instanceof LocalPlayer)) return;
         if (!NoPush.canPush(NoPush.PushBy.Entities)) {
             ci.cancel();
         }

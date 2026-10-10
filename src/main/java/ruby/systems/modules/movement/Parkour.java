@@ -1,8 +1,8 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.Box;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.phys.AABB;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -30,19 +30,19 @@ public class Parkour extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.world == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.level == null) return;
 
-        if (!player.isOnGround() || mc.options.jumpKey.isPressed()) return;
-        if (player.isSneaking() || mc.options.sneakKey.isPressed()) return;
+        if (!player.onGround() || mc.options.keyJump.isDown()) return;
+        if (player.isShiftKeyDown() || mc.options.keyShift.isDown()) return;
 
-        Box box = player.getBoundingBox();
-        Box adjustedBox = box.offset(0, -0.5, 0).expand(-edgeDistance.value(), 0, -edgeDistance.value());
+        AABB box = player.getBoundingBox();
+        AABB adjustedBox = box.move(0, -0.5, 0).inflate(-edgeDistance.value(), 0, -edgeDistance.value());
 
         // If no block collisions exist in the shrunken box below, we're at an edge
-        if (!mc.world.getBlockCollisions(player, adjustedBox).iterator().hasNext()) {
-            player.jump();
+        if (!mc.level.getBlockCollisions(player, adjustedBox).iterator().hasNext()) {
+            player.jumpFromGround();
         }
     }
 }

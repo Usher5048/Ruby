@@ -1,7 +1,7 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -54,11 +54,11 @@ public class AntiVoid extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.world == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.level == null) return;
 
-        int minY = mc.world.getBottomY();
+        int minY = mc.level.getMinY();
 
         // Only activate when near the void
         if (player.getY() > minY || player.getY() < minY - 15) {
@@ -76,7 +76,7 @@ public class AntiVoid extends Module {
                 if (flightModule != null) Modules.enable(flightModule);
                 hasRun = true;
             }
-            case Jump -> player.jump();
+            case Jump -> player.jumpFromGround();
         }
     }
 }

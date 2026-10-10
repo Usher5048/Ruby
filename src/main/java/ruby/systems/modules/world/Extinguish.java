@@ -1,16 +1,17 @@
 package ruby.systems.modules.world;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.component.SwingAnimation;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import ruby.helpers.Slots;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.IntegerValue;
@@ -52,16 +53,16 @@ public class Extinguish extends Module {
 
     @Override
     public void onDisable() {
-        this.reset(MinecraftClient.getInstance().player);
+        this.reset(Minecraft.getInstance().player);
     }
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if(player == null || mc.interactionManager == null || mc.world == null) return;
-        if(mc.currentScreen != null) return;
-        if(mc.world.getRegistryKey() == World.NETHER) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if(player == null || mc.gameMode == null || mc.level == null) return;
+        if(mc.gui.screen() != null) return;
+        if(mc.level.dimension() == Level.NETHER) return;
 
         if(this.cooldownTicks > 0) this.cooldownTicks--;
 
@@ -72,11 +73,11 @@ public class Extinguish extends Module {
         }
     }
 
-    private void tickIdle(MinecraftClient mc, ClientPlayerEntity player) {
+    private void tickIdle(Minecraft mc, LocalPlayer player) {
         if(!player.isOnFire()) return;
         if(this.cooldownTicks > 0) return;
 
-        int bucketSlot = Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.isOf(Items.WATER_BUCKET));
+        int bucketSlot = Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.is(Items.WATER_BUCKET));
         if(bucketSlot == Slots.INVALID_SLOT) return;
 
         BlockPos placePos = this.findPlacePos(mc, player);
@@ -84,18 +85,18 @@ public class Extinguish extends Module {
 
         this.prevSlot = player.getInventory().getSelectedSlot();
         player.getInventory().setSelectedSlot(bucketSlot);
-        player.setPitch(90.0f);
+        player.setXRot(90.0f);
 
-        BlockPos support = placePos.down();
+        BlockPos support = placePos.below();
         BlockHitResult hit = new BlockHitResult(
-                Vec3d.ofCenter(support),
+                Vec3.atCenterOf(support),
                 Direction.UP,
                 support,
                 false
         );
 
-        mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
-        player.swingHand(Hand.MAIN_HAND);
+        mc.gameMode.useItemOn(player, InteractionHand.MAIN_HAND, hit);
+        player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, true);
 
         this.waterPos = placePos;
         if(this.pickup.value()) {
@@ -107,54 +108,54 @@ public class Extinguish extends Module {
         }
     }
 
-    private void tickWaitPickup(ClientPlayerEntity player) {
+    private void tickWaitPickup(LocalPlayer player) {
         if(this.waitTicks-- > 0) return;
         this.state = State.PICKING_UP;
     }
 
-    private void tickPickup(MinecraftClient mc, ClientPlayerEntity player) {
+    private void tickPickup(Minecraft mc, LocalPlayer player) {
         if(this.waterPos == null) {
             this.reset(player);
             return;
         }
 
-        int bucketSlot = Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.isOf(Items.BUCKET));
+        int bucketSlot = Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.is(Items.BUCKET));
         if(bucketSlot == Slots.INVALID_SLOT) {
             this.reset(player);
             return;
         }
 
-        BlockState state = mc.world.getBlockState(this.waterPos);
-        if(state.getFluidState().getFluid() != Fluids.WATER) {
+        BlockState state = mc.level.getBlockState(this.waterPos);
+        if(state.getFluidState().getType() != Fluids.WATER) {
             this.reset(player);
             return;
         }
 
         player.getInventory().setSelectedSlot(bucketSlot);
         BlockHitResult hit = new BlockHitResult(
-                Vec3d.ofCenter(this.waterPos),
+                Vec3.atCenterOf(this.waterPos),
                 Direction.UP,
                 this.waterPos,
                 false
         );
 
-        mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
-        player.swingHand(Hand.MAIN_HAND);
+        mc.gameMode.useItemOn(player, InteractionHand.MAIN_HAND, hit);
+        player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, true);
 
         this.reset(player);
         this.cooldownTicks = this.cooldown.value();
     }
 
-    private BlockPos findPlacePos(MinecraftClient mc, ClientPlayerEntity player) {
-        BlockPos feet = player.getBlockPos();
-        if(mc.world.getBlockState(feet).isReplaceable()) return feet;
+    private BlockPos findPlacePos(Minecraft mc, LocalPlayer player) {
+        BlockPos feet = player.blockPosition();
+        if(mc.level.getBlockState(feet).canBeReplaced()) return feet;
 
-        BlockPos above = feet.up();
-        if(mc.world.getBlockState(above).isReplaceable()) return above;
+        BlockPos above = feet.above();
+        if(mc.level.getBlockState(above).canBeReplaced()) return above;
         return null;
     }
 
-    private void finish(ClientPlayerEntity player) {
+    private void finish(LocalPlayer player) {
         if(this.prevSlot != -1) {
             player.getInventory().setSelectedSlot(this.prevSlot);
             this.prevSlot = -1;
@@ -163,7 +164,7 @@ public class Extinguish extends Module {
         this.waterPos = null;
     }
 
-    private void reset(ClientPlayerEntity player) {
+    private void reset(LocalPlayer player) {
         if(player != null) this.finish(player);
         else {
             this.state = State.IDLE;

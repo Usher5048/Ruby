@@ -1,7 +1,5 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.Items;
 import ruby.helpers.Slots;
 import ruby.helpers.inventory.*;
 import ruby.systems.config.BooleanValue;
@@ -13,6 +11,8 @@ import ruby.systems.modules.ModuleType;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.Items;
 
 public class AutoTotem extends Module {
     private final BooleanValue smart;
@@ -88,7 +88,7 @@ public class AutoTotem extends Module {
     private void onSchedule(ScheduleInventoryActionEvent event) {
         if(!this.enabled()) return;
 
-        ClientPlayerEntity player = mc();
+        LocalPlayer player = mc();
         if(player == null || player.isSpectator()) return;
         if(InventoryManager.isOperating()) return;
 
@@ -138,13 +138,13 @@ public class AutoTotem extends Module {
         return actions;
     }
 
-    private int findTotemSlot(ClientPlayerEntity player) {
-        int hotbar = Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.isOf(Items.TOTEM_OF_UNDYING));
+    private int findTotemSlot(LocalPlayer player) {
+        int hotbar = Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.is(Items.TOTEM_OF_UNDYING));
         if(hotbar != Slots.INVALID_SLOT) return hotbar;
-        return Slots.findFirst(Slots.MAIN, (stack, index) -> stack.isOf(Items.TOTEM_OF_UNDYING));
+        return Slots.findFirst(Slots.MAIN, (stack, index) -> stack.is(Items.TOTEM_OF_UNDYING));
     }
 
-    private static ClientPlayerEntity mc() {
+    private static LocalPlayer mc() {
         return ruby.RubyClient.client.player;
     }
 }

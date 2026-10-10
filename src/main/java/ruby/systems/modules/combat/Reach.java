@@ -1,8 +1,8 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.attribute.EntityAttributeInstance;
-import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import ruby.systems.config.DoubleValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -44,16 +44,16 @@ public class Reach extends Module {
 
     @Override
     public void onEnable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        EntityAttributeInstance entityAttr = mc.player.getAttributeInstance(EntityAttributes.ENTITY_INTERACTION_RANGE);
+        AttributeInstance entityAttr = mc.player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE);
         if (entityAttr != null) {
             prevEntityRange = entityAttr.getBaseValue();
             entityAttr.setBaseValue(entityReach.value());
         }
 
-        EntityAttributeInstance blockAttr = mc.player.getAttributeInstance(EntityAttributes.BLOCK_INTERACTION_RANGE);
+        AttributeInstance blockAttr = mc.player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE);
         if (blockAttr != null) {
             prevBlockRange = blockAttr.getBaseValue();
             blockAttr.setBaseValue(blockReach.value());
@@ -62,25 +62,25 @@ public class Reach extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        EntityAttributeInstance entityAttr = mc.player.getAttributeInstance(EntityAttributes.ENTITY_INTERACTION_RANGE);
+        AttributeInstance entityAttr = mc.player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE);
         if (entityAttr != null) entityAttr.setBaseValue(entityReach.value());
 
-        EntityAttributeInstance blockAttr = mc.player.getAttributeInstance(EntityAttributes.BLOCK_INTERACTION_RANGE);
+        AttributeInstance blockAttr = mc.player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE);
         if (blockAttr != null) blockAttr.setBaseValue(blockReach.value());
     }
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        EntityAttributeInstance entityAttr = mc.player.getAttributeInstance(EntityAttributes.ENTITY_INTERACTION_RANGE);
+        AttributeInstance entityAttr = mc.player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE);
         if (entityAttr != null) entityAttr.setBaseValue(prevEntityRange);
 
-        EntityAttributeInstance blockAttr = mc.player.getAttributeInstance(EntityAttributes.BLOCK_INTERACTION_RANGE);
+        AttributeInstance blockAttr = mc.player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE);
         if (blockAttr != null) blockAttr.setBaseValue(prevBlockRange);
     }
 

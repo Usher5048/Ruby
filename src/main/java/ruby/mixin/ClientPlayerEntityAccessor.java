@@ -1,14 +1,17 @@
 package ruby.mixin;
 
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.player.LocalPlayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(ClientPlayerEntity.class)
+@Mixin(LocalPlayer.class)
 public interface ClientPlayerEntityAccessor {
     @Invoker("canStartSprinting")
     boolean ruby$canStartSprinting();
 
-    @Invoker("shouldStopSprinting")
-    boolean ruby$shouldStopSprinting();
+    @Invoker("shouldStopRunSprinting")
+    boolean ruby$shouldStopRunSprinting();
+
+    @Invoker("shouldStopSwimSprinting")
+    boolean ruby$shouldStopSwimSprinting();
 }

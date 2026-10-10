@@ -1,10 +1,10 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.screen.ingame.BookEditScreen;
-import net.minecraft.client.gui.screen.ingame.BookScreen;
-import net.minecraft.client.gui.screen.ingame.SignEditScreen;
-import net.minecraft.client.option.GameOptions;
+import net.minecraft.client.Options;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.inventory.BookEditScreen;
+import net.minecraft.client.gui.screens.inventory.BookViewScreen;
+import net.minecraft.client.gui.screens.inventory.SignEditScreen;
 import ruby.RubyClient;
 import ruby.helpers.input.InputUtils;
 import ruby.systems.config.BooleanValue;
@@ -47,24 +47,24 @@ public class InventoryMove extends Module {
 
     @Override
     public void tick() {
-        switch(RubyClient.client.currentScreen) {
+        switch(RubyClient.client.gui.screen()) {
             case null                 -> { return; }
             case ChatScreen c         -> { return; }
             case ClickGUI c           -> { return; }
-            case BookScreen b         -> { return; }
+            case BookViewScreen b         -> { return; }
             case BookEditScreen b     -> { return; }
             case SignEditScreen s     -> { return; }
             default -> {}
         }
 
-        GameOptions opt = RubyClient.client.options;
+        Options opt = RubyClient.client.options;
 
-        opt.forwardKey.setPressed(InputUtils.isKeyPressed(opt.forwardKey));
-        opt.backKey.setPressed(InputUtils.isKeyPressed(opt.backKey));
-        opt.leftKey.setPressed(InputUtils.isKeyPressed(opt.leftKey));
-        opt.rightKey.setPressed(InputUtils.isKeyPressed(opt.rightKey));
-        if(this.jump.value()) opt.jumpKey.setPressed(InputUtils.isKeyPressed(opt.jumpKey));
-        if(this.sneak.value()) opt.sneakKey.setPressed(InputUtils.isKeyPressed(opt.sneakKey));
-        if(this.sprint.value()) opt.sprintKey.setPressed(InputUtils.isKeyPressed(opt.sprintKey));
+        opt.keyUp.setDown(InputUtils.isKeyPressed(opt.keyUp));
+        opt.keyDown.setDown(InputUtils.isKeyPressed(opt.keyDown));
+        opt.keyLeft.setDown(InputUtils.isKeyPressed(opt.keyLeft));
+        opt.keyRight.setDown(InputUtils.isKeyPressed(opt.keyRight));
+        if(this.jump.value()) opt.keyJump.setDown(InputUtils.isKeyPressed(opt.keyJump));
+        if(this.sneak.value()) opt.keyShift.setDown(InputUtils.isKeyPressed(opt.keyShift));
+        if(this.sprint.value()) opt.keySprint.setDown(InputUtils.isKeyPressed(opt.keySprint));
     }
 }

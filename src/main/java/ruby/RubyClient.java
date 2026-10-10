@@ -1,20 +1,21 @@
 package ruby;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import org.lwjgl.glfw.GLFW;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ruby.helpers.render.Renderer;
 import ruby.plugins.ModelModifierPlugin;
 import ruby.systems.bypasses.Bypasses;
 import ruby.systems.accounts.AccountsManager;
@@ -35,7 +36,7 @@ import java.io.InputStream;
 public class RubyClient implements ModInitializer {
 	public static final String MOD_ID = "ruby";
 	public static final String MOD_NAME = "Ruby";
-	public static final String MC_VERSION = SharedConstants.getGameVersion().name();
+	public static final String MC_VERSION = SharedConstants.getCurrentVersion().name();
 	public static final String VERSION = "v" + FabricLoader
 			.getInstance()
 			.getModContainer(RubyClient.MOD_ID)
@@ -46,17 +47,17 @@ public class RubyClient implements ModInitializer {
 			.split("\\+")[0];
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(RubyClient.MOD_NAME);
-	public static final MinecraftClient client = MinecraftClient.getInstance();
+	public static final Minecraft client = Minecraft.getInstance();
 	public static final Configuration config = new Configuration();
-	private static final KeyBinding.Category KEY_CATEGORY = KeyBinding.Category.create(Identifier.of(RubyClient.MOD_ID, "ruby"));
-	public static final KeyBinding openGUIKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+	private static final KeyMapping.Category KEY_CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(RubyClient.MOD_ID, "ruby"));
+	public static final KeyMapping openGUIKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 			"key.ruby.open_gui",
-			GLFW.GLFW_KEY_RIGHT_SHIFT,
+			InputConstants.KEY_RSHIFT,
 			RubyClient.KEY_CATEGORY
 	));
-	public static final KeyBinding openCommandKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+	public static final KeyMapping openCommandKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 			"key.ruby.command",
-			GLFW.GLFW_KEY_PERIOD,
+			InputConstants.KEY_PERIOD,
 			RubyClient.KEY_CATEGORY
 	));
 
@@ -77,28 +78,27 @@ public class RubyClient implements ModInitializer {
 	public static void notifyUser(String message) {
 		RubyClient.notifyUser(message, false);
 	}
-	public static void notifyUser(Text message) {
+	public static void notifyUser(Component message) {
 		RubyClient.notifyUser(message, false);
 	}
 	public static void notifyUser(String message, boolean actionBar) {
-		RubyClient.notifyUser(Text.of(message), actionBar);
+		RubyClient.notifyUser(Component.nullToEmpty(message), actionBar);
 	}
 
-	public static void notifyUser(Text message, boolean actionBar) {
+	public static void notifyUser(Component message, boolean actionBar) {
 		if(RubyClient.client.player == null) return;
-		RubyClient.client.player.sendMessage(
-				Text.empty()
-						.append(!actionBar ? Text.literal("[").withColor(0x666666) : Text.empty())
-						.append(!actionBar ? Text.literal(RubyClient.MOD_NAME).withColor(0xCC3366) : Text.empty())
-						.append(!actionBar ? Text.literal("] ").withColor(0x666666) : Text.empty())
-						.append(message),
+		Component msg = Component.empty()
+				.append(!actionBar ? Component.literal("[").withColor(0x666666) : Component.empty())
+				.append(!actionBar ? Component.literal(RubyClient.MOD_NAME).withColor(0xCC3366) : Component.empty())
+				.append(!actionBar ? Component.literal("] ").withColor(0x666666) : Component.empty())
+				.append(message);
 
-				actionBar
-		);
+		if(actionBar) RubyClient.client.player.sendOverlayMessage(msg);
+		else RubyClient.client.player.sendSystemMessage(msg);
 	}
 
 	public static Identifier identifier(String value) {
-		return Identifier.of(RubyClient.MOD_ID, value);
+		return Identifier.fromNamespaceAndPath(RubyClient.MOD_ID, value);
 	}
 	public static void loadClient(LoadingOverlay overlay) {
 		overlay.log("Loaded " + Modules.getModules().size() + " modules");
@@ -118,17 +118,15 @@ public class RubyClient implements ModInitializer {
 		Bypasses.get().init();
 		Events.TICK.register(TickEvents.BEGIN, event -> {
 			Bypasses.get().tick();
-			if(RubyClient.openGUIKey.wasPressed())
-				RubyClient.client.setScreen(new ClickGUI());
-			if(RubyClient.openCommandKey.wasPressed())
-				RubyClient.client.setScreen(new ChatScreen(RubyClient.chatPrefix.value(), false));
+			if(RubyClient.openGUIKey.isDown()) RubyClient.client.setScreenAndShow(new ClickGUI());
+			if(RubyClient.openCommandKey.isDown()) RubyClient.client.setScreenAndShow(new ChatScreen(RubyClient.chatPrefix.value(), false));
 		});
 
 		overlay.log("Attached keybind listener to GUI");
 
 		HudElementRegistry.attachElementBefore(
 				VanillaHudElements.MISC_OVERLAYS,
-				Identifier.of(RubyClient.MOD_ID, "hud_render"),
+				Identifier.fromNamespaceAndPath(RubyClient.MOD_ID, "hud_render"),
 				(context, tickCounter) -> Events.RENDER2D.fire(new Render2DEvent(context, tickCounter))
 		);
 
@@ -137,6 +135,7 @@ public class RubyClient implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		Renderer.init();
 		ModelLoadingPlugin.register(new ModelModifierPlugin());
 	}
 }

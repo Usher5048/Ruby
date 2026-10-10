@@ -1,9 +1,9 @@
 package ruby.systems.modules.combat;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Items;
 import ruby.helpers.Slots;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
@@ -40,10 +40,10 @@ public class AutoGapple extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if(player == null || mc.interactionManager == null) return;
-        if(mc.currentScreen != null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if(player == null || mc.gameMode == null) return;
+        if(mc.gui.screen() != null) return;
 
         if(this.eating) {
             if(!player.isUsingItem()) this.stopEating(player);
@@ -59,16 +59,16 @@ public class AutoGapple extends Module {
         player.getInventory().setSelectedSlot(slot);
         this.eating = true;
 
-        mc.interactionManager.interactItem(player, Hand.MAIN_HAND);
+        mc.gameMode.useItem(player, InteractionHand.MAIN_HAND);
     }
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if(mc.player != null) this.stopEating(mc.player);
     }
 
-    private void stopEating(ClientPlayerEntity player) {
+    private void stopEating(LocalPlayer player) {
         this.eating = false;
         if(this.prevSlot != -1) {
             player.getInventory().setSelectedSlot(this.prevSlot);
@@ -76,17 +76,17 @@ public class AutoGapple extends Module {
         }
     }
 
-    private boolean needsHealing(ClientPlayerEntity player) {
+    private boolean needsHealing(LocalPlayer player) {
         float health = player.getHealth();
         if(this.considerAbsorption.value()) health += player.getAbsorptionAmount();
         return health <= player.getMaxHealth() * this.healthPercent.value().floatValue() / 100.0f;
     }
 
-    private int findGappleSlot(ClientPlayerEntity player) {
-        int normal = Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.isOf(Items.GOLDEN_APPLE));
+    private int findGappleSlot(LocalPlayer player) {
+        int normal = Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.is(Items.GOLDEN_APPLE));
         if(normal != Slots.INVALID_SLOT) return normal;
 
         if(!this.enchanted.value()) return Slots.INVALID_SLOT;
-        return Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.isOf(Items.ENCHANTED_GOLDEN_APPLE));
+        return Slots.findFirst(Slots.HOTBAR, (stack, index) -> stack.is(Items.ENCHANTED_GOLDEN_APPLE));
     }
 }

@@ -1,8 +1,8 @@
 package ruby.helpers;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.util.PlayerInput;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Input;
 import ruby.RubyClient;
 import ruby.systems.modules.combat.Criticals;
 
@@ -41,7 +41,7 @@ public final class RotationManager {
         targetEntity = null;
     }
 
-    public static PlayerInput transformInput(PlayerInput in) {
+    public static Input transformInput(Input in) {
         if(RubyClient.client.player == null) return in;
 
         if(Criticals.blocksSprintInput()) in = stripSprint(in);
@@ -51,9 +51,9 @@ public final class RotationManager {
         float x = in.left() == in.right() ? 0f : (in.left() ? 1f : -1f);
         if(x == 0f && z == 0f) return stripSprint(in);
 
-        float deltaYaw = (RubyClient.client.player.getYaw() - currentYaw) * MathHelper.RADIANS_PER_DEGREE;
-        float cos = MathHelper.cos(deltaYaw);
-        float sin = MathHelper.sin(deltaYaw);
+        float deltaYaw = (RubyClient.client.player.getYRot() - currentYaw) * Mth.RAD_TO_DEG;
+        float cos = Mth.cos(deltaYaw);
+        float sin = Mth.sin(deltaYaw);
 
         int side = Math.round(x * cos - z * sin);
         int fwd = Math.round(z * cos + x * sin);
@@ -63,20 +63,20 @@ public final class RotationManager {
         boolean backward = fwd < 0;
         boolean left = side > 0;
         boolean right = side < 0;
-        boolean sprint = in.sprint() && forward && !backward;
+        boolean sprint = in.sprint() && forward;
 
-        return new PlayerInput(forward, backward, left, right, in.jump(), in.sneak(), sprint);
+        return new Input(forward, backward, left, right, in.jump(), in.shift(), sprint);
     }
 
-    public static boolean shouldSprint(PlayerInput in) {
+    public static boolean shouldSprint(Input in) {
         if(Criticals.blocksSprintInput()) return false;
         if(!hasRotation()) return in.sprint();
         return transformInput(in).sprint();
     }
 
-    private static PlayerInput stripSprint(PlayerInput in) {
+    private static Input stripSprint(Input in) {
         if(!in.sprint()) return in;
-        return new PlayerInput(in.forward(), in.backward(), in.left(), in.right(), in.jump(), in.sneak(), false);
+        return new Input(in.forward(), in.backward(), in.left(), in.right(), in.jump(), in.shift(), false);
     }
 
     public static void setTarget(Entity entity) {
@@ -144,39 +144,38 @@ public final class RotationManager {
 
     private static float gcdBaseYaw() {
         if(currentYaw != null) return currentYaw;
-        return RubyClient.client.player.getYaw();
+        return RubyClient.client.player.getYRot();
     }
 
     private static float gcdBasePitch() {
         if(currentPitch != null) return currentPitch;
-        return RubyClient.client.player.getPitch();
+        return RubyClient.client.player.getXRot();
     }
 
     private static float[] step(float fromYaw, float fromPitch, float toYaw, float toPitch) {
-        float dy = MathHelper.wrapDegrees(toYaw - fromYaw);
+        float dy = Mth.wrapDegrees(toYaw - fromYaw);
         float dp = toPitch - fromPitch;
         float yawStep = Math.min(Math.abs(dy), TURN_SPEED) * Math.signum(dy);
         float pitchStep = Math.min(Math.abs(dp), TURN_SPEED) * Math.signum(dp);
         return new float[] {
                 fromYaw + yawStep,
-                MathHelper.clamp(fromPitch + pitchStep, -90f, 90f)
+                Mth.clamp(fromPitch + pitchStep, -90f, 90f)
         };
     }
 
     private static double mouseGcd() {
-        if(RubyClient.client == null) return 0.15;
-        double f = RubyClient.client.options.getMouseSensitivity().getValue() * 0.6 + 0.2;
+        double f = RubyClient.client.options.mouseWheelSensitivity().get() * 0.6 + 0.2;
         return f * f * f * 8.0 * 0.15;
     }
 
     private static float[] normalize(float currentYaw, float currentPitch, float targetYaw, float targetPitch) {
         double gcd = mouseGcd();
-        if(gcd <= 0) return new float[] { MathHelper.wrapDegrees(targetYaw), MathHelper.clamp(targetPitch, -90f, 90f) };
+        if(gcd <= 0) return new float[] { Mth.wrapDegrees(targetYaw), Mth.clamp(targetPitch, -90f, 90f) };
 
-        float dy = MathHelper.wrapDegrees(targetYaw - currentYaw);
+        float dy = Mth.wrapDegrees(targetYaw - currentYaw);
         float dp = targetPitch - currentPitch;
         float yaw = currentYaw + Math.round(dy / gcd) * (float) gcd;
-        float pitch = MathHelper.clamp(currentPitch + Math.round(dp / gcd) * (float) gcd, -90f, 90f);
+        float pitch = Mth.clamp(currentPitch + Math.round(dp / gcd) * (float) gcd, -90f, 90f);
         return new float[] { yaw, pitch };
     }
 }

@@ -1,11 +1,21 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.item.*;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.EggItem;
+import net.minecraft.world.item.EnderpearlItem;
+import net.minecraft.world.item.ExperienceBottleItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.LingeringPotionItem;
+import net.minecraft.world.item.SnowballItem;
+import net.minecraft.world.item.SplashPotionItem;
+import net.minecraft.world.item.TridentItem;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.helpers.projectile.ProjectileSimulator;
 import ruby.helpers.render.RenderShapes;
@@ -57,9 +67,9 @@ public class Trajectories extends Module {
 
     private static List<Item> defaultItems() {
         List<Item> list = new ArrayList<>();
-        for (Item item : Registries.ITEM) {
+        for (Item item : BuiltInRegistries.ITEM) {
             if (item instanceof BowItem || item instanceof CrossbowItem || item instanceof TridentItem
-                    || item instanceof SnowballItem || item instanceof EggItem || item instanceof EnderPearlItem
+                    || item instanceof SnowballItem || item instanceof EggItem || item instanceof EnderpearlItem
                     || item instanceof ExperienceBottleItem || item instanceof SplashPotionItem
                     || item instanceof LingeringPotionItem) {
                 list.add(item);
@@ -70,28 +80,28 @@ public class Trajectories extends Module {
 
     @Override
     public void render3D() {
-        if (RubyClient.client.world == null || RubyClient.client.player == null) return;
+        if (RubyClient.client.level == null || RubyClient.client.player == null) return;
 
-        float tickDelta = RubyClient.client.getRenderTickCounter().getTickProgress(false);
+        float tickDelta = RubyClient.client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
-        for (PlayerEntity player : RubyClient.client.world.getPlayers()) {
+        for (Player player : RubyClient.client.level.players()) {
             if (!otherPlayers.value() && player != RubyClient.client.player) continue;
             renderPlayer(player, tickDelta);
         }
 
         if (firedProjectiles.value()) {
-            for (var entity : RubyClient.client.world.getEntities()) {
-                if (!(entity instanceof ProjectileEntity)) continue;
+            for (var entity : RubyClient.client.level.getEntities(null, RubyClient.client.player.getBoundingBox().inflate(256))) {
+                if (!(entity instanceof Projectile)) continue;
                 if (!simulator.set(entity)) continue;
                 renderPath(0);
             }
         }
     }
 
-    private void renderPlayer(PlayerEntity player, float tickDelta) {
-        ItemStack stack = player.getMainHandStack();
+    private void renderPlayer(Player player, float tickDelta) {
+        ItemStack stack = player.getMainHandItem();
         if (!items.value().contains(stack.getItem())) {
-            stack = player.getOffHandStack();
+            stack = player.getOffhandItem();
             if (!items.value().contains(stack.getItem())) return;
         }
 
@@ -101,7 +111,7 @@ public class Trajectories extends Module {
 
     private void renderPath(int ignoreStart) {
         int max = simulationSteps.value() <= 0 ? Integer.MAX_VALUE : simulationSteps.value();
-        Vec3d last = null;
+        Vec3 last = null;
         HitResult hit = null;
 
         for (int i = 0; i < max; i++) {
@@ -121,7 +131,7 @@ public class Trajectories extends Module {
         }
 
         if (hit != null && hit.getType() == HitResult.Type.BLOCK) {
-            Vec3d p = hit.getPos();
+            Vec3 p = hit.getLocation();
             RenderShapes.box(p.x - 0.25, p.y - 0.25, p.z - 0.25,
                     p.x + 0.25, p.y + 0.25, p.z + 0.25,
                     sideColor.value(), lineColor.value(), shapeMode.value());

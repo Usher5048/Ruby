@@ -1,10 +1,10 @@
 package ruby.systems.modules.player;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import ruby.RubyClient;
 import ruby.mixin.ClientPlayerInteractionManagerAccessor;
 import ruby.systems.config.BlockListValue;
@@ -57,26 +57,26 @@ public class SpeedMine extends Module {
 
     @Override
     public void tick() {
-        if (RubyClient.client.player == null || RubyClient.client.world == null) return;
+        if (RubyClient.client.player == null || RubyClient.client.level == null) return;
 
         if (mode.value() == Mode.Haste) {
-            StatusEffectInstance haste = RubyClient.client.player.getStatusEffect(StatusEffects.HASTE);
+            MobEffectInstance haste = RubyClient.client.player.getEffect(MobEffects.HASTE);
             if (haste == null || haste.getAmplifier() <= hasteAmplifier.value() - 1) {
-                RubyClient.client.player.addStatusEffect(new StatusEffectInstance(
-                        StatusEffects.HASTE, -1, hasteAmplifier.value() - 1, false, false, false
+                RubyClient.client.player.addEffect(new MobEffectInstance(
+                        MobEffects.HASTE, -1, hasteAmplifier.value() - 1, false, false, false
                 ));
             }
-        } else if (mode.value() == Mode.Damage && RubyClient.client.interactionManager != null) {
+        } else if (mode.value() == Mode.Damage && RubyClient.client.gameMode != null) {
             ClientPlayerInteractionManagerAccessor accessor =
-                    (ClientPlayerInteractionManagerAccessor) RubyClient.client.interactionManager;
+                    (ClientPlayerInteractionManagerAccessor) RubyClient.client.gameMode;
             BlockPos pos = accessor.ruby$getBreakingPos();
             if (pos == null) return;
 
             float progress = accessor.ruby$getBreakingProgress();
             if (progress <= 0) return;
 
-            BlockState state = RubyClient.client.world.getBlockState(pos);
-            if (progress + state.calcBlockBreakingDelta(RubyClient.client.player, RubyClient.client.world, pos) >= 0.7f) {
+            BlockState state = RubyClient.client.level.getBlockState(pos);
+            if (progress + state.getDestroyProgress(RubyClient.client.player, RubyClient.client.level, pos) >= 0.7f) {
                 accessor.ruby$setBreakingProgress(1f);
             }
         }
@@ -84,9 +84,9 @@ public class SpeedMine extends Module {
 
     private void removeHaste() {
         if (RubyClient.client.player == null) return;
-        StatusEffectInstance haste = RubyClient.client.player.getStatusEffect(StatusEffects.HASTE);
-        if (haste != null && !haste.shouldShowIcon()) {
-            RubyClient.client.player.removeStatusEffect(StatusEffects.HASTE);
+        MobEffectInstance haste = RubyClient.client.player.getEffect(MobEffects.HASTE);
+        if (haste != null && !haste.showIcon()) {
+            RubyClient.client.player.removeEffect(MobEffects.HASTE);
         }
     }
 

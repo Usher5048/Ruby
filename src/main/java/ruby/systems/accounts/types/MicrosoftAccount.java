@@ -1,12 +1,12 @@
 package ruby.systems.accounts.types;
 
 import com.mojang.util.UndashedUuid;
-import net.minecraft.client.session.Session;
 import ruby.systems.accounts.Account;
 import ruby.systems.accounts.AccountType;
 import ruby.systems.accounts.MicrosoftLogin;
 
 import java.util.Optional;
+import net.minecraft.client.User;
 
 public class MicrosoftAccount extends Account {
     private String accessToken;
@@ -32,7 +32,7 @@ public class MicrosoftAccount extends Account {
         if (this.accessToken == null) return false;
         if (!super.login()) return false;
 
-        Account.setSession(new Session(
+        Account.setSession(new User(
                 this.cache.username,
                 UndashedUuid.fromStringLenient(this.cache.uuid),
                 this.accessToken,

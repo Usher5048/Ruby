@@ -1,7 +1,7 @@
 package ruby.helpers.render;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix3x2fStack;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.gui.text.FontRenderer;
@@ -32,7 +32,7 @@ public final class RubyNametagRenderer {
     ) {}
 
     public static void draw(
-            DrawContext ctx,
+            GuiGraphicsExtractor ctx,
             GUIStyle style,
             double centerX,
             double anchorY,
@@ -131,17 +131,17 @@ public final class RubyNametagRenderer {
         if (heldItem != null && !heldItem.isEmpty()) {
             int itemX = (int) Math.round(panelLeft + panelW + itemGap);
             int itemY = (int) Math.round(panelTop + (panelH - itemSize) / 2.0);
-            Matrix3x2fStack matrices = ctx.getMatrices();
+            Matrix3x2fStack matrices = ctx.pose();
             matrices.pushMatrix();
             matrices.translate(itemX, itemY);
             matrices.scale((float) scale, (float) scale);
-            ctx.drawItemWithoutEntity(heldItem, 0, 0);
+            ctx.item(heldItem, 0, 0);
             matrices.popMatrix();
         }
     }
 
     private static double drawBadge(
-            DrawContext ctx,
+            GuiGraphicsExtractor ctx,
             GUIStyle style,
             FontRenderer font,
             String text,
@@ -175,7 +175,7 @@ public final class RubyNametagRenderer {
     }
 
     private static void drawText(
-            DrawContext ctx,
+            GuiGraphicsExtractor ctx,
             FontRenderer font,
             String text,
             double x,
@@ -189,7 +189,7 @@ public final class RubyNametagRenderer {
         x += 0.5 * scale;
         y += 0.5 * scale;
 
-        Matrix3x2fStack matrices = ctx.getMatrices();
+        Matrix3x2fStack matrices = ctx.pose();
         matrices.pushMatrix();
         matrices.scale((float) scale, (float) scale);
 

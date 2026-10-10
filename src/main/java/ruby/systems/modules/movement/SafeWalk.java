@@ -1,8 +1,8 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.Box;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.phys.AABB;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.IntegerValue;
 import ruby.systems.modules.Module;
@@ -36,19 +36,19 @@ public class SafeWalk extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.world == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.level == null) return;
 
-        if (!player.isOnGround() || player.isSneaking()) return;
+        if (!player.onGround() || player.isShiftKeyDown()) return;
 
-        Box box = player.getBoundingBox();
-        Box belowBox = box.offset(0, -player.getStepHeight() - 0.01, 0).expand(-0.3, 0, -0.3);
+        AABB box = player.getBoundingBox();
+        AABB belowBox = box.move(0, -player.maxUpStep() - 0.01, 0).inflate(-0.3, 0, -0.3);
 
-        boolean atEdge = !mc.world.getBlockCollisions(player, belowBox).iterator().hasNext();
+        boolean atEdge = !mc.level.getBlockCollisions(player, belowBox).iterator().hasNext();
 
         if (atEdge && sneak.value()) {
-            mc.options.sneakKey.setPressed(true);
+            mc.options.keyShift.setDown(true);
         }
     }
 }

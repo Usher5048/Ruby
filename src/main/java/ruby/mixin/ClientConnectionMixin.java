@@ -2,10 +2,10 @@ package ruby.mixin;
 
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import net.minecraft.network.ClientConnection;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBundlePacket;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -20,7 +20,7 @@ import ruby.systems.events.packet.PacketEvents;
 
 import java.util.Iterator;
 
-@Mixin(ClientConnection.class)
+@Mixin(Connection.class)
 public abstract class ClientConnectionMixin {
     @Shadow
     public abstract void send(Packet<?> packet, @Nullable ChannelFutureListener listener);
@@ -29,16 +29,16 @@ public abstract class ClientConnectionMixin {
             method = "channelRead0",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/network/ClientConnection;handlePacket(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;)V"
+                    target = "Lnet/minecraft/network/Connection;genericsFtw(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;)V"
             ),
             cancellable = true
     )
     private void receivePacket(ChannelHandlerContext context, Packet<?> packet, CallbackInfo info) {
-        ClientConnection con = (ClientConnection) (Object) this;
+        Connection con = (Connection) (Object) this;
         Bypasses.get().resetConnection(con);
 
-        if(packet instanceof BundleS2CPacket packetBundle) {
-            Iterator<Packet<? super ClientPlayPacketListener>> iterator = packetBundle.getPackets().iterator();
+        if(packet instanceof ClientboundBundlePacket packetBundle) {
+            Iterator<Packet<? super ClientGamePacketListener>> iterator = packetBundle.subPackets().iterator();
             while(iterator.hasNext()) {
                 Packet<?> p = iterator.next();
                 Bypasses.get().updateServer(p);
@@ -56,7 +56,7 @@ public abstract class ClientConnectionMixin {
 
     @Overwrite
     public void send(Packet<?> packet) {
-        ClientConnection con = (ClientConnection) (Object) this;
+        Connection con = (Connection) (Object) this;
 
         PacketEvent event = new PacketEvent(con, packet);
         Bypasses.get().resetConnection(con);

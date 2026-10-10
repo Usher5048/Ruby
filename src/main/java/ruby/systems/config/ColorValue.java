@@ -67,13 +67,13 @@ public class ColorValue extends Value<Integer> {
                 stream.read());
     }
 
-    public static class Builder extends Value.Builder<Integer, Builder> {
+    public static class Builder extends Value.Builder<Integer, ruby.systems.config.ColorValue.Builder> {
         public Builder(String name) {
             super(name);
         }
 
         @Override
-        protected Builder self() {
+        protected ruby.systems.config.ColorValue.Builder self() {
             return this;
         }
 

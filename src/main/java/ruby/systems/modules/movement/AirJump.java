@@ -1,7 +1,7 @@
 package ruby.systems.modules.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
@@ -32,9 +32,9 @@ public class AirJump extends Module {
 
     @Override
     public void onEnable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
-            level = mc.player.getBlockPos().getY();
+            level = mc.player.blockPosition().getY();
         }
         jumpWasPressed = false;
         sneakWasPressed = false;
@@ -42,23 +42,23 @@ public class AirJump extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.currentScreen != null) return;
-        if (player.isOnGround()) {
-            jumpWasPressed = mc.options.jumpKey.isPressed();
-            sneakWasPressed = mc.options.sneakKey.isPressed();
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || mc.gui.screen() != null) return;
+        if (player.onGround()) {
+            jumpWasPressed = mc.options.keyJump.isDown();
+            sneakWasPressed = mc.options.keyShift.isDown();
             return;
         }
 
-        boolean jumpPressed = mc.options.jumpKey.isPressed();
-        boolean sneakPressed = mc.options.sneakKey.isPressed();
+        boolean jumpPressed = mc.options.keyJump.isDown();
+        boolean sneakPressed = mc.options.keyShift.isDown();
 
         // Detect key press edge (not held)
         if (jumpPressed && !jumpWasPressed) {
-            level = player.getBlockPos().getY();
-            double preJumpY = player.getVelocity().y;
-            player.jump();
+            level = player.blockPosition().getY();
+            double preJumpY = player.getDeltaMovement().y;
+            player.jumpFromGround();
             HighJump.applyJumpMultiplier(player, preJumpY);
         }
         if (sneakPressed && !sneakWasPressed) {
@@ -69,9 +69,9 @@ public class AirJump extends Module {
         sneakWasPressed = sneakPressed;
 
         // Maintain level: auto-jump when holding jump at current Y
-        if (maintainLevel.value() && player.getBlockPos().getY() == level && jumpPressed) {
-            double preJumpY = player.getVelocity().y;
-            player.jump();
+        if (maintainLevel.value() && player.blockPosition().getY() == level && jumpPressed) {
+            double preJumpY = player.getDeltaMovement().y;
+            player.jumpFromGround();
             HighJump.applyJumpMultiplier(player, preJumpY);
         }
     }

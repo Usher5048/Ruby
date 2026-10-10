@@ -1,9 +1,9 @@
 package ruby.systems.modules.render;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import ruby.RubyClient;
 import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
@@ -35,33 +35,33 @@ public class Fullbright extends Module {
 
     @Override
     public void tick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
         if (mode.value() == Mode.Potion) {
             // Apply night vision effect (duration high enough to never flicker)
-            StatusEffectInstance nightVision = new StatusEffectInstance(
-                    StatusEffects.NIGHT_VISION, 260, 0, false, false, false
+            MobEffectInstance nightVision = new MobEffectInstance(
+                    MobEffects.NIGHT_VISION, 260, 0, false, false, false
             );
-            player.addStatusEffect(nightVision);
+            player.addEffect(nightVision);
             return;
         }
 
-        this.originalGamma = RubyClient.client.options.getGamma().getValue();
-        RubyClient.client.options.getGamma().setValue(100d);
+        this.originalGamma = RubyClient.client.options.gamma().get();
+        RubyClient.client.options.gamma().set(100d);
     }
 
     @Override
     public void onDisable() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
         if (mode.value() == Mode.Potion) {
-            mc.player.removeStatusEffect(StatusEffects.NIGHT_VISION);
+            mc.player.removeEffect(MobEffects.NIGHT_VISION);
             return;
         }
 
-        RubyClient.client.options.getGamma().setValue(this.originalGamma);
+        RubyClient.client.options.gamma().set(this.originalGamma);
     }
 }

@@ -1,8 +1,6 @@
 package ruby.systems.gui.windows;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import ruby.systems.gui.ClickGuiSearch;
 import ruby.systems.gui.ClickGuiSelection;
 import ruby.systems.gui.GUIStyle;
@@ -16,6 +14,8 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 
 public class ModulePanelWindow extends Window {
     public static final int WIDTH = ClickGuiLayoutWindow.MODULE_PANEL_WIDTH;
@@ -115,20 +115,15 @@ public class ModulePanelWindow extends Window {
     public void requestSelection(ClickGuiSelection sel) {
         if (this.selection.equals(sel)) return;
 
-        if (sel instanceof ClickGuiSelection.Search search) {
-            this.updateSearch(search.query());
+        if (sel instanceof ClickGuiSelection.Search(String query)) {
+            this.updateSearch(query);
             return;
         }
 
         this.selection = sel;
         this.pendingSelection = sel;
         switch (this.switchPhase) {
-            case IDLE -> {
-                this.switchPhase = SwitchPhase.FADE_OUT;
-                this.switchTimer = 0f;
-                this.itemStaggerActive = false;
-            }
-            case FADE_IN -> {
+            case IDLE, FADE_IN -> {
                 this.switchPhase = SwitchPhase.FADE_OUT;
                 this.switchTimer = 0f;
                 this.itemStaggerActive = false;
@@ -273,30 +268,30 @@ public class ModulePanelWindow extends Window {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         boolean animating = this.switchPhase != SwitchPhase.IDLE
                 || Math.abs(this.panelOffsetY) > 0.01f
                 || Math.abs(this.panelScale - 1f) > 0.001f
                 || this.panelAlpha < 0.999f;
 
         if (!animating) {
-            super.render(context, mouseX, mouseY, dt);
+            super.extractRenderState(context, mouseX, mouseY, dt);
             return;
         }
 
-        context.getMatrices().pushMatrix();
-        context.getMatrices().translate(0, this.panelOffsetY);
+        context.pose().pushMatrix();
+        context.pose().translate(0, this.panelOffsetY);
         float cx = WIDTH / 2f;
         float cy = HEADER_H / 2f;
-        context.getMatrices().translate(cx, cy);
-        context.getMatrices().scale(this.panelScale, this.panelScale);
-        context.getMatrices().translate(-cx, -cy);
-        super.render(context, mouseX, mouseY, dt);
-        context.getMatrices().popMatrix();
+        context.pose().translate(cx, cy);
+        context.pose().scale(this.panelScale, this.panelScale);
+        context.pose().translate(-cx, -cy);
+        super.extractRenderState(context, mouseX, mouseY, dt);
+        context.pose().popMatrix();
     }
 
     @Override
-    public void onRender(DrawContext context, int mouseX, int mouseY, float dt) {
+    public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         float deltaSec = GuiTime.toSeconds(dt);
         float targetCollapse = this.panelCollapsed ? 0f : 1f;
         float collapseStep = deltaSec / COLLAPSE_SEC;
@@ -489,8 +484,8 @@ public class ModulePanelWindow extends Window {
     }
 
     @Override
-    public boolean onMouseDown(Click click, boolean doubled) {
-        if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+    public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
         if (click.y() >= 6 && click.y() < HEADER_H - 6 && click.x() >= WIDTH - 30) {
             this.panelCollapsed = !this.panelCollapsed;
             return true;
