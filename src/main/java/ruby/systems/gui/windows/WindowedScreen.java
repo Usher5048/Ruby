@@ -17,6 +17,7 @@ public class WindowedScreen extends Screen {
 
     public WindowedScreen(String title) {
         super(Component.nullToEmpty(title));
+        RubyClient.client.onTextInputFocusChange(this, true);
     }
 
     public Window addWindow(Window window) {
@@ -202,7 +203,15 @@ public class WindowedScreen extends Screen {
         this.onTick();
     }
 
-    protected void clearChildren() {
+    public void onClose() {}
+
+    @Override
+    public void removed() {
+        RubyClient.client.onTextInputFocusChange(this, false);
+        this.onClose();
+    }
+
+    protected void clearWidgets() {
         this.windows.clear();
         super.clearWidgets();
     }

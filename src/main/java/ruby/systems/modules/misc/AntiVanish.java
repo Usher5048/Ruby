@@ -50,7 +50,11 @@ public class AntiVanish extends Module {
     public AntiVanish() {
         super("Anti-Vanish", "Notifies you when players enter or exit vanish.", ModuleType.MISC);
 
-        Events.CHAT.register(ChatEvents.RECEIVE, event -> this.messageList.add(event.message().getString()));
+        Events.CHAT.register(ChatEvents.RECEIVE, event -> {
+            if(!this.enabled()) return;
+            this.messageList.add(event.message().getString());
+        });
+
         Events.PACKET.register(PacketEvents.RECEIVE, event -> {
             if(RubyClient.client.player == null) return;
             if(!this.enabled()) return;

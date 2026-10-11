@@ -92,6 +92,7 @@ public class Hitboxes extends Module {
 
     public double getEntityValue(Entity entity) {
         if(!this.enabled()) return 0;
+        if(RubyClient.client.player == null) return 0;
         if(entity.equals(RubyClient.client.player)) return 0;
 
         if(this.ignoreFriends.value() && entity instanceof Player player && FriendsManager.isFriend(player))
