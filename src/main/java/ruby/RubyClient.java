@@ -15,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ruby.helpers.render.Renderer;
 import ruby.plugins.ModelModifierPlugin;
 import ruby.systems.bypasses.Bypasses;
 import ruby.systems.accounts.AccountsManager;
@@ -135,7 +134,6 @@ public class RubyClient implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		Renderer.init();
 		ModelLoadingPlugin.register(new ModelModifierPlugin());
 	}
 }

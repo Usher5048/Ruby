@@ -5,6 +5,10 @@ plugins {
 
 version = project.mod_version
 
+base {
+    archivesName = project.archives_base_name
+}
+
 repositories {
     exclusiveContent {
         forRepository {
@@ -23,7 +27,7 @@ dependencies {
 
     // sodium
     compileOnly "maven.modrinth:AANobbMI:bAZQdGpg"
-    runtimeOnly "maven.modrinth:AANobbMI:bAZQdGpg"
+//    runtimeOnly "maven.modrinth:AANobbMI:bAZQdGpg"
 
     annotationProcessor "io.github.llamalad7:mixinextras-common:0.5.0"
     implementation include("io.github.llamalad7:mixinextras-fabric:0.5.0")
@@ -55,6 +59,10 @@ java {
 
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/ruby.classtweaker")
 }
 
 jar {

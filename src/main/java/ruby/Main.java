@@ -3,7 +3,7 @@ package ruby;
 import javax.swing.*;
 
 public class Main {
-	public static void main(String[] args) {
+	void main() {
 		JOptionPane.showMessageDialog(
 				null,
 				"Don't run directly, put in mods folder.",

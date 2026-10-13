@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_25",
   "plugin": "ruby.plugins.MixinPlugin",
   "client": [
+    "AzimuthWaypointAccessor",
     "BlockMixin",
     "AbstractBlockMixin",
     "BlockModelRendererMixin",
@@ -13,6 +14,7 @@
     "ChatInputSuggestorMixin",
     "ChatScreenMixin",
     "ChunkOcclusionDataBuilderMixin",
+    "ChunkWaypointAccessor",
     "ClientConnectionMixin",
     "ClientPlayerEntityMixin",
     "ClientPlayerEntityAccessor",
@@ -41,6 +43,8 @@
     "PlayerInteractEntityC2SPacketAccessor",
     "SimpleOptionMixin",
     "TitleScreenMixin",
+    "TrackedWaypointAccessor",
+    "Vec3iWaypointAccessor",
     "WindowMixin"
   ],
   "injectors": {

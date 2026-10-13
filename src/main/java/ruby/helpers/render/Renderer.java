@@ -26,10 +26,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Renderer {
-    // ShaderManager compiles registered pipelines on resource reload.
-    // ruby:pos_color resolves to assets/ruby/shaders/pos_color.vsh and .fsh.
-    public static void init() {}
-
     private static RenderPipeline pipeline(String path, PrimitiveTopology topology, boolean depth) {
         return RenderPipelines.register(RenderPipeline.builder()
                 .withLocation(RubyClient.identifier(path))

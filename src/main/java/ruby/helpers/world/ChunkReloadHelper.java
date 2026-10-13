@@ -12,7 +12,7 @@ public final class ChunkReloadHelper {
 
     public static void schedule() {
         Minecraft client = RubyClient.client;
-        if (client == null || client.levelRenderer == null || client.level == null) return;
+        if (client.level == null) return;
 
         if (client.isSameThread()) {
             reload(client);
@@ -22,7 +22,7 @@ public final class ChunkReloadHelper {
     }
 
     private static void reload(Minecraft client) {
-        if (client.levelRenderer == null || client.level == null) return;
+        if (client.level == null) return;
         client.levelRenderer.invalidateCompiledGeometry(
                 client.level,
                 client.options,

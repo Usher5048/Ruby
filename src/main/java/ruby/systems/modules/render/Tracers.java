@@ -1,5 +1,6 @@
 package ruby.systems.modules.render;
 
+import net.minecraft.client.waypoints.ClientWaypointManager;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ambient.AmbientCreature;
@@ -8,9 +9,14 @@ import net.minecraft.world.entity.animal.fish.WaterAnimal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.waypoints.TrackedWaypoint;
 import ruby.RubyClient;
 import ruby.helpers.render.RenderShapes;
 import ruby.helpers.render.Renderer;
+import ruby.mixin.ChunkWaypointAccessor;
+import ruby.mixin.TrackedWaypointAccessor;
+import ruby.mixin.Vec3iWaypointAccessor;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.ColorValue;
 import ruby.systems.config.DoubleValue;
@@ -19,6 +25,8 @@ import ruby.systems.config.EnumValue;
 import ruby.systems.modules.Module;
 import ruby.systems.modules.ModuleType;
 import ruby.systems.social.FriendsManager;
+
+import java.util.UUID;
 
 /**
  * Ported from Meteor Client tracers (lines mode).
@@ -43,6 +51,16 @@ public class Tracers extends Module {
     private final ColorValue ambientColor;
     private final ColorValue miscColor;
     private final ColorValue friendColor;
+
+    private final BooleanValue extendTracers = this.config.create(new BooleanValue.Builder("Extend tracers")
+            .description("Uses the locator bar to show rough positions of far away players")
+            .defaultValue(false)
+            .visible(() -> {
+                if(RubyClient.client.getConnection() == null) return false;
+                return RubyClient.client.getConnection()
+                        .getWaypointManager()
+                        .hasWaypoints();
+            }).build());
 
     private int count;
 
@@ -90,7 +108,7 @@ public class Tracers extends Module {
             double z = entity.getPosition(tickDelta).z;
 
             double height = box.maxY - box.minY;
-            if (target.value() == Target.Head) y += height;
+            if (target.value() == Target.Head) y += entity.getEyeHeight();
             else if (target.value() == Target.Body) y += height / 2;
 
             int color = colorFor(entity);
@@ -104,6 +122,52 @@ public class Tracers extends Module {
 
             count++;
         }
+
+        if(!this.extendTracers.value()) return;
+        if(RubyClient.client.getConnection() == null) return;
+
+        ClientWaypointManager manager = RubyClient.client.getConnection().getWaypointManager();
+        if(!manager.hasWaypoints()) return;
+
+        // Waypoints aren't attached to entities, fall back to player data
+        AABB box = RubyClient.client.player.getBoundingBox();
+        float eyeHeight = RubyClient.client.player.getEyeHeight();
+        double height = box.maxY - box.minY;
+
+        // TODO: There HAS to be a better way to do this
+        manager.forEachWaypoint(RubyClient.client.player, waypoint -> {
+            TrackedWaypoint.Type type = ((TrackedWaypointAccessor) waypoint).ruby$getType();
+            if(type == TrackedWaypoint.Type.EMPTY) return;
+            if(type == TrackedWaypoint.Type.AZIMUTH) return;
+
+            Vec3 pos = null;
+            if(type == TrackedWaypoint.Type.CHUNK) {
+                pos = Vec3.atBottomCenterOf(
+                        ((ChunkWaypointAccessor) waypoint).getChunkPos()
+                        .getMiddleBlockPosition(RubyClient.client.player.getBlockY())
+                );
+            } else if(type == TrackedWaypoint.Type.VEC3I)
+                pos = Vec3.atBottomCenterOf(((Vec3iWaypointAccessor) waypoint).getVector());
+
+            if(pos == null) return;
+
+            if(this.target.value() == Target.Head) pos.add(0, eyeHeight, 0);
+            else if(this.target.value() == Target.Body) pos.add(0, height / 2, 0);
+
+            Entity e = RubyClient.client.level.getEntity(waypoint.id().left().orElse(UUID.randomUUID()));
+            if(e != null) return; // if we have a copy of the entity the normal tracer has already been drawn
+
+            int color = this.playersColor.value(); // locator bar only shows players on normal servers
+            RenderShapes.lineToCenter(pos.x(), pos.y(), pos.z(), color);
+
+            if(this.stem.value()) {
+                Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);
+                Renderer.color(color);
+                Renderer.line(pos.x(), pos.y(), pos.z(), pos.x(), pos.y() + height, pos.z());
+            }
+
+            this.count++;
+        });
     }
 
     private boolean shouldIgnore(Entity entity) {
