@@ -9,6 +9,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import ruby.systems.config.ColorValue;
+
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
@@ -30,11 +32,21 @@ public final class ThemeManager {
     private int textMuted = 0xFF5A5557;
     private int catInactive = 0xFF8A8688;
     private int arrowInactive = 0xFF333333;
-    private int borderPanel = 0x06FFFFFF;
+    private int borderPanel = 0xFF221C1E;
     private int borderSubtle = 0xFF121012;
     private int border = 0xFF181416;
     private int trackOff = 0xFF1A1617;
     private int overlayDim = 0x88000000;
+    private int scrollbar = 0xFF4A4648;
+
+    private List<ThemeColor> colorRows;
+    private List<ThemeGroup> themeGroups;
+    private List<ColorValue> palette;
+    private int paletteVersion;
+    private static final int PALETTE = 1;
+    /** Bumped when the catalog is regrouped so a hotswap rebuilds the cached list. */
+    private int catalogVersion;
+    private static final int CATALOG = 2;
 
     private ThemeManager() {}
 
@@ -43,26 +55,55 @@ public final class ThemeManager {
     }
 
     public List<ThemeColor> colors() {
+        this.ensureCatalog();
+        return this.colorRows;
+    }
+
+    public List<ThemeGroup> groups() {
+        this.ensureCatalog();
+        return this.themeGroups;
+    }
+
+    private void ensureCatalog() {
+        if (this.colorRows != null && this.themeGroups != null && this.catalogVersion == CATALOG) return;
+        this.catalogVersion = CATALOG;
         List<ThemeColor> list = new ArrayList<>();
-        list.add(new ThemeColor("Ruby", () -> this.ruby, v -> this.ruby = v, ThemeManager.DEFAULT_RUBY));
-        list.add(new ThemeColor("Ruby Hover", () -> this.rubyHover, v -> this.rubyHover = v, ThemeManager.DEFAULT_RUBY_HOVER));
-        list.add(new ThemeColor("Ruby Background", () -> this.rubyBg, v -> this.rubyBg = v, 0xFF0F0C0D));
-        list.add(new ThemeColor("Ruby Active", () -> this.rubyActive, v -> this.rubyActive = v, 0xFF141012));
-        list.add(new ThemeColor("Panel", () -> this.bgPanel, v -> this.bgPanel = v, 0xFF090809));
-        list.add(new ThemeColor("Base", () -> this.bgBase, v -> this.bgBase = v, 0xFF050405));
-        list.add(new ThemeColor("Hover", () -> this.bgHover, v -> this.bgHover = v, 0xFF121012));
-        list.add(new ThemeColor("Elevated", () -> this.bgElevated, v -> this.bgElevated = v, 0xFF0E0C0D));
-        list.add(new ThemeColor("Text", () -> this.text, v -> this.text = v, 0xFFB8B4B5));
-        list.add(new ThemeColor("Text Bright", () -> this.textBright, v -> this.textBright = v, 0xFFD4D0D1));
-        list.add(new ThemeColor("Text Muted", () -> this.textMuted, v -> this.textMuted = v, 0xFF5A5557));
-        list.add(new ThemeColor("Category", () -> this.catInactive, v -> this.catInactive = v, 0xFF8A8688));
-        list.add(new ThemeColor("Arrow", () -> this.arrowInactive, v -> this.arrowInactive = v, 0xFF333333));
-        list.add(new ThemeColor("Panel Border", () -> this.borderPanel, v -> this.borderPanel = v, 0x06FFFFFF));
-        list.add(new ThemeColor("Subtle Border", () -> this.borderSubtle, v -> this.borderSubtle = v, 0xFF121012));
-        list.add(new ThemeColor("Border", () -> this.border, v -> this.border = v, 0xFF181416));
-        list.add(new ThemeColor("Track Off", () -> this.trackOff, v -> this.trackOff = v, 0xFF1A1617));
-        list.add(new ThemeColor("Overlay", () -> this.overlayDim, v -> this.overlayDim = v, 0x88000000));
-        return list;
+        List<ThemeGroup> groups = new ArrayList<>();
+        groups.add(this.bundle(list, "Accent",
+                new ThemeColor("Ruby", () -> this.ruby, v -> this.ruby = v, ThemeManager.DEFAULT_RUBY),
+                new ThemeColor("Hover", () -> this.rubyHover, v -> this.rubyHover = v, ThemeManager.DEFAULT_RUBY_HOVER),
+                new ThemeColor("Background", () -> this.rubyBg, v -> this.rubyBg = v, 0xFF0F0C0D),
+                new ThemeColor("Active", () -> this.rubyActive, v -> this.rubyActive = v, 0xFF141012)));
+        groups.add(this.bundle(list, "Surfaces",
+                new ThemeColor("Panel", () -> this.bgPanel, v -> this.bgPanel = v, 0xFF090809),
+                new ThemeColor("Base", () -> this.bgBase, v -> this.bgBase = v, 0xFF050405),
+                new ThemeColor("Hover", () -> this.bgHover, v -> this.bgHover = v, 0xFF121012),
+                new ThemeColor("Raised", () -> this.bgElevated, v -> this.bgElevated = v, 0xFF0E0C0D)));
+        groups.add(this.bundle(list, "Text",
+                new ThemeColor("Primary", () -> this.text, v -> this.text = v, 0xFFB8B4B5),
+                new ThemeColor("Bright", () -> this.textBright, v -> this.textBright = v, 0xFFD4D0D1),
+                new ThemeColor("Muted", () -> this.textMuted, v -> this.textMuted = v, 0xFF5A5557),
+                new ThemeColor("Category", () -> this.catInactive, v -> this.catInactive = v, 0xFF8A8688),
+                new ThemeColor("Arrow", () -> this.arrowInactive, v -> this.arrowInactive = v, 0xFF333333)));
+        groups.add(this.bundle(list, "Borders",
+                new ThemeColor("Panel", this::panelBorder, v -> this.borderPanel = v, 0xFF221C1E),
+                new ThemeColor("Divider", () -> this.borderSubtle, v -> this.borderSubtle = v, 0xFF121012),
+                new ThemeColor("Control", () -> this.border, v -> this.border = v, 0xFF181416)));
+        groups.add(this.bundle(list, "Chrome",
+                new ThemeColor("Toggle", () -> this.trackOff, v -> this.trackOff = v, 0xFF1A1617),
+                new ThemeColor("Dim", () -> this.overlayDim, v -> this.overlayDim = v, 0x88000000),
+                new ThemeColor("Scrollbar", this::scrollbarColor, v -> this.scrollbar = v, 0xFF4A4648)));
+        this.colorRows = list;
+        this.themeGroups = groups;
+    }
+
+    private ThemeGroup bundle(List<ThemeColor> into, String name, ThemeColor... colors) {
+        List<ThemeColor> group = new ArrayList<>();
+        for (ThemeColor color : colors) {
+            into.add(color);
+            group.add(color);
+        }
+        return new ThemeGroup(name, group);
     }
 
     public void applyIfNeeded() {
@@ -78,6 +119,7 @@ public final class ThemeManager {
                 this.bgPanel, this.bgBase, this.bgHover, this.bgElevated,
                 this.text, this.textBright, this.textMuted, this.catInactive, this.arrowInactive,
                 this.borderPanel, this.borderSubtle, this.border, this.trackOff, this.overlayDim,
+                this.scrollbarColor(),
                 base.logoFont(), base.subHeaderFont(), base.bodyFont(), base.labelFont(),
                 base.badgeFont(), base.profileFont(), base.monospaceFont()
         ));
@@ -99,9 +141,11 @@ public final class ThemeManager {
         ConfigManager.writeInt(stream, this.arrowInactive);
         ConfigManager.writeInt(stream, this.borderPanel);
         ConfigManager.writeInt(stream, this.borderSubtle);
-        ConfigManager.writeInt(stream, this.border);
+        ConfigManager.writeInt(stream, this.panelBorder());
         ConfigManager.writeInt(stream, this.trackOff);
         ConfigManager.writeInt(stream, this.overlayDim);
+        ConfigManager.writeInt(stream, this.scrollbarColor());
+        ClientSettings.get().write(stream);
     }
 
     public void readFromProfile(ByteArrayInputStream stream) {
@@ -123,30 +167,224 @@ public final class ThemeManager {
         this.border = ConfigManager.readInt(stream);
         this.trackOff = ConfigManager.readInt(stream);
         this.overlayDim = ConfigManager.readInt(stream);
-        this.pendingApply = true;
+        if (stream.available() >= 4) this.scrollbar = ConfigManager.readInt(stream);
+        ClientSettings.get().read(stream);
+        this.syncPalette();
     }
 
     public void resetDefaults() {
         GUIStyle defaults = GUIStyle.defaultStyle();
         this.ruby = defaults.ruby();
-        this.rubyHover = defaults.rubyHover();
-        this.rubyBg = defaults.rubyBg();
-        this.rubyActive = defaults.rubyActive();
-        this.bgPanel = defaults.bgPanel();
-        this.bgBase = defaults.bgBase();
-        this.bgHover = defaults.bgHover();
-        this.bgElevated = defaults.bgElevated();
-        this.text = defaults.text();
-        this.textBright = defaults.textBright();
-        this.textMuted = defaults.textMuted();
-        this.catInactive = defaults.catInactive();
-        this.arrowInactive = defaults.arrowInactive();
-        this.borderPanel = defaults.borderPanel();
-        this.borderSubtle = defaults.borderSubtle();
-        this.border = defaults.border();
-        this.trackOff = defaults.trackOff();
-        this.overlayDim = defaults.overlayDim();
+        this.assignDefaults();
         this.apply();
+        this.syncPalette();
+    }
+
+    /** Restores the built-in palette without touching fonts. Profile load applies it later. */
+    public void assignDefaults() {
+        this.ruby = ThemeManager.DEFAULT_RUBY;
+        this.rubyHover = ThemeManager.DEFAULT_RUBY_HOVER;
+        this.rubyBg = 0xFF0F0C0D;
+        this.rubyActive = 0xFF141012;
+        this.bgPanel = 0xFF090809;
+        this.bgBase = 0xFF050405;
+        this.bgHover = 0xFF121012;
+        this.bgElevated = 0xFF0E0C0D;
+        this.text = 0xFFB8B4B5;
+        this.textBright = 0xFFD4D0D1;
+        this.textMuted = 0xFF5A5557;
+        this.catInactive = 0xFF8A8688;
+        this.arrowInactive = 0xFF333333;
+        this.borderPanel = 0xFF221C1E;
+        this.borderSubtle = 0xFF121012;
+        this.border = 0xFF181416;
+        this.trackOff = 0xFF1A1617;
+        this.overlayDim = 0x88000000;
+        this.scrollbar = 0xFF4A4648;
+    }
+
+    public void finishProfileRead() {
+        this.syncPalette();
+        this.pendingApply = true;
+    }
+
+    public void writeNamed(ByteArrayOutputStream stream) {
+        this.writeColor(stream, "ruby", this.ruby);
+        this.writeColor(stream, "rubyHover", this.rubyHover);
+        this.writeColor(stream, "rubyBg", this.rubyBg);
+        this.writeColor(stream, "rubyActive", this.rubyActive);
+        this.writeColor(stream, "bgPanel", this.bgPanel);
+        this.writeColor(stream, "bgBase", this.bgBase);
+        this.writeColor(stream, "bgHover", this.bgHover);
+        this.writeColor(stream, "bgElevated", this.bgElevated);
+        this.writeColor(stream, "text", this.text);
+        this.writeColor(stream, "textBright", this.textBright);
+        this.writeColor(stream, "textMuted", this.textMuted);
+        this.writeColor(stream, "catInactive", this.catInactive);
+        this.writeColor(stream, "arrowInactive", this.arrowInactive);
+        this.writeColor(stream, "borderPanel", this.panelBorder());
+        this.writeColor(stream, "borderSubtle", this.borderSubtle);
+        this.writeColor(stream, "border", this.border);
+        this.writeColor(stream, "trackOff", this.trackOff);
+        this.writeColor(stream, "overlayDim", this.overlayDim);
+        this.writeColor(stream, "scrollbar", this.scrollbarColor());
+    }
+
+    public void readNamed(ByteArrayInputStream stream) {
+        while (stream.available() >= 6) {
+            String name = ConfigManager.readUtf8(stream);
+            if (stream.available() < 4) return;
+            int value = ConfigManager.readInt(stream);
+            switch (name) {
+                case "ruby" -> this.ruby = value;
+                case "rubyHover" -> this.rubyHover = value;
+                case "rubyBg" -> this.rubyBg = value;
+                case "rubyActive" -> this.rubyActive = value;
+                case "bgPanel" -> this.bgPanel = value;
+                case "bgBase" -> this.bgBase = value;
+                case "bgHover" -> this.bgHover = value;
+                case "bgElevated" -> this.bgElevated = value;
+                case "text" -> this.text = value;
+                case "textBright" -> this.textBright = value;
+                case "textMuted" -> this.textMuted = value;
+                case "catInactive" -> this.catInactive = value;
+                case "arrowInactive" -> this.arrowInactive = value;
+                case "borderPanel" -> this.borderPanel = value;
+                case "borderSubtle" -> this.borderSubtle = value;
+                case "border" -> this.border = value;
+                case "trackOff" -> this.trackOff = value;
+                case "overlayDim" -> this.overlayDim = value;
+                case "scrollbar" -> this.scrollbar = value;
+                default -> {}
+            }
+        }
+    }
+
+    private void writeColor(ByteArrayOutputStream stream, String name, int value) {
+        ConfigManager.writeUtf8(stream, name);
+        ConfigManager.writeInt(stream, value);
+    }
+
+    /**
+     * One control per family. Hover, raised surfaces, and the quiet borders follow
+     * the color the user actually picks.
+     */
+    public List<ColorValue> palette() {
+        if (this.palette != null && this.paletteVersion == PALETTE) return this.palette;
+        this.paletteVersion = PALETTE;
+        List<ColorValue> list = new ArrayList<>();
+        list.add(this.color("Accent", this.ruby, this::applyAccent));
+        list.add(this.color("Selection", this.rubyBg, this::applySelection));
+        list.add(this.color("Panel", this.bgPanel, this::applyPanel));
+        list.add(this.color("Background", this.bgBase, this::applyBackground));
+        list.add(this.color("Text", this.text, this::applyText));
+        list.add(this.color("Muted", this.textMuted, this::applyMuted));
+        list.add(this.color("Border", this.panelBorder(), this::applyBorder));
+        list.add(this.color("Scrollbar", this.scrollbarColor(), this::applyScrollbar));
+        this.palette = list;
+        return list;
+    }
+
+    private ColorValue color(String name, int current, IntConsumer apply) {
+        return (ColorValue) new ColorValue.Builder(name)
+                .defaultValue(current)
+                .changed(value -> {
+                    apply.accept(value);
+                    this.apply();
+                })
+                .build();
+    }
+
+    private void syncPalette() {
+        if (this.palette == null || this.paletteVersion != PALETTE) return;
+        int[] now = {
+                this.ruby, this.rubyBg, this.bgPanel, this.bgBase,
+                this.text, this.textMuted, this.panelBorder(), this.scrollbarColor()
+        };
+        for (int i = 0; i < now.length && i < this.palette.size(); i++) {
+            this.palette.get(i).setQuiet(now[i] | 0xFF000000);
+        }
+    }
+
+    public void setDimPercent(int percent) {
+        this.writeDim(percent);
+        this.apply();
+    }
+
+    /** Profile load. The style is applied later, once fonts exist. */
+    public void setDimQuiet(int percent) {
+        this.writeDim(percent);
+    }
+
+    private void writeDim(int percent) {
+        int alpha = Math.round(Math.clamp(percent, 0, 100) * 255f / 100f);
+        this.overlayDim = (alpha << 24) | (this.overlayDim & 0x00FFFFFF);
+    }
+
+    public int dimPercent() {
+        return Math.round(((this.overlayDim >>> 24) & 0xFF) * 100f / 255f);
+    }
+
+    private void applyAccent(int value) {
+        this.ruby = value | 0xFF000000;
+        this.rubyHover = ThemeManager.lighten(this.ruby, 0.2f);
+    }
+
+    private void applySelection(int value) {
+        this.rubyBg = value | 0xFF000000;
+        this.rubyActive = ThemeManager.lighten(this.rubyBg, 0.08f);
+    }
+
+    private void applyPanel(int value) {
+        this.bgPanel = value | 0xFF000000;
+    }
+
+    private void applyBackground(int value) {
+        this.bgBase = value | 0xFF000000;
+        this.bgElevated = ThemeManager.lighten(this.bgBase, 0.05f);
+        this.bgHover = ThemeManager.lighten(this.bgBase, 0.1f);
+    }
+
+    private void applyText(int value) {
+        this.text = value | 0xFF000000;
+        this.textBright = ThemeManager.lighten(this.text, 0.28f);
+    }
+
+    private void applyMuted(int value) {
+        this.textMuted = value | 0xFF000000;
+        this.catInactive = ThemeManager.lighten(this.textMuted, 0.42f);
+        this.arrowInactive = ThemeManager.darken(this.textMuted, 0.45f);
+    }
+
+    private void applyBorder(int value) {
+        this.borderPanel = value | 0xFF000000;
+        this.border = ThemeManager.darken(this.borderPanel, 0.18f);
+        this.borderSubtle = ThemeManager.darken(this.borderPanel, 0.42f);
+    }
+
+    private void applyScrollbar(int value) {
+        this.scrollbar = value | 0xFF000000;
+        this.trackOff = ThemeManager.darken(this.scrollbar, 0.68f);
+    }
+
+    private static int lighten(int color, float t) {
+        return Motion.mix(color | 0xFF000000, 0xFFFFFFFF, t);
+    }
+
+    private static int darken(int color, float t) {
+        return Motion.mix(color | 0xFF000000, 0xFF000000, t);
+    }
+
+    /** Older outlines were either invisible (0x06FFFFFF) or louder than the panel (0xFF3E383A). */
+    private int panelBorder() {
+        if (this.borderPanel == 0x06FFFFFF || this.borderPanel == 0xFF3E383A) this.borderPanel = 0xFF221C1E;
+        return this.borderPanel;
+    }
+
+    /** Hotswap and older profiles leave this at 0. The picker always writes an opaque color. */
+    private int scrollbarColor() {
+        if (this.scrollbar == 0) this.scrollbar = 0xFF4A4648;
+        return this.scrollbar;
     }
 
     private File themeFile() {
@@ -163,6 +401,8 @@ public final class ThemeManager {
             return this.getter.getAsInt();
         }
     }
+
+    public record ThemeGroup(String name, List<ThemeColor> colors) {}
 
     private static class ThemeData {
         @SerializedName("ruby") Integer ruby;
@@ -183,6 +423,7 @@ public final class ThemeManager {
         @SerializedName("border") Integer border;
         @SerializedName("trackOff") Integer trackOff;
         @SerializedName("overlayDim") Integer overlayDim;
+        @SerializedName("scrollbar") Integer scrollbar;
     }
 
     private static final class Holder {

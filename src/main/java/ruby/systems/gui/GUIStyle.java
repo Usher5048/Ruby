@@ -24,6 +24,7 @@ public record GUIStyle(
         int border,
         int trackOff,
         int overlayDim,
+        int scrollbar,
         FontRenderer logoFont,
         FontRenderer subHeaderFont,
         FontRenderer bodyFont,
@@ -78,9 +79,10 @@ public record GUIStyle(
                 0xFF0F0C0D, 0xFF141012,
                 0xFF090809, 0xFF050405, 0xFF121012, 0xFF0E0C0D,
                 0xFFB8B4B5, 0xFFD4D0D1, 0xFF5A5557, 0xFF8A8688, 0xFF333333,
-                0x06FFFFFF, 0xFF121012, 0xFF181416,
+                0xFF221C1E, 0xFF121012, 0xFF181416,
                 0xFF1A1617,
                 0x88000000,
+                0xFF4A4648,
                 logo, sub,
                 body, label, badge,
                 profile, mono
@@ -92,6 +94,10 @@ public record GUIStyle(
     public static GUIStyle get() {
         ThemeManager.get().applyIfNeeded();
         if (current == null) current = defaultStyle();
+        if (current == null || current.scrollbar() == 0
+                || current.borderPanel() == 0x06FFFFFF || current.borderPanel() == 0xFF3E383A) {
+            ThemeManager.get().apply();
+        }
         return current;
     }
 

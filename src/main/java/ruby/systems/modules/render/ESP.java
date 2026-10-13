@@ -108,7 +108,7 @@ public class ESP extends Module {
         if (mode.value() != Mode.Box || RubyClient.client.level == null || RubyClient.client.player == null) return;
 
         count = 0;
-        float tickDelta = RubyClient.client.gameRenderer.mainCamera().getCameraEntityPartialTicks(RubyClient.client.getDeltaTracker());
+        float tickDelta = ruby.helpers.render.Renderer.partialTicks();
         ShapeMode shape = shapeMode.value();
 
         for (Entity entity : RubyClient.client.level.entitiesForRendering()) {
@@ -140,7 +140,7 @@ public class ESP extends Module {
         hud.begin(event.getContext());
 
         count = 0;
-        float tickDelta = RubyClient.client.gameRenderer.mainCamera().getCameraEntityPartialTicks(RubyClient.client.getDeltaTracker());
+        float tickDelta = ruby.helpers.render.Renderer.partialTicks();
         boolean corners = twoDStyle.value() == TwoDStyle.Corners;
         ShapeMode shape = shapeMode.value();
 

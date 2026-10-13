@@ -15,11 +15,14 @@ import java.util.function.Function;
 
 public class Window extends AbstractContainerEventHandler implements GuiEventListener, Renderable {
     private final List<Window> children = new ArrayList<>();
-    private int[] scissorSpace;
+    private final int[] scissorSpace = new int[] {-1, -1, -1, -1};
+    private int layoutStamp;
     private int x;
     private int y;
 
     protected boolean handleChildren;
+    /** Child that took the button down. Drags stay with it after the cursor leaves. */
+    private Window pointerChild;
     protected int[] draggableBounds;
     protected int width;
     protected int height;
@@ -54,6 +57,13 @@ public class Window extends AbstractContainerEventHandler implements GuiEventLis
     }
     public void onMouseMoved(double mouseX, double mouseY) {}
 
+    protected void onRenderForeground(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {}
+
+    /** Header and clipped regions can reject children that have been scrolled underneath them. */
+    protected boolean isChildInteractive(Window child, double localX, double localY) {
+        return true;
+    }
+
     public boolean onKeyPress(KeyEvent input) {
         return false;
     }
@@ -74,10 +84,25 @@ public class Window extends AbstractContainerEventHandler implements GuiEventLis
     }
 
     public void disableCutout() {
-        this.scissorSpace = new int[] {-1, -1, -1, -1};
+        this.scissorSpace[0] = -1;
+        this.scissorSpace[1] = -1;
+        this.scissorSpace[2] = -1;
+        this.scissorSpace[3] = -1;
     }
     public void enableCutout(int x1, int y1, int x2, int y2) {
-        this.scissorSpace = new int[] {x1, y1, x2, y2};
+        this.scissorSpace[0] = x1;
+        this.scissorSpace[1] = y1;
+        this.scissorSpace[2] = x2;
+        this.scissorSpace[3] = y2;
+    }
+
+    /** Bumped when this window's height changes so parents can skip a layout walk. */
+    public int layoutStamp() {
+        return this.layoutStamp;
+    }
+
+    protected void bumpLayout() {
+        this.layoutStamp++;
     }
 
     public void drawText(FontRenderer font, GuiGraphicsExtractor context, String text, int x, int y, int color) {
@@ -200,86 +225,100 @@ public class Window extends AbstractContainerEventHandler implements GuiEventLis
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
+        int scale = RubyClient.client.getWindow().getGuiScale();
+        float inv = 1f / scale;
+        double invD = 1.0 / scale;
+
         context.pose().pushMatrix();
-        context.pose().scale(
-                1f / (float) RubyClient.client.getWindow().getGuiScale(),
-                1f / (float) RubyClient.client.getWindow().getGuiScale()
-        );
+        context.pose().scale(inv, inv);
 
-        int sMouseX = mouseX * RubyClient.client.getWindow().getGuiScale();
-        int sMouseY = mouseY * RubyClient.client.getWindow().getGuiScale();
-
-        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
-        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
+        int sMouseX = mouseX * scale;
+        int sMouseY = mouseY * scale;
+        double sX = this.x * invD;
+        double sY = this.y * invD;
 
         context.pose().translate(this.x, this.y);
         this.onRender(context, sMouseX - this.x, sMouseY - this.y, dt);
         context.pose().popMatrix();
 
-        context.pose().pushMatrix();
-        context.pose().translate((float) sX, (float) sY);
+        if(this.handleChildren) {
+            context.pose().pushMatrix();
+            context.pose().translate((float) sX, (float) sY);
 
-        if(!this.handleChildren) {
+            int cutL = this.scissorSpace[0];
+            int cutT = this.scissorSpace[1];
+            int cutR = this.scissorSpace[2];
+            int cutB = this.scissorSpace[3];
+            boolean scissorEnabled = cutL != -1 && cutT != -1 && cutR != -1 && cutB != -1;
+
+            if(scissorEnabled) {
+                context.enableScissor(cutL / scale, cutT / scale, cutR / scale, cutB / scale);
+            }
+
+            int childMouseX = (int) (mouseX - sX);
+            int childMouseY = (int) (mouseY - sY);
+            if (this.blockChildHover(sMouseX - this.x, sMouseY - this.y)) {
+                childMouseX = -100000;
+                childMouseY = -100000;
+            }
+            for(int i = 0, n = this.children.size(); i < n; i++) {
+                this.children.get(i).extractRenderState(context, childMouseX, childMouseY, dt);
+            }
+
+            if(scissorEnabled) context.disableScissor();
             context.pose().popMatrix();
-            return;
         }
 
-        boolean scissorEnabled =
-                this.scissorSpace[0] != -1 && this.scissorSpace[1] != -1 &&
-                this.scissorSpace[2] != -1 && this.scissorSpace[3] != -1;
-
-        if(scissorEnabled) {
-            context.enableScissor(
-                    this.scissorSpace[0] / RubyClient.client.getWindow().getGuiScale(),
-                    this.scissorSpace[1] / RubyClient.client.getWindow().getGuiScale(),
-                    this.scissorSpace[2] / RubyClient.client.getWindow().getGuiScale(),
-                    this.scissorSpace[3] / RubyClient.client.getWindow().getGuiScale()
-            );
-        }
-
-        for(Window window : this.windows()) {
-            window.extractRenderState(
-                    context,
-                    (int) (mouseX - sX),
-                    (int) (mouseY - sY),
-                    dt
-            );
-        }
-
-        if(scissorEnabled) context.disableScissor();
+        context.pose().pushMatrix();
+        context.pose().scale(inv, inv);
+        context.pose().translate(this.x, this.y);
+        this.onRenderForeground(context, sMouseX - this.x, sMouseY - this.y, dt);
         context.pose().popMatrix();
+    }
+
+    /** True while the pointer is on this window's own chrome, so children do not hover underneath. */
+    protected boolean blockChildHover(int localX, int localY) {
+        return false;
+    }
+
+    private int guiScale() {
+        return RubyClient.client.getWindow().getGuiScale();
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
-        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getGuiScale());
-        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getGuiScale());
-        double sDeltaX = Math.round(deltaX * RubyClient.client.getWindow().getGuiScale());
-        double sDeltaY = Math.round(deltaY * RubyClient.client.getWindow().getGuiScale());
+        int scale = this.guiScale();
+        double sMouseX = Math.round(click.x() * scale);
+        double sMouseY = Math.round(click.y() * scale);
+        double sDeltaX = Math.round(deltaX * scale);
+        double sDeltaY = Math.round(deltaY * scale);
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
-        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
+        double localX = sMouseX - this.x;
+        double localY = sMouseY - this.y;
 
-        for(int i = this.children.size() - 1; i >= 0; i--) {
-            if(!this.handleChildren) continue;
-            Window window = this.children.get(i);
+        if (this.pointerChild != null && this.children.contains(this.pointerChild)) {
+            this.pointerChild.mouseDragged(this.childClick(click), deltaX, deltaY);
+            if (this.isDragging() && click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
+                this.x += (int) sDeltaX;
+                this.y += (int) sDeltaY;
+            }
+            return true;
+        }
 
-            if(sMouseX - this.x < window.getX()) continue;
-            if(sMouseY - this.y < window.getY()) continue;
-            if(sMouseX - this.x >= window.getX() + window.getWidth()) continue;
-            if(sMouseY - this.y >= window.getY() + window.getHeight()) continue;
+        if(this.handleChildren) {
+            for(int i = this.children.size() - 1; i >= 0; i--) {
+                Window window = this.children.get(i);
+                if(!this.isChildInteractive(window, localX, localY)) continue;
+                if(!this.containsChild(window, localX, localY)) continue;
 
-            if(this.focusWindow(window).mouseDragged(new MouseButtonEvent(
-                    click.x() - sX,
-                    click.y() - sY,
-                    click.buttonInfo()
-            ), deltaX, deltaY)) return true;
-            break;
+                if(this.focusWindow(window).mouseDragged(this.childClick(click), deltaX, deltaY)) return true;
+                break;
+            }
         }
 
         if(this.onMouseDragged(new MouseButtonEvent(
-                sMouseX - this.x,
-                sMouseY - this.y,
+                localX,
+                localY,
                 click.buttonInfo()
         ), deltaX, deltaY)) return true;
 
@@ -292,9 +331,10 @@ public class Window extends AbstractContainerEventHandler implements GuiEventLis
     }
 
     public void tick() {
-        for(int i = this.children.size() - 1; i >= 0; i--) {
-            if(!this.handleChildren) continue;
-            this.children.get(i).tick();
+        if(this.handleChildren) {
+            for(int i = this.children.size() - 1; i >= 0; i--) {
+                this.children.get(i).tick();
+            }
         }
 
         this.onTick();
@@ -302,32 +342,33 @@ public class Window extends AbstractContainerEventHandler implements GuiEventLis
 
     @Override
     public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
-        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getGuiScale());
-        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getGuiScale());
+        int scale = this.guiScale();
+        double sMouseX = Math.round(click.x() * scale);
+        double sMouseY = Math.round(click.y() * scale);
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
-        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
+        double sX = this.x / (double) scale;
+        double sY = this.y / (double) scale;
+        double localX = sMouseX - this.x;
+        double localY = sMouseY - this.y;
 
-        for(int i = this.children.size() - 1; i >= 0; i--) {
-            if(!this.handleChildren) continue;
-            Window window = this.children.get(i);
+        this.pointerChild = null;
+        if(this.handleChildren) {
+            for(int i = this.children.size() - 1; i >= 0; i--) {
+                Window window = this.children.get(i);
+                if(!this.isChildInteractive(window, localX, localY)) continue;
+                if(!this.containsChild(window, localX, localY)) continue;
 
-            if(sMouseX - this.x < window.getX()) continue;
-            if(sMouseY - this.y < window.getY()) continue;
-            if(sMouseX - this.x >= window.getX() + window.getWidth()) continue;
-            if(sMouseY - this.y >= window.getY() + window.getHeight()) continue;
-
-            if(this.focusWindow(window).mouseClicked(new MouseButtonEvent(
-                    click.x() - sX,
-                    click.y() - sY,
-                    click.buttonInfo()
-            ), doubled)) return true;
-            break;
+                if(this.focusWindow(window).mouseClicked(this.childClick(click), doubled)) {
+                    this.pointerChild = window;
+                    return true;
+                }
+                break;
+            }
         }
 
         if(this.onMouseDown(new MouseButtonEvent(
-                sMouseX - this.x,
-                sMouseY - this.y,
+                localX,
+                localY,
                 click.buttonInfo()
         ), doubled)) return true;
 
@@ -344,32 +385,35 @@ public class Window extends AbstractContainerEventHandler implements GuiEventLis
 
     @Override
     public boolean mouseReleased(MouseButtonEvent click) {
-        double sMouseX = Math.round(click.x() * RubyClient.client.getWindow().getGuiScale());
-        double sMouseY = Math.round(click.y() * RubyClient.client.getWindow().getGuiScale());
+        int scale = this.guiScale();
+        double sMouseX = Math.round(click.x() * scale);
+        double sMouseY = Math.round(click.y() * scale);
+        double localX = sMouseX - this.x;
+        double localY = sMouseY - this.y;
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
-        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
+        if (this.pointerChild != null) {
+            Window held = this.pointerChild;
+            this.pointerChild = null;
+            if (this.children.contains(held)) held.mouseReleased(this.childClick(click));
+            this.onMouseUp(new MouseButtonEvent(localX, localY, click.buttonInfo()));
+            this.setDragging(false);
+            return true;
+        }
 
-        for(int i = this.children.size() - 1; i >= 0; i--) {
-            if(!this.handleChildren) continue;
-            Window window = this.children.get(i);
+        if(this.handleChildren) {
+            for(int i = this.children.size() - 1; i >= 0; i--) {
+                Window window = this.children.get(i);
+                if(!this.isChildInteractive(window, localX, localY)) continue;
+                if(!this.containsChild(window, localX, localY)) continue;
 
-            if(sMouseX - this.x < window.getX()) continue;
-            if(sMouseY - this.y < window.getY()) continue;
-            if(sMouseX - this.x >= window.getX() + window.getWidth()) continue;
-            if(sMouseY - this.y >= window.getY() + window.getHeight()) continue;
-
-            if(window.mouseReleased(new MouseButtonEvent(
-                    click.x() - sX,
-                    click.y() - sY,
-                    click.buttonInfo()
-            ))) return true;
-            break;
+                if(window.mouseReleased(this.childClick(click))) return true;
+                break;
+            }
         }
 
         if(this.onMouseUp(new MouseButtonEvent(
-                sMouseX - this.x,
-                sMouseY - this.y,
+                localX,
+                localY,
                 click.buttonInfo()
         ))) return true;
 
@@ -391,67 +435,70 @@ public class Window extends AbstractContainerEventHandler implements GuiEventLis
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        double sMouseX = Math.round(mouseX * RubyClient.client.getWindow().getGuiScale());
-        double sMouseY = Math.round(mouseY * RubyClient.client.getWindow().getGuiScale());
+        int scale = this.guiScale();
+        double sMouseX = Math.round(mouseX * scale);
+        double sMouseY = Math.round(mouseY * scale);
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
-        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
+        double sX = this.x / (double) scale;
+        double sY = this.y / (double) scale;
+        double localX = sMouseX - this.x;
+        double localY = sMouseY - this.y;
 
-        for(int i = this.children.size() - 1; i >= 0; i--) {
-            if(!this.handleChildren) continue;
-            Window window = this.children.get(i);
+        if(this.handleChildren) {
+            for(int i = this.children.size() - 1; i >= 0; i--) {
+                Window window = this.children.get(i);
+                if(!this.isChildInteractive(window, localX, localY)) continue;
+                if(!this.containsChild(window, localX, localY)) continue;
 
-            if(sMouseX - this.x < window.getX()) continue;
-            if(sMouseY - this.y < window.getY()) continue;
-            if(sMouseX - this.x >= window.getX() + window.getWidth()) continue;
-            if(sMouseY - this.y >= window.getY() + window.getHeight()) continue;
-
-            if(window.onMouseScrolled(
-                    mouseX - sX,
-                    mouseY - sY,
-                    horizontalAmount,
-                    verticalAmount
-            )) return true;
-            break;
+                if(window.mouseScrolled(
+                        mouseX - sX,
+                        mouseY - sY,
+                        horizontalAmount,
+                        verticalAmount
+                )) return true;
+                break;
+            }
         }
 
-        return this.onMouseScrolled(
-                sMouseX - this.x,
-                sMouseY - this.y,
-                horizontalAmount,
-                verticalAmount
-        );
+        return this.onMouseScrolled(localX, localY, horizontalAmount, verticalAmount);
     }
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        double sMouseX = Math.round(mouseX * RubyClient.client.getWindow().getGuiScale());
-        double sMouseY = Math.round(mouseY * RubyClient.client.getWindow().getGuiScale());
+        int scale = this.guiScale();
+        double sMouseX = Math.round(mouseX * scale);
+        double sMouseY = Math.round(mouseY * scale);
 
-        double sX = this.x / (double) RubyClient.client.getWindow().getGuiScale();
-        double sY = this.y / (double) RubyClient.client.getWindow().getGuiScale();
+        double sX = this.x / (double) scale;
+        double sY = this.y / (double) scale;
+        double localX = sMouseX - this.x;
+        double localY = sMouseY - this.y;
 
-        for(int i = this.children.size() - 1; i >= 0; i--) {
-            if(!this.handleChildren) continue;
-            Window window = this.children.get(i);
+        if(this.handleChildren) {
+            for(int i = this.children.size() - 1; i >= 0; i--) {
+                Window window = this.children.get(i);
+                if(!this.isChildInteractive(window, localX, localY)) continue;
+                if(!this.containsChild(window, localX, localY)) continue;
 
-            if(sMouseX - this.x < window.getX()) continue;
-            if(sMouseY - this.y < window.getY()) continue;
-            if(sMouseX - this.x >= window.getX() + window.getWidth()) continue;
-            if(sMouseY - this.y >= window.getY() + window.getHeight()) continue;
-
-            window.onMouseMoved(
-                    mouseX - sX,
-                    mouseY - sY
-            );
-
-            break;
+                window.onMouseMoved(mouseX - sX, mouseY - sY);
+                break;
+            }
         }
 
-        this.onMouseMoved(
-                sMouseX - this.x,
-                sMouseY - this.y
-        );
+        this.onMouseMoved(localX, localY);
+    }
+
+    private MouseButtonEvent childClick(MouseButtonEvent click) {
+        int scale = this.guiScale();
+        double sX = this.x / (double) scale;
+        double sY = this.y / (double) scale;
+        return new MouseButtonEvent(click.x() - sX, click.y() - sY, click.buttonInfo());
+    }
+
+    private boolean containsChild(Window window, double localX, double localY) {
+        int x = window.getX();
+        int y = window.getY();
+        return localX >= x && localY >= y && localX < x + window.getWidth() && localY < y + window.getHeight();
     }
 
     @Override

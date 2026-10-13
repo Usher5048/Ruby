@@ -52,7 +52,8 @@ public class MeshBuilder {
         this.vertexIndex = 0;
         this.indexIndex = 0;
 
-        this.cameraPos = RubyClient.client.gameRenderer.mainCamera().position();
+        Renderer.ensureCamera();
+        this.cameraPos = Renderer.cameraPos();
     }
 
     public MeshBuilder vec3(double x, double y, double z) {

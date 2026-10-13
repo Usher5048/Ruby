@@ -55,6 +55,19 @@ public final class Http {
         }
 
         public <T> T sendJson(Class<T> type) {
+            Result result = this.send();
+            if (result == null || !result.ok()) {
+                if (result != null) {
+                    String body = result.body.replace('\n', ' ');
+                    if (body.length() > 240) body = body.substring(0, 240);
+                    ruby.RubyClient.LOGGER.warn("HTTP {}: {}", result.status, body);
+                }
+                return null;
+            }
+            return Http.GSON.fromJson(result.body, type);
+        }
+
+        public Result send() {
             try {
                 if (this.method != null) {
                     this.builder.method(this.method, HttpRequest.BodyPublishers.noBody());
@@ -64,13 +77,33 @@ public final class Http {
                         this.builder.build(),
                         HttpResponse.BodyHandlers.ofString()
                 );
-
-                if (response.statusCode() < 200 || response.statusCode() >= 300) return null;
-                return Http.GSON.fromJson(response.body(), type);
+                return new Result(response.statusCode(), response.body());
             } catch (Exception e) {
                 ruby.RubyClient.LOGGER.error("HTTP request failed", e);
                 return null;
             }
+        }
+    }
+
+    public static <T> T json(String body, Class<T> type) {
+        return GSON.fromJson(body, type);
+    }
+
+    public static String quote(String value) {
+        return GSON.toJson(value == null ? "" : value);
+    }
+
+    public static final class Result {
+        public final int status;
+        public final String body;
+
+        public Result(int status, String body) {
+            this.status = status;
+            this.body = body == null ? "" : body;
+        }
+
+        public boolean ok() {
+            return this.status >= 200 && this.status < 300;
         }
     }
 }

@@ -3,6 +3,7 @@ package ruby.systems.modules.render;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -20,6 +21,10 @@ import ruby.systems.modules.Module;
 import ruby.systems.modules.Modules;
 import ruby.systems.modules.ModuleType;
 import ruby.systems.social.FriendsManager;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public class Nametags extends Module {
 
@@ -44,30 +49,32 @@ public class Nametags extends Module {
 
         entities = config.create(new EntityTypeListValue.Builder("Entities")
                 .defaultValue(EntityTypes.PLAYER).build());
-        scale = config.create(new DoubleValue.Builder("Scale").defaultValue(1.1).range(0.1, 3, 0.1).build());
-        distanceScale = config.create(new BooleanValue.Builder("Distance Scale")
-                .description("Shrink nametags slightly with distance.")
+        displayHealth = config.create(new BooleanValue.Builder("Health").defaultValue(true).build());
+        displayPing = config.create(new BooleanValue.Builder("Ping").defaultValue(true).build());
+        displayDistance = config.create(new BooleanValue.Builder("Distance").defaultValue(false).build());
+        displayItems = config.create(new BooleanValue.Builder("Items")
+                .description("Show the item the player is holding, inside the tag.")
                 .defaultValue(true).build());
-        minScale = config.create(new DoubleValue.Builder("Min Scale")
-                .description("Smallest scale when distance scaling is enabled.")
-                .range(0.5, 1.5, 0.05).defaultValue(0.85)
-                .visible(distanceScale::value)
-                .build());
         ignoreSelf = config.create(new BooleanValue.Builder("Ignore Self").defaultValue(true).build());
         ignoreFriends = config.create(new BooleanValue.Builder("Ignore Friends").defaultValue(false).build());
         ignoreBots = config.create(new BooleanValue.Builder("Ignore Bots")
                 .description("Only show nametags for players with a valid gamemode.")
                 .defaultValue(true).build());
-        displayHealth = config.create(new BooleanValue.Builder("Health").defaultValue(true).build());
-        displayDistance = config.create(new BooleanValue.Builder("Distance").defaultValue(false).build());
-        displayPing = config.create(new BooleanValue.Builder("Ping").defaultValue(true).build());
-        displayItems = config.create(new BooleanValue.Builder("Items")
-                .description("Show the item the player is holding.")
-                .defaultValue(true).build());
+        scale = config.create(new DoubleValue.Builder("Scale")
+                .description("1 is the sharp size. Larger values stretch the text.")
+                .defaultValue(1).range(0.5, 2, 0.05).build());
+        distanceScale = config.create(new BooleanValue.Builder("Distance Scale")
+                .description("Shrinks the tag as the target gets farther away.")
+                .defaultValue(false).build());
+        minScale = config.create(new DoubleValue.Builder("Min Scale")
+                .description("Smallest the tag gets at long range.")
+                .range(0.5, 1, 0.01).defaultValue(0.5)
+                .visible(distanceScale::value)
+                .build());
         backgroundOpacity = config.create(new DoubleValue.Builder("Background Opacity")
                 .range(0, 1, 0.05).defaultValue(0.92).build());
         nameColor = config.create(new ColorValue.Builder("Name Color").defaultValue(GUIStyle.TEXT_BRIGHT).build());
-        backgroundColor = config.create(new ColorValue.Builder("Background").defaultValue(GUIStyle.BG_ELEVATED).build());
+        backgroundColor = config.create(new ColorValue.Builder("Background").defaultValue(0xFF090809).build());
     }
 
     @Override
@@ -83,29 +90,52 @@ public class Nametags extends Module {
     @Override
     public void render2D(Render2DEvent event) {
         if (RubyClient.client.level == null || RubyClient.client.player == null) return;
-        if (false) return;
+        this.loosenOldMin();
 
         GUIStyle style = GUIStyle.get();
-        float tickDelta = RubyClient.client.gameRenderer.mainCamera().getCameraEntityPartialTicks(RubyClient.client.getDeltaTracker());
-        int panelBg = withAlpha(backgroundColor.value(), backgroundOpacity.value().floatValue());
-        int panelBorder = GUIStyle.withAlpha(style.borderSubtle(), backgroundOpacity.value().floatValue());
+        float tickDelta = ruby.helpers.render.Renderer.partialTicks();
+        float opacity = backgroundOpacity.value().floatValue();
+        int panelBg = withAlpha(backgroundColor.value(), opacity);
+        int panelBorder = GUIStyle.withAlpha(style.borderPanel(), opacity);
+        int screenW = RubyClient.client.getWindow().getWidth();
+        int screenH = RubyClient.client.getWindow().getHeight();
 
+        List<Drawn> tags = new ArrayList<>();
         for (Entity entity : RubyClient.client.level.entitiesForRendering()) {
             if (!shouldRender(entity)) continue;
 
             Vec3 pos = entity.getPosition(tickDelta);
-            Vec3 anchor = new Vec3(pos.x, pos.y + entity.getBbHeight() + 0.5, pos.z);
-            if (!NametagUtils.to2D(anchor, scale.value(), distanceScale.value(), minScale.value())) continue;
+            Vec3 anchor = new Vec3(pos.x, pos.y + entity.getBbHeight() + 0.35, pos.z);
+            double sized = this.scale.value();
+            if (!NametagUtils.to2D(anchor, sized, this.distanceScale.value(), this.minScale.value())) continue;
+            sized = NametagUtils.scale;
+            double sx = NametagUtils.getX();
+            double sy = NametagUtils.getY();
+            if (sx < -64 || sy < -32 || sx > screenW + 64 || sy > screenH + 32) continue;
 
             ItemStack held = displayItems.value() && entity instanceof Player player
                     ? player.getMainHandItem() : ItemStack.EMPTY;
+            tags.add(new Drawn(
+                    RubyClient.client.player.distanceToSqr(entity),
+                    sx, sy, sized,
+                    buildTag(entity), held
+            ));
+        }
 
+        tags.sort(Comparator.comparingDouble(Drawn::dist).reversed());
+        int color = nameColor.value();
+        for (Drawn tag : tags) {
             RubyNametagRenderer.draw(
                     event.getContext(), style,
-                    NametagUtils.getX(), NametagUtils.getY(), NametagUtils.scale,
-                    buildTag(entity), nameColor.value(), panelBg, panelBorder, true, held
+                    tag.x, tag.y, tag.scale,
+                    tag.data, color, panelBg, panelBorder, tag.held
             );
         }
+    }
+
+    /** True when this module is drawing its own tag, so the vanilla nameplate should stay hidden. */
+    public boolean hidesVanilla(Entity entity) {
+        return this.shouldRender(entity);
     }
 
     private RubyNametagRenderer.TagData buildTag(Entity entity) {
@@ -113,8 +143,8 @@ public class Nametags extends Module {
         boolean friend = entity instanceof Player player && FriendsManager.isFriend(player);
 
         Integer health = null;
-        if (displayHealth.value() && entity instanceof Player player) {
-            health = Math.round(player.getHealth() + player.getAbsorptionAmount());
+        if (displayHealth.value() && entity instanceof LivingEntity living) {
+            health = Math.round(living.getHealth() + living.getAbsorptionAmount());
         }
 
         Integer distance = null;
@@ -145,6 +175,20 @@ public class Nametags extends Module {
         if (ignoreBots.value() && entity instanceof Player player && botFilter.shouldHide(player)) return false;
         return true;
     }
+
+    /** Hotswap does not rebuild settings, so an older floor can still be stored on the live slider. */
+    private static boolean readableFloor;
+
+    private void loosenOldMin() {
+        if (Nametags.readableFloor) return;
+        Nametags.readableFloor = true;
+        if (this.minScale.value() < 0.5) this.minScale.setQuiet(0.5);
+    }
+
+    private record Drawn(
+            double dist, double x, double y, double scale,
+            RubyNametagRenderer.TagData data, ItemStack held
+    ) {}
 
     private static int withAlpha(int color, float alpha) {
         int rgb = color & 0x00FFFFFF;

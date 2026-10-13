@@ -49,6 +49,8 @@ public final class BlinkManager {
     public record PacketSnapshot(Packet<?> packet, Origin origin, long timestamp) {}
 
     private static final ConcurrentLinkedQueue<PacketSnapshot> PACKET_QUEUE = new ConcurrentLinkedQueue<>();
+    /** Packets released by a flush must not start another flush. */
+    private static int SENDING;
 
     static {
         Events.PACKET.register(PacketEvents.SEND, BlinkManager::onSend);
@@ -84,6 +86,8 @@ public final class BlinkManager {
     }
 
     public static void flush(java.util.function.Predicate<PacketSnapshot> flushWhen) {
+        if (SENDING > 0) return;
+
         Iterator<PacketSnapshot> iterator = PACKET_QUEUE.iterator();
         while (iterator.hasNext()) {
             PacketSnapshot snapshot = iterator.next();
@@ -136,6 +140,7 @@ public final class BlinkManager {
     }
 
     private static void onSend(PacketEvent event) {
+        if (SENDING > 0) return;
         if (!isConnected()) {
             PACKET_QUEUE.clear();
             return;
@@ -230,13 +235,18 @@ public final class BlinkManager {
         ClientPacketListener handler = mc.getConnection();
         if (handler == null) return;
 
-        switch (snapshot.origin()) {
-            case OUTGOING -> handler.getConnection().send(snapshot.packet());
-            case INCOMING -> {
-                @SuppressWarnings("unchecked")
-                Packet<ClientPacketListener> playPacket = (Packet<ClientPacketListener>) snapshot.packet();
-                playPacket.handle(handler);
+        SENDING++;
+        try {
+            switch (snapshot.origin()) {
+                case OUTGOING -> handler.getConnection().send(snapshot.packet());
+                case INCOMING -> {
+                    @SuppressWarnings("unchecked")
+                    Packet<ClientPacketListener> playPacket = (Packet<ClientPacketListener>) snapshot.packet();
+                    playPacket.handle(handler);
+                }
             }
+        } finally {
+            SENDING--;
         }
     }
 

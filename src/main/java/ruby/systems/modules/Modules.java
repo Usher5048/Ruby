@@ -2,6 +2,7 @@ package ruby.systems.modules;
 
 import ruby.RubyClient;
 import ruby.systems.events.Events;
+import ruby.systems.gui.Toasts;
 import ruby.systems.events.Render2DEvent;
 import ruby.systems.events.TickEvents;
 import ruby.systems.modules.combat.*;
@@ -148,8 +149,8 @@ public class Modules {
 
         Modules.activeModules.add(module);
 
-        if(module.showsToasts())
-            RubyClient.notifyUser("Enabled " + module);
+        if(module.showsToasts() && ruby.systems.gui.ClientSettings.get().moduleToasts())
+            Toasts.toast(module.name()).icon("check").detail("Enabled").show();
 
         module.enabled = true;
         module.onEnable();
@@ -161,8 +162,8 @@ public class Modules {
 
         Modules.activeModules.remove(module);
 
-        if(module.showsToasts())
-            RubyClient.notifyUser("Disabled " + module);
+        if(module.showsToasts() && ruby.systems.gui.ClientSettings.get().moduleToasts())
+            Toasts.toast(module.name()).icon("x").detail("Disabled").show();
 
         module.enabled = false;
         module.onDisable();
@@ -177,6 +178,17 @@ public class Modules {
     public static void setEnabled(Module module, boolean isEnabled) {
         if(module == null) return;
         if(module.enabled != isEnabled) Modules.toggle(module);
+    }
+
+    /** Clears module state before a profile is applied, so missing entries do not linger. */
+    public static void prepareProfileLoad() {
+        for (Module module : Modules.modules) {
+            Modules.disableSilently(module);
+            module.showsToasts(true);
+            module.keybind.unbind();
+            module.keybind.togglesOnRelease(false);
+            module.config.resetToDefaults();
+        }
     }
 
     public static void disableAllSilently() {

@@ -11,6 +11,9 @@ public final class NametagUtils {
 
     public record ScreenBounds(double x1, double y1, double x2, double y2) {}
 
+    /** Not final: a hotswap does not re-run static init, so this stays null until first use. */
+    private static Vector4f projectVec;
+
     private static double x;
     private static double y;
     public static double scale = 1.0;
@@ -26,8 +29,10 @@ public final class NametagUtils {
 
         scale = tagScale;
         if (distanceScaling) {
-            Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
-            double distScale = Mth.clamp(1.0 - cam.distanceTo(worldPos) * 0.004, minScale, 1.0);
+            Vec3 cam = Renderer.cameraPos();
+            double dist = cam.distanceTo(worldPos);
+            // Full size up close, then shrinks in proportion to distance.
+            double distScale = Mth.clamp(5.0 / Math.max(dist, 5.0), minScale, 1.0);
             scale *= distScale;
         }
         return true;
@@ -58,10 +63,13 @@ public final class NametagUtils {
     }
 
     private static boolean project(Vec3 worldPos) {
+        Renderer.ensureCamera();
         if (Renderer.projection() == null || Renderer.view() == null) return false;
 
-        Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
-        Vector4f vec = new Vector4f(
+        Vec3 cam = Renderer.cameraPos();
+        Vector4f vec = projectVec;
+        if (vec == null) projectVec = vec = new Vector4f();
+        vec.set(
                 (float) (worldPos.x - cam.x),
                 (float) (worldPos.y - cam.y),
                 (float) (worldPos.z - cam.z),

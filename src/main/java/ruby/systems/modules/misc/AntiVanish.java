@@ -78,7 +78,7 @@ public class AntiVanish extends Module {
                 if(username.length() < 3 || username.length() > 16) continue;
 
                 if(!this.usernameCache.contains(username)) continue;
-                this.notifyUser(String.format("%s left the game", username));
+                this.toast(username + " left").icon("user").show();
             }
 
             for(String username : this.usernameCache) {

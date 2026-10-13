@@ -22,7 +22,6 @@ public class FreeLook extends Module {
     public final BooleanValue togglePerspective;
     public final BooleanValue arrows;
     public final DoubleValue arrowSpeed;
-    public final DoubleValue sensitivity;
 
     public float cameraYaw;
     public float cameraPitch;
@@ -34,7 +33,7 @@ public class FreeLook extends Module {
 
         mode = config.create(new EnumValue.Builder<Mode>("Mode")
                 .description("Which entity to rotate.")
-                .defaultValue(Mode.Player)
+                .defaultValue(Mode.Camera)
                 .build());
         togglePerspective = config.create(new BooleanValue.Builder("Toggle Perspective")
                 .defaultValue(true).build());
@@ -43,9 +42,6 @@ public class FreeLook extends Module {
                 .defaultValue(true).build());
         arrowSpeed = config.create(new DoubleValue.Builder("Arrow Speed")
                 .defaultValue(4.0).range(0, 10, 0.5).build());
-        sensitivity = config.create(new DoubleValue.Builder("Camera Sensitivity")
-                .description("Mouse sensitivity in camera mode.")
-                .defaultValue(8.0).range(0.1, 20, 0.5).build());
     }
 
     @Override
@@ -67,8 +63,20 @@ public class FreeLook extends Module {
         }
     }
 
+    /** Hotswap does not rebuild the module, so a saved Player default would stay selected. */
+    private static boolean cameraDefault;
+    private static boolean droppedSensitivity;
+
     @Override
     public void tick() {
+        if (!FreeLook.cameraDefault) {
+            FreeLook.cameraDefault = true;
+            if (this.mode.value() == Mode.Player && this.mode.isDefault()) this.mode.setValue(Mode.Camera);
+        }
+        if (!FreeLook.droppedSensitivity) {
+            FreeLook.droppedSensitivity = true;
+            this.config.remove("Camera Sensitivity");
+        }
         if (RubyClient.client.player == null) return;
 
         if (arrows.value()) {
@@ -105,8 +113,8 @@ public class FreeLook extends Module {
     }
 
     public void changeLookDirection(double deltaX, double deltaY) {
-        cameraYaw += (float) (deltaX / sensitivity.value());
-        cameraPitch = Mth.clamp(cameraPitch + (float) (deltaY / sensitivity.value()), -90, 90);
+        cameraYaw += (float) deltaX;
+        cameraPitch = Mth.clamp(cameraPitch + (float) deltaY, -90, 90);
     }
 
     private static boolean isKey(int key) {

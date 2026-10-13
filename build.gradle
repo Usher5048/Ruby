@@ -31,11 +31,6 @@ dependencies {
 
     annotationProcessor "io.github.llamalad7:mixinextras-common:0.5.0"
     implementation include("io.github.llamalad7:mixinextras-fabric:0.5.0")
-
-    // auth me
-//    implementation "org.apache.httpcomponents:httpclient:4.5.14"
-//    runtimeOnly "maven.modrinth:resourceful-config:8bR7M6K7"
-    runtimeOnly "maven.modrinth:yjgIrBjZ:IruchRZE"
 }
 
 processResources {
@@ -92,5 +87,214 @@ publishing {
         // Notice: This block does NOT have the same function as the block in the top level.
         // The repositories here will be used for publishing your artifact, not for
         // retrieving dependencies.
+    }
+}
+
+// Dev hotswap. The agent jar is not part of the mod. ./dev.sh client launches the
+// game on JetBrains Runtime so method bodies, fields, and methods can be replaced
+// while Minecraft is running. ./dev.sh hotswap compiles and pushes those classes.
+sourceSets {
+    hotswap {
+        java {
+            srcDir "dev/hotswap/java"
+        }
+    }
+}
+
+def hotswapPort = 5006
+def hotswapStamp = layout.buildDirectory.file("dev/hotswap-stamp")
+
+tasks.register("hotswapAgentJar", Jar) {
+    group = "development"
+    description = "Builds the dev-only hotswap agent."
+    archiveFileName = "ruby-hotswap-agent.jar"
+    destinationDirectory = layout.buildDirectory.dir("dev")
+    from sourceSets.hotswap.output
+    manifest {
+        attributes(
+                "Premain-Class": "ruby.dev.HotswapAgent",
+                "Main-Class": "ruby.dev.HotswapAgent",
+                "Can-Redefine-Classes": "true",
+                "Can-Retransform-Classes": "true"
+        )
+    }
+}
+
+def jbrLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(25)
+    vendor = JvmVendorSpec.JETBRAINS
+}
+
+def rubyQuoteArgFile = { String arg ->
+    String specials = " #'\"\n\r\t\f"
+    if (!arg.any { specials.indexOf((int) it) >= 0 }) return arg
+    StringBuilder sb = new StringBuilder(arg.length() * 2)
+    arg.each { ch ->
+        switch (ch) {
+            case ' ':
+            case '#':
+            case '\'':
+                sb.append('"').append(ch).append('"')
+                break
+            case '"':
+                sb.append("\"\\\"\"")
+                break
+            case '\n':
+                sb.append("\"\\n\"")
+                break
+            case '\r':
+                sb.append("\"\\r\"")
+                break
+            case '\t':
+                sb.append("\"\\t\"")
+                break
+            case '\u000c':
+                sb.append("\"\\f\"")
+                break
+            default:
+                sb.append(ch)
+        }
+    }
+    return sb.toString()
+}
+
+def rubyShellQuote = { String value ->
+    "'" + value.replace("'", "'\\''") + "'"
+}
+
+def rubyDeclared = { Object target, String name ->
+    Class<?> type = target.getClass()
+    while (type != null) {
+        try {
+            def method = type.getDeclaredMethod(name)
+            method.setAccessible(true)
+            return method.invoke(target)
+        } catch (NoSuchMethodException ignored) {
+            type = type.superclass
+        }
+    }
+    return null
+}
+
+afterEvaluate {
+    tasks.named("runClient", JavaExec).configure {
+        dependsOn tasks.named("hotswapAgentJar")
+        javaLauncher.set(jbrLauncher)
+        jvmArgumentProviders.add(new org.gradle.process.CommandLineArgumentProvider() {
+            @Override
+            Iterable<String> asArguments() {
+                List<String> args = ["-XX:+AllowEnhancedClassRedefinition"]
+                File mixin = configurations.runtimeClasspath.files.find { File file ->
+                    file.name.contains("sponge-mixin") && file.name.endsWith(".jar")
+                }
+                if (mixin == null) {
+                    mixin = configurations.runtimeClasspath.files.find { File file ->
+                        file.name.startsWith("mixin-") && file.name.endsWith(".jar") && !file.name.contains("extras")
+                    }
+                }
+                if (mixin != null) {
+                    String premain = null
+                    new java.util.jar.JarFile(mixin).withCloseable { jar ->
+                        premain = jar.manifest?.mainAttributes?.getValue("Premain-Class")
+                    }
+                    if (premain != null) {
+                        args.add("-javaagent:${mixin.absolutePath}")
+                    } else {
+                        logger.warn("Ruby hotswap: {} has no Premain-Class; mixin edits need a restart", mixin.name)
+                    }
+                } else {
+                    logger.warn("Ruby hotswap: mixin jar not found; mixin edits need a restart")
+                }
+                File agent = tasks.named("hotswapAgentJar", Jar).get().archiveFile.get().asFile
+                String classes = sourceSets.main.java.classesDirectory.get().asFile.absolutePath
+                args.add("-javaagent:${agent.absolutePath}=${hotswapPort}=${classes}")
+                return args
+            }
+        })
+
+        doFirst { task ->
+            if (System.getenv("RUBY_EXPORT_LAUNCH") != "1") return
+            def javaBin = task.javaLauncher.get().executablePath.asFile.absolutePath
+            def stableJbr = new File(System.getProperty("user.home"), ".local/jdks/jbr-25/bin/java")
+            if (stableJbr.isFile()) javaBin = stableJbr.absolutePath
+            logger.lifecycle("Ruby dev client JVM: {}", javaBin)
+
+            List<String> jvmArgs = new ArrayList<>()
+            task.jvmArgumentProviders.each { provider -> jvmArgs.addAll(provider.asArguments()) }
+            jvmArgs.addAll(task.jvmArgs)
+
+            String argFileArg = jvmArgs.find { it.startsWith("@") }
+            if (argFileArg != null) {
+                File argFile = new File(argFileArg.substring(1))
+                argFile.parentFile.mkdirs()
+                String classpathLine = task.classpath.files.collect { File file ->
+                    rubyQuoteArgFile(file.absolutePath)
+                }.join(File.pathSeparator)
+                argFile.setText("-classpath\n${classpathLine}\n", "UTF-8")
+            }
+
+            List<String> programArgs = new ArrayList<>()
+            task.argumentProviders.each { provider -> programArgs.addAll(provider.asArguments()) }
+            programArgs.addAll(task.args)
+
+            File workDir = task.workingDir
+            def runDirProp = rubyDeclared(task, "getInternalRunDir")
+            if (runDirProp != null) workDir = runDirProp.get().asFile
+            workDir.mkdirs()
+
+            Map<String, ?> env = new LinkedHashMap<>()
+            def envProp = rubyDeclared(task, "getInternalEnvironmentVars")
+            if (envProp != null) env.putAll(envProp.get())
+
+            File script = layout.buildDirectory.file("dev/run-client.sh").get().asFile
+            script.parentFile.mkdirs()
+            List<String> command = new ArrayList<>()
+            command.add(javaBin)
+            command.addAll(jvmArgs)
+            command.add(task.mainClass.get())
+            command.addAll(programArgs)
+
+            StringBuilder body = new StringBuilder()
+            body.append("#!/usr/bin/env bash\n")
+            body.append("set -euo pipefail\n")
+            body.append("cd ${rubyShellQuote(workDir.absolutePath)}\n")
+            env.each { key, value ->
+                if (value != null) body.append("export ${key}=${rubyShellQuote(String.valueOf(value))}\n")
+            }
+            body.append("unset WAYLAND_DISPLAY || true\n")
+            body.append("export DISPLAY=\"\${DISPLAY:-:0}\"\n")
+            body.append("exec")
+            command.each { arg -> body.append(" ${rubyShellQuote(arg)}") }
+            body.append("\n")
+            script.setText(body.toString(), "UTF-8")
+            script.setExecutable(true)
+            logger.lifecycle("Exported {}", script)
+            throw new org.gradle.api.tasks.StopExecutionException("Exported the dev client launch script")
+        }
+    }
+}
+
+tasks.register("hotswap", JavaExec) {
+    group = "development"
+    description = "Compile changed classes and push them into the running dev client."
+    dependsOn tasks.named("classes"), tasks.named("hotswapAgentJar")
+    classpath = files(tasks.named("hotswapAgentJar", Jar).flatMap { it.archiveFile })
+    mainClass = "ruby.dev.HotswapAgent"
+    systemProperty "ruby.hotswap.port", hotswapPort.toString()
+    inputs.files(sourceSets.main.allJava)
+    inputs.files(sourceSets.main.resources)
+    if (project.hasProperty("ruby.hotswap.ping")) {
+        args "--ping"
+    } else {
+        outputs.file(hotswapStamp)
+        argumentProviders.add(new org.gradle.process.CommandLineArgumentProvider() {
+            @Override
+            Iterable<String> asArguments() {
+                return [
+                        sourceSets.main.java.classesDirectory.get().asFile.absolutePath,
+                        hotswapStamp.get().asFile.absolutePath
+                ]
+            }
+        })
     }
 }

@@ -113,8 +113,6 @@ public class ModuleTypeWindow extends CollapsibleWindow {
     /** Flat bottom edge, rounded top corners — used when the module panel is collapsed. */
     public static void fillTopRoundedRect(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int color) {
         if (x2 <= x1 || y2 <= y1) return;
-        int baseAlpha = (color >> 24) & 0xFF;
-        int rgb = color & 0x00FFFFFF;
         int r = Math.min(radius, Math.min((x2 - x1) / 2, (y2 - y1) / 2));
         if (r <= 0) {
             ctx.fill(x1, y1, x2, y2, color);
@@ -122,56 +120,32 @@ public class ModuleTypeWindow extends CollapsibleWindow {
         }
 
         ctx.fill(x1, y1 + r, x2, y2, color);
-
         for (int y = 0; y < r; y++) {
-            double dy = r - y - 0.5;
-            double dx = Math.sqrt((double) r * r - dy * dy);
-            double edgeX = r - dx;
-            int fullInset = (int) Math.ceil(edgeX);
-            double coverage = fullInset - edgeX;
-            int edgeAlpha = (int) (baseAlpha * coverage);
-            int edgeColor = rgb | (edgeAlpha << 24);
-
-            ctx.fill(x1 + fullInset, y1 + y, x2 - fullInset, y1 + y + 1, color);
-
-            if (edgeAlpha > 0 && fullInset > 0) {
-                ctx.fill(x1 + fullInset - 1, y1 + y, x1 + fullInset, y1 + y + 1, edgeColor);
-                ctx.fill(x2 - fullInset, y1 + y, x2 - fullInset + 1, y1 + y + 1, edgeColor);
-            }
+            fillCappedSpan(ctx, x1, x2, y1 + y, r, y, color);
         }
-    }
-
-    /** Small chevron arrow drawn with pixels so it works without unicode font glyphs. */
-    public static void drawChevron(GuiGraphicsExtractor ctx, int x, int y, int color, boolean pointRight) {
-        for (int i = 0; i < 5; i++) {
-            int inset = Math.min(i, 4 - i);
-            int px = pointRight ? x + inset : x + (4 - inset);
-            ctx.fill(px, y + i, px + 1, y + i + 1, color);
-        }
-    }
-
-    /** Same › glyph rotated — open = 90° (down), collapsed = -90° (right). */
-    public static void drawCollapseArrow(GuiGraphicsExtractor ctx, int cx, int cy, int color, boolean collapsed) {
-        drawCollapseArrow(ctx, cx, cy, color, collapsed ? -90f : 90f);
-    }
-
-    public static void drawCollapseArrow(GuiGraphicsExtractor ctx, int cx, int cy, int color, float rotationDeg) {
-        var matrices = ctx.pose();
-        matrices.pushMatrix();
-        matrices.translate(cx, cy);
-        matrices.rotate((float) Math.toRadians(rotationDeg));
-        drawChevron(ctx, -2, -2, color, true);
-        matrices.popMatrix();
     }
 
     public static void fillRowBackground(
             GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int color, boolean roundBottom
     ) {
-        if (roundBottom) {
-            ModuleTypeWindow.fillBottomRoundedRect(ctx, x1, y1, x2, y2, GUIStyle.RADIUS_PANEL, color);
-        } else {
+        ModuleTypeWindow.fillRowBackground(ctx, x1, y1, x2, y2, color, roundBottom, GUIStyle.RADIUS_PANEL);
+    }
+
+    /**
+     * Last-row hover sits on the container's bottom edge. The container stroke owns the
+     * outer pixel, so the highlight is clipped to the inner corner (radius - 1).
+     */
+    public static void fillRowBackground(
+            GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int color,
+            boolean roundBottom, int containerRadius
+    ) {
+        if (!roundBottom || containerRadius <= 0) {
             ctx.fill(x1, y1, x2, y2, color);
+            return;
         }
+        int clipBottom = y2 - 1;
+        if (clipBottom <= y1) return;
+        ModuleTypeWindow.fillBottomRoundedRect(ctx, x1, y1, x2, clipBottom, containerRadius - 1, color);
     }
 
     public static void drawRoundedBadge(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int bg, int border) {
@@ -180,15 +154,54 @@ public class ModuleTypeWindow extends CollapsibleWindow {
         fillSmoothRoundedRect(ctx, x1 + 1, y1 + 1, x2 - 1, y2 - 1, Math.max(0, r - 1), bg);
     }
 
-    /** Horizontal ⋮ using three stacked dots at right side of row. */
-    public static void drawMenuDots(GuiGraphicsExtractor ctx, int rightX, int centerY, int color) {
-        int dot = 2;
-        int gap = 3;
-        int cx = rightX - 3;
-        for (int i = -1; i <= 1; i++) {
-            int dy = centerY + i * gap;
-            ctx.fill(cx - dot / 2, dy - dot / 2, cx - dot / 2 + dot, dy - dot / 2 + dot, color);
+    private static final int MAX_CORNER_RADIUS = 32;
+    /** Not final: a hotswap can add these fields without re-running a static initializer, leaving them null. */
+    private static volatile int[][] CORNER_INSET;
+    private static volatile float[][] CORNER_COVERAGE;
+
+    /**
+     * Fills the corner lookup if a hotswap skipped class initialization.
+     * The tables are built locally and published together so a partial init cannot be observed.
+     */
+    private static synchronized void ensureCornerTables() {
+        if (CORNER_INSET != null && CORNER_COVERAGE != null) return;
+        int[][] inset = new int[MAX_CORNER_RADIUS + 1][];
+        float[][] coverage = new float[MAX_CORNER_RADIUS + 1][];
+        for (int r = 1; r <= MAX_CORNER_RADIUS; r++) {
+            inset[r] = new int[r];
+            coverage[r] = new float[r];
+            double r2 = (double) r * r;
+            for (int y = 0; y < r; y++) {
+                double dy = r - y - 0.5;
+                double dx = Math.sqrt(r2 - dy * dy);
+                double edgeX = r - dx;
+                int fullInset = (int) Math.ceil(edgeX);
+                inset[r][y] = fullInset;
+                coverage[r][y] = (float) (fullInset - edgeX);
+            }
         }
+        CORNER_INSET = inset;
+        CORNER_COVERAGE = coverage;
+    }
+
+    /** Horizontal inset of a rounded corner scanline. Same curve as {@link #fillSmoothRoundedRect}. */
+    static int cornerInset(int radius, int y) {
+        if (radius <= 0 || y >= radius) return 0;
+        if (y < 0) return radius;
+        int x = 0;
+        while (x < radius && spanCoverage(radius, y, x) < 0.99f) x++;
+        return x;
+    }
+
+    private static float cornerCoverage(int radius, int y) {
+        if (radius <= MAX_CORNER_RADIUS) {
+            if (CORNER_COVERAGE == null) ensureCornerTables();
+            return CORNER_COVERAGE[radius][y];
+        }
+        double dy = radius - y - 0.5;
+        double dx = Math.sqrt(Math.max(0.0, radius * (double) radius - dy * dy));
+        double edgeX = radius - dx;
+        return (float) (Math.ceil(edgeX) - edgeX);
     }
 
     /**
@@ -198,36 +211,35 @@ public class ModuleTypeWindow extends CollapsibleWindow {
         if (x2 <= x1 || y2 <= y1) return;
         int baseAlpha = (color >> 24) & 0xFF;
         int rgb = color & 0x00FFFFFF;
-        int r = Math.min(radius, Math.min((x2 - x1) / 2, (y2 - y1) / 2));
+        int width = x2 - x1;
+        int height = y2 - y1;
+        int r = Math.min(radius, Math.min(width / 2, height / 2));
         if (r <= 0) {
             ctx.fill(x1, y1, x2, y2, color);
             return;
         }
 
-        // Center body
-        ctx.fill(x1, y1 + r, x2, y2 - r, color);
-
-        // Corner scanlines with AA
-        for (int y = 0; y < r; y++) {
-            double dy = r - y - 0.5;
-            double dx = Math.sqrt((double) r * r - dy * dy);
-            double edgeX = r - dx;
-            int fullInset = (int) Math.ceil(edgeX);
-            double coverage = fullInset - edgeX;
-            int edgeAlpha = (int) (baseAlpha * coverage);
-            int edgeColor = rgb | (edgeAlpha << 24);
-
-            // Interior scanlines (full color)
-            ctx.fill(x1 + fullInset, y1 + y, x2 - fullInset, y1 + y + 1, color);
-            ctx.fill(x1 + fullInset, y2 - y - 1, x2 - fullInset, y2 - y, color);
-
-            // AA edge pixels (partial alpha)
-            if (edgeAlpha > 0 && fullInset > 0) {
-                ctx.fill(x1 + fullInset - 1, y1 + y, x1 + fullInset, y1 + y + 1, edgeColor);
-                ctx.fill(x2 - fullInset, y1 + y, x2 - fullInset + 1, y1 + y + 1, edgeColor);
-                ctx.fill(x1 + fullInset - 1, y2 - y - 1, x1 + fullInset, y2 - y, edgeColor);
-                ctx.fill(x2 - fullInset, y2 - y - 1, x2 - fullInset + 1, y2 - y, edgeColor);
+        // A 1px radius on a thin rect only shaves a fraction of the corner pixel, so it reads as a square.
+        // Cut that pixel back to half alpha once the rect is wide enough for the curve to show.
+        if (radius == 1 && r == 1 && width >= 3 && height >= 3) {
+            ctx.fill(x1, y1 + 1, x2, y2 - 1, color);
+            ctx.fill(x1 + 1, y1, x2 - 1, y1 + 1, color);
+            ctx.fill(x1 + 1, y2 - 1, x2 - 1, y2, color);
+            int cornerAlpha = baseAlpha >> 1;
+            if (cornerAlpha > 0) {
+                int edge = rgb | (cornerAlpha << 24);
+                ctx.fill(x1, y1, x1 + 1, y1 + 1, edge);
+                ctx.fill(x2 - 1, y1, x2, y1 + 1, edge);
+                ctx.fill(x1, y2 - 1, x1 + 1, y2, edge);
+                ctx.fill(x2 - 1, y2 - 1, x2, y2, edge);
             }
+            return;
+        }
+
+        ctx.fill(x1, y1 + r, x2, y2 - r, color);
+        for (int y = 0; y < r; y++) {
+            fillCappedSpan(ctx, x1, x2, y1 + y, r, y, color);
+            fillCappedSpan(ctx, x1, x2, y2 - y - 1, r, y, color);
         }
     }
 
@@ -253,12 +265,8 @@ public class ModuleTypeWindow extends CollapsibleWindow {
         ctx.fill(x1, y1 + r, accentRight, y2 - r, color);
 
         for (int y = 0; y < r; y++) {
-            double dy = r - y - 0.5;
-            double dx = Math.sqrt((double) r * r - dy * dy);
-            double edgeX = r - dx;
-            int fullInset = (int) Math.ceil(edgeX);
-            double coverage = fullInset - edgeX;
-            int edgeAlpha = (int) (baseAlpha * coverage);
+            int fullInset = cornerInset(r, y);
+            int edgeAlpha = (int) (baseAlpha * cornerCoverage(r, y));
             int edgeColor = rgb | (edgeAlpha << 24);
 
             int top = y1 + y;
@@ -336,8 +344,6 @@ public class ModuleTypeWindow extends CollapsibleWindow {
      */
     public static void fillBottomRoundedRect(GuiGraphicsExtractor ctx, int x1, int y1, int x2, int y2, int radius, int color) {
         if (x2 <= x1 || y2 <= y1) return;
-        int baseAlpha = (color >> 24) & 0xFF;
-        int rgb = color & 0x00FFFFFF;
         int r = Math.min(radius, Math.min((x2 - x1) / 2, (y2 - y1) / 2));
         if (r <= 0) {
             ctx.fill(x1, y1, x2, y2, color);
@@ -346,23 +352,42 @@ public class ModuleTypeWindow extends CollapsibleWindow {
 
         // Top flat + center body (y1 to y2-r, full width)
         ctx.fill(x1, y1, x2, y2 - r, color);
-
-        // Bottom rounded corners
         for (int y = 0; y < r; y++) {
-            double dy = r - y - 0.5;
-            double dx = Math.sqrt((double) r * r - dy * dy);
-            double edgeX = r - dx;
-            int fullInset = (int) Math.ceil(edgeX);
-            double coverage = fullInset - edgeX;
-            int edgeAlpha = (int) (baseAlpha * coverage);
-            int edgeColor = rgb | (edgeAlpha << 24);
-
-            ctx.fill(x1 + fullInset, y2 - y - 1, x2 - fullInset, y2 - y, color);
-
-            if (edgeAlpha > 0 && fullInset > 0) {
-                ctx.fill(x1 + fullInset - 1, y2 - y - 1, x1 + fullInset, y2 - y, edgeColor);
-                ctx.fill(x2 - fullInset, y2 - y - 1, x2 - fullInset + 1, y2 - y, edgeColor);
-            }
+            fillCappedSpan(ctx, x1, x2, y2 - y - 1, r, y, color);
         }
+    }
+
+    /**
+     * One scanline of a rounded cap. Coverage is a short ramp around the true circle
+     * so the corner stays smooth when the GUI is scaled up.
+     */
+    private static void fillCappedSpan(
+            GuiGraphicsExtractor ctx, int x1, int x2, int pixelY, int radius, int row, int color
+    ) {
+        int baseAlpha = (color >>> 24) & 0xFF;
+        int rgb = color & 0x00FFFFFF;
+        int limit = Math.min(radius + 2, (x2 - x1) / 2);
+        int solid = 0;
+        while (solid < limit && spanCoverage(radius, row, solid) < 0.99f) solid++;
+        if (x1 + solid < x2 - solid) {
+            ctx.fill(x1 + solid, pixelY, x2 - solid, pixelY + 1, color);
+        }
+        for (int i = 0; i < solid; i++) {
+            float coverage = spanCoverage(radius, row, i);
+            if (coverage <= 0.004f) continue;
+            int alpha = Math.min(255, Math.round(baseAlpha * coverage));
+            if (alpha <= 0) continue;
+            int edge = rgb | (alpha << 24);
+            ctx.fill(x1 + i, pixelY, x1 + i + 1, pixelY + 1, edge);
+            ctx.fill(x2 - i - 1, pixelY, x2 - i, pixelY + 1, edge);
+        }
+    }
+
+    /** How much of the pixel at {@code x} on corner row {@code row} sits inside the circle. */
+    private static float spanCoverage(int radius, int row, int x) {
+        double dx = x + 0.5 - radius;
+        double dy = row + 0.5 - radius;
+        double signed = Math.hypot(dx, dy) - radius;
+        return Math.clamp((float) ((0.85 - signed) / 1.7), 0f, 1f);
     }
 }

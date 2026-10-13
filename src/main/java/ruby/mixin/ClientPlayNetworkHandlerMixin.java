@@ -8,6 +8,8 @@ import ruby.RubyClient;
 import ruby.helpers.world.ChunkReloadHelper;
 import ruby.systems.commands.Command;
 import ruby.systems.commands.Commands;
+import ruby.systems.gui.GUIStyle;
+import ruby.systems.gui.Toasts;
 import ruby.systems.modules.Modules;
 import ruby.systems.modules.render.Xray;
 

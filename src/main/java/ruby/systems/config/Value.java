@@ -57,6 +57,11 @@ public abstract class Value<T> {
         this.value = value;
     }
 
+    /** Updates the stored value without running the change callback. */
+    public void setQuiet(T value) {
+        this.value = value;
+    }
+
     @Override
     public abstract String toString();
     public abstract boolean fromString(String str); // returns false if string is invalid

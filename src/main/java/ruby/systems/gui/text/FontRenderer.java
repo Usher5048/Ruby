@@ -1,16 +1,22 @@
 package ruby.systems.gui.text;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.renderpearl.api.textures.FilterMode;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import ruby.RubyClient;
 
 import java.awt.*;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 
 public class FontRenderer {
     public record TextBounds(int left, int top, int width, int height) {}
 
     private final GlyphSheet sheet;
     public final int fontHeight;
+    private boolean smooth;
 
     private FontRenderer(GlyphSheet sheet) {
         this.sheet = sheet;
@@ -43,6 +49,7 @@ public class FontRenderer {
 
     public void draw(GuiGraphicsExtractor context, String text, int x, int y, int color) {
         if(text == null) return;
+        this.useSmoothSampling();
         for(char c : text.toCharArray()) {
             GlyphSheet.Glyph glyph = this.sheet.glyph(c);
             if(glyph == null) continue;
@@ -63,6 +70,24 @@ public class FontRenderer {
             );
 
             x += glyph.advanceX();
+        }
+    }
+
+    /**
+     * Nearest filtering drops strokes as soon as a nametag scales below 1.
+     * Linear sampling keeps the same atlas sharp at 1:1 and readable while it shrinks.
+     */
+    private void useSmoothSampling() {
+        if (this.smooth) return;
+        this.smooth = true;
+        try {
+            AbstractTexture texture = RubyClient.client.getTextureManager().getTexture(this.sheet.getTexture());
+            if (texture == null) return;
+            Field field = AbstractTexture.class.getDeclaredField("sampler");
+            field.setAccessible(true);
+            field.set(texture, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+        } catch (Exception e) {
+            RubyClient.LOGGER.warn("Could not enable smooth font scaling", e);
         }
     }
 

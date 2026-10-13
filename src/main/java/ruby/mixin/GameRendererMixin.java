@@ -2,6 +2,8 @@ package ruby.mixin;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.renderpearl.api.commands.CommandEncoder;
+import com.mojang.renderpearl.api.textures.GpuTexture;
 import com.mojang.renderpearl.api.textures.GpuTextureView;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.state.OptionsRenderState;
@@ -13,9 +15,11 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ruby.helpers.render.Renderer;
 import ruby.systems.events.Events;
+import ruby.systems.gui.PerspectiveBoard;
 import ruby.systems.modules.Modules;
 import ruby.systems.modules.render.Freecam;
 
@@ -25,6 +29,28 @@ public abstract class GameRendererMixin {
     @Shadow private void bobView(CameraRenderState cameraState, PoseStack matrices) {}
 
     @Unique private final PoseStack matrices = new PoseStack();
+
+    @Inject(method = "extract", at = @At("HEAD"))
+    private void ruby$beginPerspectiveFrame(CallbackInfo info) {
+        PerspectiveBoard.beginFrame();
+    }
+
+    @Inject(method = "processBlurEffect", at = @At("HEAD"), cancellable = true)
+    private void ruby$skipPerspectiveBlur(CallbackInfo info) {
+        if (PerspectiveBoard.suppressBlur()) info.cancel();
+    }
+
+    @Redirect(
+            method = "render3dHud",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lcom/mojang/renderpearl/api/commands/CommandEncoder;clearDepthTexture(Lcom/mojang/renderpearl/api/textures/GpuTexture;D)V"
+            )
+    )
+    private void ruby$compositeBeforeHand(CommandEncoder encoder, GpuTexture texture, double clear) {
+        if (PerspectiveBoard.active()) PerspectiveBoard.composite();
+        encoder.clearDepthTexture(texture, clear);
+    }
 
     @Inject(
             method = "render3dHud",
@@ -41,7 +67,7 @@ public abstract class GameRendererMixin {
             boolean renderHand,
             CallbackInfo info
     ) {
-        // Walk bob and hurt tilt are multiplied into the projection, not the view.
+        PerspectiveBoard.captureProjection(cameraState.projectionMatrix);
         Matrix4f view = new Matrix4f(cameraState.viewRotationMatrix);
         Matrix4f projection = new Matrix4f(cameraState.projectionMatrix);
 

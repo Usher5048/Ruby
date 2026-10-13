@@ -1,9 +1,9 @@
 package ruby.systems.modules;
 
-import net.minecraft.network.chat.Component;
 import ruby.RubyClient;
 import ruby.systems.config.Configuration;
 import ruby.systems.events.Render2DEvent;
+import ruby.systems.gui.Toasts;
 
 public abstract class Module {
     private final String name;
@@ -66,24 +66,16 @@ public abstract class Module {
     public void showsToasts(boolean showToasts) {
         this.showToasts = showToasts;
     }
+    /**
+     * A toast from this module. It uses the module name as the second line
+     * and stays quiet when Show toasts is off.
+     */
+    public Toasts.Toast toast(String title) {
+        return Toasts.toast(title).source(this.name()).when(this::showsToasts);
+    }
+
     public void notifyUser(String message) {
-        this.notifyUser(message, false);
-    }
-    public void notifyUser(String message, boolean actionBar) {
-        this.notifyUser(Component.nullToEmpty(message), actionBar);
-    }
-    public void notifyUser(Component message) {
-        this.notifyUser(message, false);
-    }
-    public void notifyUser(Component message, boolean actionBar) {
-        RubyClient.notifyUser(
-                Component.empty()
-                        .append(!actionBar ? Component.literal("[").withColor(0x666666) : Component.empty())
-                        .append(!actionBar ? Component.literal(this.name()).withColor(0x999999) : Component.empty())
-                        .append(!actionBar ? Component.literal("] ").withColor(0x666666) : Component.empty())
-                        .append(message),
-                actionBar
-        );
+        this.toast(message).show();
     }
 
     @Override

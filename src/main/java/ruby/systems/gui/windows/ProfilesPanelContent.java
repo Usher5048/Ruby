@@ -6,6 +6,12 @@ import ruby.helpers.input.InputUtils;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.config.ProfileManager;
 import ruby.systems.gui.GUIStyle;
+import ruby.systems.gui.GuiTime;
+import ruby.systems.gui.Motion;
+import ruby.systems.gui.Press;
+import ruby.systems.gui.SystemClipboard;
+import ruby.systems.gui.Toasts;
+import ruby.systems.gui.icons.Lucide;
 
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -16,24 +22,25 @@ import net.minecraft.client.input.MouseButtonEvent;
 public class ProfilesPanelContent extends Window {
     private static final int PAD = 14;
     private static final int INNER_L = 1;
-    private static final int ROW_H = 36;
-    private static final int ADD_ROW_H = 40;
-    private static final int BTN_H = 24;
-    private static final int BTN_SECTION_TOP = 8;
-    private static final int BTN_GAP = 4;
-    private static final int BTN_SECTION_BOTTOM = 8;
-    private static final int ADD_BTN_W = 52;
-    private static final int SHARE_BTN_W = 44;
-    private static final int INPUT_GAP = 6;
+    private static final int ROW_H = 31;
+    private static final int LAST_EXTRA = 4;
     private static final int INPUT_MAX_LEN = 8192;
+    private static final float HINT_DELAY = 0.3f;
 
     private boolean showCreateInput = false;
     private String inputText = "";
     private int cursorBlink = 0;
-    private float savedFlash = 0f;
-    private float copiedFlash = 0f;
-    private String copiedProfile = null;
     private float contentAlpha = 1f;
+    private float newMix;
+    private float[] rowMix;
+    private String clipboardRaw = "";
+    private String clipboardName;
+    private String hintKey;
+    private String hint;
+    private float hintTime;
+    private int hintX;
+    private int hintY;
+    private boolean hintOffered;
 
     public void setContentAlpha(float contentAlpha) {
         this.contentAlpha = contentAlpha;
@@ -45,15 +52,45 @@ public class ProfilesPanelContent extends Window {
         this.handleChildren = false;
     }
 
-    private int buttonSectionHeight() {
-        if (this.showCreateInput) return ADD_ROW_H + 1;
-        return BTN_SECTION_TOP + BTN_H + BTN_GAP + BTN_H + BTN_SECTION_BOTTOM + 1;
+    /** Reads the clipboard once, when Profiles is opened. Not safe to call every frame. */
+    public void refreshClipboard() {
+        try {
+            String clip = RubyClient.client.keyboardHandler.getClipboard();
+            if (clip == null) clip = "";
+            clip = clip.trim();
+            this.clipboardRaw = clip;
+            this.clipboardName = ProfileManager.peekName(clip);
+        } catch (RuntimeException ignored) {
+            this.clipboardRaw = "";
+            this.clipboardName = null;
+        }
+    }
+
+    private boolean clipboardSaved() {
+        return this.clipboardName != null && this.isSaved(this.clipboardName);
+    }
+
+    private boolean showClipboardRow() {
+        return this.clipboardName != null && !this.clipboardName.isBlank() && !this.clipboardSaved();
+    }
+
+    private boolean isSaved(String name) {
+        for (String profile : ProfileManager.profiles()) {
+            if (profile.equalsIgnoreCase(name)) return true;
+        }
+        return false;
+    }
+
+    private int bodyRows(int profileCount) {
+        int rows = 1 + profileCount;
+        if (this.showCreateInput) rows++;
+        if (this.showClipboardRow()) rows++;
+        return rows;
     }
 
     @Override
     public int getHeight() {
-        List<String> profiles = ProfileManager.profiles();
-        int h = this.buttonSectionHeight() + profiles.size() * ROW_H;
+        int h = this.bodyRows(ProfileManager.profiles().size()) * ROW_H + LAST_EXTRA;
         this.height = h;
         return h;
     }
@@ -66,154 +103,279 @@ public class ProfilesPanelContent extends Window {
 
     @Override
     public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
-        if (this.savedFlash > 0f) {
-            this.savedFlash = Math.max(0f, this.savedFlash - dt * 0.15f);
-        }
-        if (this.copiedFlash > 0f) {
-            this.copiedFlash = Math.max(0f, this.copiedFlash - dt * 0.15f);
-        }
-        this.drawContent(context, mouseX, mouseY);
+        this.drawContent(context, mouseX, mouseY, GuiTime.toSeconds(dt));
     }
 
-    private void drawContent(GuiGraphicsExtractor context, int mouseX, int mouseY) {
+    private void drawContent(GuiGraphicsExtractor context, int mouseX, int mouseY, float seconds) {
+        this.hintOffered = false;
         GUIStyle style = GUIStyle.get();
         int innerR = this.getWidth() - INNER_L;
-        int y = 0;
         List<String> profiles = ProfileManager.profiles();
-        String active = ProfileManager.activeProfile();
+        int rows = this.bodyRows(profiles.size());
+        int y = 0;
+        int row = 0;
+
+        y = this.drawNewRow(context, style, innerR, y, mouseX, mouseY, row == rows - 1, seconds);
+        row++;
 
         if (this.showCreateInput) {
-            y = this.drawCreateInput(context, style, innerR, y, mouseX, mouseY);
-        } else {
-            boolean saved = this.savedFlash > 0.01f;
-            y = this.drawOutlineButton(context, style, innerR, BTN_SECTION_TOP, mouseX, mouseY, "+ New Profile", false);
-            y = this.drawOutlineButton(context, style, innerR, y + BTN_GAP, mouseX, mouseY,
-                    saved ? "Saved!" : "Save Profile", saved);
-            y += BTN_SECTION_BOTTOM;
+            y = this.drawInputRow(context, style, innerR, y, mouseX, mouseY, row == rows - 1, seconds);
+            row++;
         }
 
-        context.fill(INNER_L, y, innerR, y + 1, style.borderSubtle());
-        y += 1;
+        if (this.showClipboardRow()) {
+            y = this.drawClipboardRow(context, style, innerR, y, mouseX, mouseY, row == rows - 1, seconds);
+            row++;
+        }
 
+        String active = ProfileManager.activeProfile();
         for (int i = 0; i < profiles.size(); i++) {
             String name = profiles.get(i);
-            boolean isActive = name.equalsIgnoreCase(active);
-            boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + ROW_H;
-            boolean last = i == profiles.size() - 1;
-
-            if (isActive) {
-                int bg = GUIStyle.withAlpha(style.rubyActive(), this.contentAlpha);
-                ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + ROW_H, bg, last);
-            } else if (hovered) {
-                int bg = GUIStyle.withAlpha(style.bgHover(), this.contentAlpha);
-                ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + ROW_H, bg, last);
-            }
-
-            int dotY = y + (ROW_H - 6) / 2;
-            ModuleTypeWindow.fillSmoothRoundedRect(context, PAD, dotY, PAD + 6, dotY + 6, 2,
-                    isActive ? style.ruby() : 0xFF282426);
-
-            int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
-            int textRight = innerR - PAD;
-            if (!"default".equalsIgnoreCase(name)) {
-                textRight = innerR - 22 - 8 - SHARE_BTN_W;
-            } else {
-                textRight = innerR - PAD - SHARE_BTN_W - 8;
-            }
-            style.bodyFont().draw(context, name, 28, textY,
-                    GUIStyle.withAlpha(isActive ? style.ruby() : style.text(), this.contentAlpha));
-
-            int shareX = innerR - 22 - 8 - SHARE_BTN_W;
-            if ("default".equalsIgnoreCase(name)) {
-                shareX = innerR - PAD - SHARE_BTN_W;
-            }
-            int shareY = y + (ROW_H - BTN_H) / 2;
-            boolean shareHovered = mouseX >= shareX && mouseX < shareX + SHARE_BTN_W
-                    && mouseY >= shareY && mouseY < shareY + BTN_H;
-            boolean shareCopied = this.copiedFlash > 0.01f && name.equals(this.copiedProfile);
-            ModuleTypeWindow.drawRoundedBadge(context, shareX, shareY, shareX + SHARE_BTN_W, shareY + BTN_H,
-                    shareHovered || shareCopied ? style.rubyBg() : 0x00000000, style.border());
-            this.drawTextInRect(style.bodyFont(), context, shareCopied ? "Copied" : "Share",
-                    shareX, shareY, shareX + SHARE_BTN_W, shareY + BTN_H,
-                    GUIStyle.withAlpha(shareCopied ? style.ruby() : (shareHovered ? style.textBright() : style.ruby()),
-                            this.contentAlpha));
-
-            if (!"default".equalsIgnoreCase(name)) {
-                boolean removeHovered = mouseX >= innerR - 28 && mouseX < innerR - 8
-                        && mouseY >= y + 8 && mouseY < y + ROW_H - 8;
-                style.bodyFont().draw(context, "\u2715", innerR - 22, textY,
-                        GUIStyle.withAlpha(removeHovered ? 0xFFC25555 : style.textMuted(), this.contentAlpha));
-            }
-
-            if (!last) {
-                context.fill(INNER_L, y + ROW_H - 1, innerR, y + ROW_H, style.borderSubtle());
-            }
-
-            y += ROW_H;
+            y = this.drawProfile(context, style, innerR, y, mouseX, mouseY, name,
+                    name.equalsIgnoreCase(active), i, row == rows - 1, seconds);
+            row++;
+        }
+        if (!this.hintOffered) {
+            this.hintKey = null;
+            this.hint = null;
+            this.hintTime = 0f;
         }
     }
 
-    private int drawOutlineButton(
-            GuiGraphicsExtractor context, GUIStyle style, int innerR, int by,
-            int mx, int my, String label, boolean saved
-    ) {
-        int btnR = innerR - PAD;
-        boolean hovered = mx >= PAD && mx < btnR && my >= by && my < by + BTN_H;
-        int textColor = saved ? style.ruby() : (hovered ? style.textBright() : style.ruby());
-        int bg = (hovered || saved) ? style.rubyBg() : 0x00000000;
-        ModuleTypeWindow.drawRoundedBadge(context, PAD, by, btnR, by + BTN_H, bg, style.border());
-        this.drawTextInRect(style.bodyFont(), context, label, PAD, by, btnR, by + BTN_H,
-                GUIStyle.withAlpha(textColor, this.contentAlpha));
-        return by + BTN_H;
+    private void offerHint(String key, String text, boolean hot, int mouseX, int mouseY, float seconds) {
+        if (!hot) return;
+        this.hintOffered = true;
+        if (!key.equals(this.hintKey)) {
+            this.hintKey = key;
+            this.hintTime = 0f;
+        }
+        this.hintTime += Math.min(seconds, 0.05f);
+        this.hint = text;
+        this.hintX = mouseX;
+        this.hintY = mouseY;
     }
 
-    private int drawCreateInput(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my) {
-        int rowY = y + 8;
-        int inputH = 24;
-        int contentR = innerR - PAD;
-        int btnX = contentR - ADD_BTN_W;
-        int inputR = btnX - INPUT_GAP;
+    /** Drawn by the module panel after its scissor, so the hint can follow the cursor. */
+    public void drawHint(GuiGraphicsExtractor context) {
+        if (this.hint == null || this.hintTime < HINT_DELAY) return;
+        GUIStyle style = GUIStyle.get();
+        float show = Math.clamp((this.hintTime - HINT_DELAY) / 0.08f, 0f, 1f) * this.contentAlpha;
+        if (show <= 0.01f) return;
 
-        ModuleTypeWindow.drawRoundedBadge(context, PAD, rowY, inputR, rowY + inputH, style.bgBase(), style.border());
+        var font = style.labelFont();
+        int padX = 6;
+        int padY = 3;
+        int textW = font.getWidth(this.hint);
+        int boxW = textW + padX * 2;
+        int boxH = font.fontHeight + padY * 2;
+        int cursorX = this.getX() + this.hintX;
+        int cursorY = this.getY() + this.hintY;
+        int x = cursorX - boxW / 2;
+        int y = cursorY - boxH - 8 - Math.round((1f - show) * 4f);
+        int minX = 4;
+        int maxX = this.getX() + this.getWidth() - boxW - 4;
+        if (x < minX) x = minX;
+        if (x > maxX) x = Math.max(minX, maxX);
+        if (y < 2) y = cursorY + 14;
 
-        String placeholder = "Name or share code...";
-        String display = this.inputText.isEmpty() ? placeholder : this.truncateInputDisplay(this.inputText);
+        int bg = GUIStyle.withAlpha(style.bgElevated(), show);
+        int edge = GUIStyle.withAlpha(style.borderPanel(), show);
+        ModuleTypeWindow.drawRoundedPanel(context, x, y, x + boxW, y + boxH, GUIStyle.RADIUS_BADGE, bg, edge);
+        font.draw(context, this.hint, x + padX, y + padY, GUIStyle.withAlpha(style.text(), show));
+    }
+
+    private int rowHeight(boolean last) {
+        return last ? ROW_H + LAST_EXTRA : ROW_H;
+    }
+
+    private void drawSeparator(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int rowH) {
+        context.fill(INNER_L, y + rowH - 1, innerR, y + rowH,
+                GUIStyle.withAlpha(style.borderSubtle(), this.contentAlpha));
+    }
+
+    private int drawNewRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                           int mouseX, int mouseY, boolean last, float seconds) {
+        int rowH = this.rowHeight(last);
+        boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + rowH;
+        float target = hovered || this.showCreateInput ? 1f : 0f;
+        this.newMix = Motion.follow(this.newMix, target, seconds, Motion.HOVER);
+        if (this.newMix > 0.01f) {
+            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + rowH,
+                    GUIStyle.withAlpha(style.bgHover(), this.contentAlpha * this.newMix), last);
+        }
+
+        int iconColor = Motion.mix(style.textMuted(), style.ruby(), this.newMix);
+        int textColor = Motion.mix(style.text(), style.textBright(), this.newMix);
+        int iconY = y + (ROW_H - Lucide.UI) / 2;
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        boolean plusHovered = mouseX >= PAD - 2 && mouseX < PAD + Lucide.UI + 4
+                && mouseY >= y && mouseY < y + rowH;
+        this.offerHint("new", "New profile", plusHovered, mouseX, mouseY, seconds);
+        int plusColor = GUIStyle.withAlpha(iconColor, this.contentAlpha);
+        int labelColor = GUIStyle.withAlpha(textColor, this.contentAlpha);
+        Press.icon(context, "plus", PAD, iconY, plusColor, "profiles-new");
+        Press.label(style.bodyFont(), context, "New profile", PAD + Lucide.UI + 8, textY, labelColor, "profiles-new");
+        if (!last) this.drawSeparator(context, style, innerR, y, rowH);
+        return y + rowH;
+    }
+
+    private int drawInputRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                             int mouseX, int mouseY, boolean last, float seconds) {
+        int rowH = this.rowHeight(last);
+        context.fill(INNER_L, y, innerR, y + ROW_H, GUIStyle.withAlpha(style.bgBase(), this.contentAlpha));
+
+        String shown = this.inputText.isEmpty() ? "Name or code" : this.truncateInputDisplay(this.inputText);
         int col = this.inputText.isEmpty() ? style.textMuted() : style.text();
-        int textY = rowY + (inputH - style.bodyFont().fontHeight) / 2;
-        style.bodyFont().draw(context, display, PAD + 8, textY, GUIStyle.withAlpha(col, this.contentAlpha));
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        style.bodyFont().draw(context, shown, PAD, textY, GUIStyle.withAlpha(col, this.contentAlpha));
 
         if (this.cursorBlink < 10) {
-            int cx = PAD + 8 + style.bodyFont().getWidth(this.inputText.isEmpty() ? "" : this.truncateInputDisplay(this.inputText));
+            String measured = this.inputText.isEmpty() ? "" : this.truncateInputDisplay(this.inputText);
+            int cx = PAD + style.bodyFont().getWidth(measured);
             context.fill(cx, textY, cx + 1, textY + style.bodyFont().fontHeight,
                     GUIStyle.withAlpha(style.text(), this.contentAlpha));
         }
 
-        boolean addHovered = mx >= btnX && mx < contentR && my >= rowY && my < rowY + inputH;
-        ModuleTypeWindow.fillSmoothRoundedRect(context, btnX, rowY, contentR, rowY + inputH, GUIStyle.RADIUS_BADGE,
-                GUIStyle.withAlpha(addHovered ? style.rubyHover() : style.ruby(), this.contentAlpha));
-        this.drawTextInRect(style.bodyFont(), context, "Add", btnX, rowY, contentR, rowY + inputH, 0xFFE8E4E5);
+        String action = "Add";
+        int actionX = innerR - PAD - style.bodyFont().getWidth(action);
+        boolean actionHovered = mouseX >= actionX - 6 && mouseX < innerR - 6
+                && mouseY >= y && mouseY < y + ROW_H;
+        this.offerHint("add", "Add", actionHovered, mouseX, mouseY, seconds);
+        Press.label(style.bodyFont(), context, action, actionX, textY,
+                GUIStyle.withAlpha(actionHovered ? style.rubyHover() : style.ruby(), this.contentAlpha), "profiles-add");
 
-        return y + ADD_ROW_H;
+        if (!last) this.drawSeparator(context, style, innerR, y, rowH);
+        return y + rowH;
+    }
+
+    private int drawClipboardRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                                 int mouseX, int mouseY, boolean last, float seconds) {
+        int rowH = this.rowHeight(last);
+        boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + rowH;
+        float mix = this.rowMix(0, hovered ? 0.7f : 0f, seconds);
+        if (mix > 0.01f) {
+            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + rowH,
+                    GUIStyle.withAlpha(style.bgHover(), this.contentAlpha * mix), last);
+        }
+
+        int iconY = y + (ROW_H - Lucide.UI) / 2;
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        boolean clipHovered = mouseX >= PAD - 2 && mouseX < PAD + Lucide.UI + 4
+                && mouseY >= y && mouseY < y + rowH;
+        this.offerHint("clipboard", "Clipboard", clipHovered, mouseX, mouseY, seconds);
+        Lucide.draw(context, "clipboard", PAD, iconY, Lucide.UI,
+                GUIStyle.withAlpha(style.textMuted(), this.contentAlpha));
+        style.bodyFont().draw(context, this.clipboardName, PAD + Lucide.UI + 8, textY,
+                GUIStyle.withAlpha(style.text(), this.contentAlpha));
+
+        int saveX = innerR - PAD - Lucide.UI;
+        boolean saveHovered = mouseX >= saveX - 4 && mouseX < innerR - 6 && mouseY >= y && mouseY < y + rowH;
+        this.offerHint("clipboard-save", "Save", saveHovered, mouseX, mouseY, seconds);
+        Press.icon(context, "check", saveX, iconY,
+                GUIStyle.withAlpha(saveHovered ? style.ruby() : style.textMuted(), this.contentAlpha), "profiles-clip-save");
+
+        if (!last) this.drawSeparator(context, style, innerR, y, rowH);
+        return y + rowH;
+    }
+
+    private int drawProfile(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                            int mouseX, int mouseY, String name, boolean active,
+                            int index, boolean last, float seconds) {
+        int rowH = this.rowHeight(last);
+        boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + rowH;
+        float mix = this.rowMix(index + 1, active || hovered ? 1f : 0f, seconds);
+        if (mix > 0.01f) {
+            int bg = active ? style.rubyBg() : style.bgHover();
+            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + rowH,
+                    GUIStyle.withAlpha(bg, this.contentAlpha * mix), last);
+        }
+
+        int iconY = y + (ROW_H - Lucide.UI) / 2;
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        boolean copyHovered = mouseX >= PAD - 2 && mouseX < PAD + Lucide.UI + 4
+                && mouseY >= y && mouseY < y + rowH;
+        this.offerHint("copy:" + name, "Copy", copyHovered, mouseX, mouseY, seconds);
+        Press.icon(context, "forward", PAD, iconY,
+                GUIStyle.withAlpha(copyHovered ? style.ruby() : style.textMuted(), this.contentAlpha), "profiles-copy:" + name);
+        Press.label(style.bodyFont(), context, name, PAD + Lucide.UI + 8, textY,
+                GUIStyle.withAlpha(active ? style.ruby() : style.text(), this.contentAlpha), "profiles-load:" + name);
+
+        int saveX = innerR - PAD - Lucide.UI;
+        boolean saveHovered = mouseX >= saveX - 4 && mouseX < innerR - 6 && mouseY >= y && mouseY < y + rowH;
+        this.offerHint("save:" + name, "Save", saveHovered, mouseX, mouseY, seconds);
+        Press.icon(context, "check", saveX, iconY,
+                GUIStyle.withAlpha(saveHovered ? style.ruby() : style.textMuted(), this.contentAlpha), "profiles-save:" + name);
+
+        if (!"default".equalsIgnoreCase(name)) {
+            int removeX = saveX - 8 - Lucide.UI;
+            boolean removeHovered = mouseX >= removeX - 4 && mouseX < saveX - 4
+                    && mouseY >= y && mouseY < y + rowH;
+            this.offerHint("delete:" + name, "Delete", removeHovered, mouseX, mouseY, seconds);
+            Press.icon(context, "x", removeX, iconY,
+                    GUIStyle.withAlpha(removeHovered ? 0xFFC25555 : style.textMuted(), this.contentAlpha), "profiles-delete:" + name);
+        }
+
+        if (!last) this.drawSeparator(context, style, innerR, y, rowH);
+        return y + rowH;
+    }
+
+    private float rowMix(int index, float target, float seconds) {
+        if (this.rowMix == null || this.rowMix.length <= index) {
+            float[] next = new float[index + 1];
+            if (this.rowMix != null) System.arraycopy(this.rowMix, 0, next, 0, this.rowMix.length);
+            next[index] = target;
+            this.rowMix = next;
+            return target;
+        }
+        this.rowMix[index] = Motion.follow(this.rowMix[index], target, seconds, Motion.HOVER);
+        return this.rowMix[index];
     }
 
     private String truncateInputDisplay(String text) {
-        if (text.length() <= 28) return text;
-        return text.substring(0, 12) + "..." + text.substring(text.length() - 10);
+        if (text.length() <= 22) return text;
+        return text.substring(0, 10) + "..." + text.substring(text.length() - 8);
     }
 
     private void submitInput() {
         if (this.inputText.isBlank()) return;
-
-        if(!ProfileManager.importProfile(this.inputText))
-            ProfileManager.createProfile(this.inputText);
-
+        String text = this.inputText.trim();
+        if (ProfileManager.importProfile(text.replaceAll("\\s", ""))) {
+            String name = ProfileManager.peekName(text);
+            Toasts.show("clipboard", name == null || name.isBlank() ? "Imported profile" : "Imported " + name);
+        } else if (ProfileManager.createProfile(text)) {
+            Toasts.show("plus", "Created " + text);
+        }
         this.inputText = "";
         this.showCreateInput = false;
     }
 
+    private void saveClipboard() {
+        if (this.clipboardRaw == null || this.clipboardRaw.isBlank()) return;
+        String name = this.clipboardName;
+        if (ProfileManager.importProfile(this.clipboardRaw.replaceAll("\\s", ""))) {
+            ConfigManager.saveState();
+            Toasts.show("check", name == null || name.isBlank() ? "Saved profile" : "Saved " + name);
+        }
+    }
+
+    private void saveProfile(String name) {
+        ProfileManager.saveProfile(name);
+        ConfigManager.saveState();
+        Toasts.show("check", "Saved " + name);
+    }
+
+    private void copyProfile(String name) {
+        String code = ProfileManager.exportProfile(name);
+        if (code == null) return;
+        this.clipboardRaw = code.trim();
+        this.clipboardName = name;
+        SystemClipboard.set(code);
+        Toasts.show("forward", "Copied " + name);
+    }
+
     private boolean isControlDown() {
-        return InputUtils.isKeyPressed(InputConstants.KEY_LCONTROL) ||
-                InputUtils.isKeyPressed(InputConstants.KEY_RCONTROL);
+        return InputUtils.isKeyPressed(InputConstants.KEY_LCONTROL)
+                || InputUtils.isKeyPressed(InputConstants.KEY_RCONTROL);
     }
 
     @Override
@@ -222,66 +384,76 @@ public class ProfilesPanelContent extends Window {
 
         int innerR = this.getWidth() - INNER_L;
         List<String> profiles = ProfileManager.profiles();
-        int contentR = innerR - PAD;
+        int rows = this.bodyRows(profiles.size());
+        int y = 0;
+        int row = 0;
+
+        int newH = this.rowHeight(row == rows - 1);
+        if (click.y() >= y && click.y() < y + newH) {
+            Press.down("profiles-new");
+            this.showCreateInput = !this.showCreateInput;
+            if (this.showCreateInput) this.inputText = "";
+            return true;
+        }
+        y += newH;
+        row++;
 
         if (this.showCreateInput) {
-            int rowY = 8;
-            int btnX = contentR - ADD_BTN_W;
-            if (click.x() >= btnX && click.x() < contentR && click.y() >= rowY && click.y() < rowY + 24) {
-                this.submitInput();
+            int inputH = this.rowHeight(row == rows - 1);
+            if (click.y() >= y && click.y() < y + inputH) {
+                int actionX = innerR - PAD - GUIStyle.get().bodyFont().getWidth("Add");
+                if (click.x() >= actionX - 6) {
+                    Press.down("profiles-add");
+                    this.submitInput();
+                }
                 return true;
             }
-            int inputR = btnX - INPUT_GAP;
-            if (click.x() >= PAD && click.x() < inputR && click.y() >= rowY && click.y() < rowY + 24) {
-                return true;
-            }
-        } else {
-            int newBtnY = BTN_SECTION_TOP;
-            int saveBtnY = BTN_SECTION_TOP + BTN_H + BTN_GAP;
-            if (click.x() >= PAD && click.x() < contentR && click.y() >= newBtnY && click.y() < newBtnY + BTN_H) {
-                this.showCreateInput = true;
-                this.inputText = "";
-                return true;
-            }
-            if (click.x() >= PAD && click.x() < contentR && click.y() >= saveBtnY && click.y() < saveBtnY + BTN_H) {
-                ProfileManager.saveProfile(ProfileManager.activeProfile());
-                ConfigManager.saveState();
-                this.savedFlash = 1f;
-                return true;
-            }
+            y += inputH;
+            row++;
         }
 
-        int y = this.buttonSectionHeight();
-        for (String name : profiles) {
-            if (click.y() >= y && click.y() < y + ROW_H) {
-                int shareX = innerR - 22 - 8 - SHARE_BTN_W;
-                if ("default".equalsIgnoreCase(name)) {
-                    shareX = innerR - PAD - SHARE_BTN_W;
-                }
-                int shareY = y + (ROW_H - BTN_H) / 2;
-
-                if (click.x() >= shareX && click.x() < shareX + SHARE_BTN_W
-                        && click.y() >= shareY && click.y() < shareY + BTN_H) {
-                    String code = ProfileManager.exportProfile(name);
-                    if (code != null) {
-                        RubyClient.client.keyboardHandler.setClipboard(code);
-                        this.copiedProfile = name;
-                        this.copiedFlash = 1f;
-                    }
-                    return true;
-                }
-
-                if (!"default".equalsIgnoreCase(name) && click.x() >= innerR - 28) {
-                    ProfileManager.deleteProfile(name);
-                    ConfigManager.saveState();
-                } else if (click.x() < shareX) {
-                    ProfileManager.setActiveProfile(name);
-//                    ConfigManager.setActiveProfile(name);
-                    ConfigManager.saveState();
+        if (this.showClipboardRow()) {
+            int clipH = this.rowHeight(row == rows - 1);
+            if (click.y() >= y && click.y() < y + clipH) {
+                int saveX = innerR - PAD - Lucide.UI;
+                if (click.x() >= saveX - 4) {
+                    Press.down("profiles-clip-save");
+                    this.saveClipboard();
                 }
                 return true;
             }
-            y += ROW_H;
+            y += clipH;
+            row++;
+        }
+
+        for (int i = 0; i < profiles.size(); i++) {
+            int rowH = this.rowHeight(row == rows - 1);
+            if (click.y() >= y && click.y() < y + rowH) {
+                String name = profiles.get(i);
+                boolean canDelete = !"default".equalsIgnoreCase(name);
+                int saveX = innerR - PAD - Lucide.UI;
+                int removeX = saveX - 8 - Lucide.UI;
+                if (click.x() >= saveX - 4) {
+                    Press.down("profiles-save:" + name);
+                    this.saveProfile(name);
+                } else if (canDelete && click.x() >= removeX - 4) {
+                    Press.down("profiles-delete:" + name);
+                    ProfileManager.deleteProfile(name);
+                    ConfigManager.saveState();
+                    Toasts.show("x", "Deleted " + name);
+                } else if (click.x() < PAD + Lucide.UI + 4) {
+                    Press.down("profiles-copy:" + name);
+                    this.copyProfile(name);
+                } else {
+                    Press.down("profiles-load:" + name);
+                    ProfileManager.setActiveProfile(name);
+                    ConfigManager.saveState();
+                    Toasts.show("chevron-right", "Loaded " + name);
+                }
+                return true;
+            }
+            y += rowH;
+            row++;
         }
 
         return false;
@@ -302,9 +474,7 @@ public class ProfilesPanelContent extends Window {
         }
         if (input.key() == InputConstants.KEY_V && this.isControlDown()) {
             String clip = RubyClient.client.keyboardHandler.getClipboard();
-            if (!clip.isBlank()) {
-                this.appendInput(clip.trim());
-            }
+            if (clip != null && !clip.isBlank()) this.appendInput(clip.trim());
             return true;
         }
         if (input.key() == InputConstants.KEY_RETURN) {
@@ -326,10 +496,7 @@ public class ProfilesPanelContent extends Window {
     private void appendInput(String text) {
         int remaining = INPUT_MAX_LEN - this.inputText.length();
         if (remaining <= 0) return;
-        if (text.length() > remaining) {
-            this.inputText += text.substring(0, remaining);
-        } else {
-            this.inputText += text;
-        }
+        if (text.length() > remaining) this.inputText += text.substring(0, remaining);
+        else this.inputText += text;
     }
 }

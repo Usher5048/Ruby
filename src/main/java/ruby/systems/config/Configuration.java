@@ -20,6 +20,10 @@ public class Configuration {
         return this.options.get(key);
     }
 
+    public void remove(String key) {
+        this.options.remove(key);
+    }
+
     @SuppressWarnings("unchecked")
     public void resetToDefaults() {
         for (String key : this.getAll()) {

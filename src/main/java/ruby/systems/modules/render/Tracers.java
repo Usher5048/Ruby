@@ -97,7 +97,7 @@ public class Tracers extends Module {
         if (RubyClient.client.level == null || RubyClient.client.player == null) return;
 
         count = 0;
-        float tickDelta = RubyClient.client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        float tickDelta = ruby.helpers.render.Renderer.partialTicks();
 
         for (Entity entity : RubyClient.client.level.entitiesForRendering()) {
             if (shouldIgnore(entity)) continue;

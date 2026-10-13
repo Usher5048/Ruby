@@ -1,7 +1,7 @@
 package ruby.systems.config;
 
+import ruby.systems.gui.ClientSettings;
 import ruby.systems.gui.ThemeManager;
-import ruby.systems.modules.Module;
 import ruby.systems.modules.Modules;
 
 import java.io.ByteArrayInputStream;
@@ -11,11 +11,12 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.zip.Deflater;
-import java.util.zip.Inflater;
 
 // i had to rewrite this whole damn thing
 public class ProfileManager {
     public static final String DEFAULT_PROFILE = "default";
+    /** First bytes of a version-4 profile body, after the length prefix. */
+    private static final int FORMAT_V4 = 0x52345634;
 
     private static final HashMap<String, byte[]> profiles = new HashMap<>();
     private static String activeProfile = null;
@@ -36,28 +37,98 @@ public class ProfileManager {
         if(!ProfileManager.profiles.containsKey(name)) return;
         ProfileManager.activeProfile = name;
 
-        ByteArrayInputStream stream = new ByteArrayInputStream(ProfileManager.profile(name));
-        ConfigManager.readInt(stream); // length for streams, can skip here
-
-        int moduleCount = ConfigManager.readShort(stream);
-        for(int i = 0; i < moduleCount; i++) ConfigManager.bytesToModule(stream);
-
-        ThemeManager.get().readFromProfile(stream);
+        byte[] raw = ProfileManager.profile(name);
+        ByteArrayInputStream stream = new ByteArrayInputStream(raw);
+        int len = ConfigManager.readInt(stream);
+        int take = Math.min(Math.max(len, 0), stream.available());
+        byte[] body = new byte[take];
+        stream.readNBytes(body, 0, take);
+        if (ProfileManager.magic(body) == ProfileManager.FORMAT_V4) {
+            ProfileManager.readV4(new ByteArrayInputStream(body, 4, body.length - 4));
+            return;
+        }
+        ProfileManager.readLegacy(new ByteArrayInputStream(body));
     }
 
     public static byte[] captureState() {
+        ByteArrayOutputStream body = new ByteArrayOutputStream();
+        ConfigManager.writeInt(body, ProfileManager.FORMAT_V4);
+        ProfileManager.section(body, "modules", ProfileManager.modulesSection());
+        ProfileManager.section(body, "theme", ProfileManager.themeSection());
+        ProfileManager.section(body, "settings", ProfileManager.settingsSection());
+
+        ByteArrayOutputStream wrapped = new ByteArrayOutputStream();
+        ConfigManager.writeInt(wrapped, body.size());
+        wrapped.writeBytes(body.toByteArray());
+        return wrapped.toByteArray();
+    }
+
+    private static void section(ByteArrayOutputStream out, String id, byte[] payload) {
+        ConfigManager.writeUtf8(out, id);
+        ConfigManager.writeInt(out, payload.length);
+        out.writeBytes(payload);
+    }
+
+    private static byte[] modulesSection() {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        ConfigManager.writeModules(stream);
+        return stream.toByteArray();
+    }
 
-        ConfigManager.writeShort(stream, Modules.getModules().size());
-        for(Module module : Modules.getModules()) ConfigManager.moduleToBytes(stream, module);
+    private static byte[] themeSection() {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        ThemeManager.get().writeNamed(stream);
+        return stream.toByteArray();
+    }
 
-        ThemeManager.get().writeToProfile(stream);
+    private static byte[] settingsSection() {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        ClientSettings.get().writeNamed(stream);
+        return stream.toByteArray();
+    }
 
-        ByteArrayOutputStream len = new ByteArrayOutputStream();
-        ConfigManager.writeInt(len, stream.size());
-        len.writeBytes(stream.toByteArray());
+    private static int magic(byte[] body) {
+        if (body.length < 4) return 0;
+        return ((body[0] & 0xFF) << 24)
+                | ((body[1] & 0xFF) << 16)
+                | ((body[2] & 0xFF) << 8)
+                | (body[3] & 0xFF);
+    }
 
-        return len.toByteArray();
+    private static void readV4(ByteArrayInputStream stream) {
+        Modules.prepareProfileLoad();
+        ThemeManager.get().assignDefaults();
+        ClientSettings.get().reset();
+        ConfigManager.setPanelHeight(-1);
+        while (stream.available() >= 6) {
+            String id = ConfigManager.readUtf8(stream);
+            int len = ConfigManager.readInt(stream);
+            if (len < 0 || len > stream.available()) return;
+            byte[] payload = new byte[len];
+            stream.readNBytes(payload, 0, len);
+            ByteArrayInputStream section = new ByteArrayInputStream(payload);
+            switch (id) {
+                case "modules" -> ConfigManager.readModules(section);
+                case "theme" -> ThemeManager.get().readNamed(section);
+                case "settings" -> ClientSettings.get().readNamed(section);
+                default -> {}
+            }
+        }
+        ThemeManager.get().finishProfileRead();
+    }
+
+    private static void readLegacy(ByteArrayInputStream stream) {
+        Modules.prepareProfileLoad();
+        ThemeManager.get().assignDefaults();
+        ClientSettings.get().reset();
+        if (stream.available() < 2) {
+            ThemeManager.get().finishProfileRead();
+            return;
+        }
+        int moduleCount = ConfigManager.readShort(stream);
+        for (int i = 0; i < moduleCount; i++) ConfigManager.bytesToModule(stream);
+        if (stream.available() >= 4) ThemeManager.get().readFromProfile(stream);
+        else ThemeManager.get().finishProfileRead();
     }
 
     public static void loadProfile(ByteArrayInputStream stream, String name) {
@@ -90,11 +161,32 @@ public class ProfileManager {
 
         while(!deflater.finished()) {
             int count = deflater.deflate(buf);
+            if (count <= 0) break;
             compressedStream.write(buf, 0, count);
         }
 
         deflater.end();
         return Base64.getEncoder().encodeToString(compressedStream.toByteArray());
+    }
+
+    /** Profile name inside a share code, or null when the text is not one. */
+    public static String peekName(String data) {
+        if (data == null || data.isBlank()) return null;
+        try {
+            String compact = data.replaceAll("\\s", "");
+            byte[] decoded = Base64.getDecoder().decode(compact);
+            if (decoded.length <= 12) return null;
+            ByteArrayInputStream stream = new ByteArrayInputStream(decoded);
+            byte[] sig = new byte[12];
+            if (stream.readNBytes(sig, 0, sig.length) != sig.length) return null;
+            if (!"RUBY_PROFILE".equals(new String(sig, StandardCharsets.US_ASCII))) return null;
+
+            byte[] decompressed = ConfigManager.inflate(stream.readAllBytes());
+            if (decompressed == null) return null;
+            return ConfigManager.readString(new ByteArrayInputStream(decompressed));
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     public static void saveProfile(String name) {
@@ -113,21 +205,9 @@ public class ProfileManager {
         if(!(new String(sig, StandardCharsets.US_ASCII).equals("RUBY_PROFILE")))
             return false;
 
-        Inflater inflater = new Inflater();
-        inflater.setInput(stream.readAllBytes());
-
-        byte[] buf = new byte[1024];
-        ByteArrayOutputStream decompressed = new ByteArrayOutputStream();
-
-        while(!inflater.finished()) {
-            try {
-                int count = inflater.inflate(buf);
-                decompressed.write(buf, 0, count);
-            } catch(Exception ignored) { return true; }
-        }
-
-        inflater.end();
-        ByteArrayInputStream inner = new ByteArrayInputStream(decompressed.toByteArray());
+        byte[] decompressed = ConfigManager.inflate(stream.readAllBytes());
+        if (decompressed == null) return true;
+        ByteArrayInputStream inner = new ByteArrayInputStream(decompressed);
 
         String name = ConfigManager.readString(inner);
         ProfileManager.loadProfile(inner, name);

@@ -17,6 +17,12 @@ public class WindowedScreen extends Screen {
 
     public WindowedScreen(String title) {
         super(Component.nullToEmpty(title));
+    }
+
+    @Override
+    public void added() {
+        super.added();
+        // setScreen stops text input while leaving the previous screen, after this object is constructed.
         RubyClient.client.onTextInputFocusChange(this, true);
     }
 

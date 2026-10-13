@@ -14,6 +14,11 @@ import ruby.systems.accounts.types.CrackedAccount;
 import ruby.systems.accounts.types.MicrosoftAccount;
 import ruby.systems.accounts.types.SessionAccount;
 import ruby.systems.gui.GUIStyle;
+import ruby.systems.gui.GuiTime;
+import ruby.systems.gui.Motion;
+import ruby.systems.gui.Press;
+import ruby.systems.gui.Toasts;
+import ruby.systems.gui.icons.Lucide;
 import ruby.systems.social.PlayerHeadCache;
 
 import java.util.List;
@@ -21,19 +26,14 @@ import java.util.List;
 public class AccountsPanelContent extends Window {
     private static final int PAD = 14;
     private static final int INNER_L = 1;
-    private static final int ROW_H = 44;
-    private static final int ADD_BTN_ROW_H = 44;
-    private static final int TYPE_ROW_H = 36;
-    private static final int INPUT_ROW_H = 40;
-    private static final int SESSION_INPUT_ROW_H = 70;
-    private static final int HEAD_SIZE = 24;
-    private static final int ACTION_BTN_W = 48;
-    private static final int REMOVE_INSET = 18;
-    private static final int ACTION_GAP = 4;
-    private static final int INPUT_GAP = 6;
-    private static final int CREATE_BTN_W = 52;
+    private static final int ROW_H = 31;
+    private static final int LAST_EXTRA = 4;
+    private static final int HEAD_SIZE = 16;
 
-    private enum AddMode { NONE, PICK_TYPE, CRACKED, SESSION }
+    private enum AddMode { NONE, PICK, CRACKED, SESSION }
+
+    private static final String[] TYPE_LABELS = { "Cracked", "Microsoft", "Session" };
+    private static final String[] TYPE_ICONS = { "user", "users", "clipboard" };
 
     private AddMode addMode = AddMode.NONE;
     private String inputPrimary = "";
@@ -41,15 +41,12 @@ public class AccountsPanelContent extends Window {
     private int cursorBlink = 0;
     private boolean focusPrimary = true;
     private float contentAlpha = 1f;
-    private String statusMessage = "";
+    private float addMix;
+    private final float[] typeMix = new float[3];
+    private float[] rowMix;
 
     public void setContentAlpha(float contentAlpha) {
         this.contentAlpha = contentAlpha;
-    }
-
-    public void resetState() {
-        this.resetAddState();
-        this.statusMessage = "";
     }
 
     public AccountsPanelContent(int x, int y, int width) {
@@ -58,17 +55,22 @@ public class AccountsPanelContent extends Window {
         this.handleChildren = false;
     }
 
+    private int extraRows() {
+        return switch (this.addMode) {
+            case PICK -> 3;
+            case CRACKED -> 1;
+            case SESSION -> 2;
+            case NONE -> AccountsManager.getAccounts().isEmpty() ? 1 : 0;
+        };
+    }
+
+    private int bodyRows() {
+        return 1 + this.extraRows() + AccountsManager.getAccounts().size();
+    }
+
     @Override
     public int getHeight() {
-        int h = switch (this.addMode) {
-            case NONE -> ADD_BTN_ROW_H;
-            case PICK_TYPE -> ADD_BTN_ROW_H + TYPE_ROW_H * 3;
-            case CRACKED -> INPUT_ROW_H;
-            case SESSION -> SESSION_INPUT_ROW_H;
-        };
-        h += AccountsManager.getAccounts().size() * ROW_H;
-        if (AccountsManager.getAccounts().isEmpty() && this.addMode == AddMode.NONE) h += 32;
-        if (!this.statusMessage.isEmpty()) h += 20;
+        int h = this.bodyRows() * ROW_H + LAST_EXTRA;
         this.height = h;
         return h;
     }
@@ -81,186 +83,203 @@ public class AccountsPanelContent extends Window {
 
     @Override
     public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
-        this.drawContent(context, mouseX, mouseY);
+        this.drawContent(context, mouseX, mouseY, GuiTime.toSeconds(dt));
     }
 
-    private void drawContent(GuiGraphicsExtractor context, int mouseX, int mouseY) {
+    private void drawContent(GuiGraphicsExtractor context, int mouseX, int mouseY, float seconds) {
         GUIStyle style = GUIStyle.get();
-        int w = this.getWidth();
-        int innerR = w - INNER_L;
-        int y = 0;
+        int innerR = this.getWidth() - INNER_L;
         List<Account> accounts = AccountsManager.getAccounts();
+        int rows = this.bodyRows();
+        int y = 0;
+        int row = 0;
 
-        y = switch (this.addMode) {
-            case NONE -> this.drawAddButton(context, style, innerR, y, mouseX, mouseY);
-            case PICK_TYPE -> this.drawTypePicker(context, style, innerR, y, mouseX, mouseY);
-            case CRACKED -> this.drawSingleInput(context, style, innerR, y, mouseX, mouseY,
-                    "Username...", this.inputPrimary, true);
-            case SESSION -> this.drawDualInput(context, style, innerR, y, mouseX, mouseY);
-        };
+        y = this.drawAddRow(context, style, innerR, y, mouseX, mouseY, row == rows - 1, seconds);
+        row++;
 
-        if (!this.statusMessage.isEmpty()) {
-            style.bodyFont().draw(context, this.statusMessage, PAD, y + 4,
-                    GUIStyle.withAlpha(style.textMuted(), this.contentAlpha));
-            y += 20;
-        }
-
-        if (accounts.isEmpty() && this.addMode == AddMode.NONE) {
-            ModuleTypeWindow.fillBottomRoundedRect(context, INNER_L, y, innerR, y + 32, GUIStyle.RADIUS_ROW,
-                    GUIStyle.withAlpha(style.bgPanel(), this.contentAlpha));
-            style.bodyFont().draw(context, "No accounts saved", PAD, y + 8,
-                    GUIStyle.withAlpha(style.textMuted(), this.contentAlpha));
-            y += 32;
+        switch (this.addMode) {
+            case PICK -> {
+                for (int i = 0; i < TYPE_LABELS.length; i++) {
+                    y = this.drawTypeRow(context, style, innerR, y, mouseX, mouseY, i, row == rows - 1, seconds);
+                    row++;
+                }
+            }
+            case CRACKED -> {
+                y = this.drawInputRow(context, style, innerR, y, mouseX, mouseY,
+                        "Username", this.inputPrimary, true, "acct-create", row == rows - 1);
+                row++;
+            }
+            case SESSION -> {
+                y = this.drawInputRow(context, style, innerR, y, mouseX, mouseY,
+                        "Label", this.inputPrimary, this.focusPrimary, null, false);
+                row++;
+                y = this.drawInputRow(context, style, innerR, y, mouseX, mouseY,
+                        "Access token", this.inputSecondary, !this.focusPrimary, "acct-create", row == rows - 1);
+                row++;
+            }
+            case NONE -> {
+                if (accounts.isEmpty()) {
+                    y = this.drawEmptyRow(context, style, innerR, y, row == rows - 1);
+                    row++;
+                }
+            }
         }
 
         for (int i = 0; i < accounts.size(); i++) {
-            y = this.drawAccountRow(context, style, innerR, y, mouseX, mouseY, accounts.get(i), i == accounts.size() - 1);
+            y = this.drawAccount(context, style, innerR, y, mouseX, mouseY, accounts.get(i), i,
+                    row == rows - 1, seconds);
+            row++;
         }
     }
 
-    private int drawAddButton(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my) {
-        int btnR = innerR - PAD;
-        int by = y + 10;
-        int bh = 24;
-        boolean hovered = mx >= PAD && mx < btnR && my >= by && my < by + bh;
-        ModuleTypeWindow.drawRoundedBadge(context, PAD, by, btnR, by + bh,
-                hovered ? style.rubyBg() : 0x00000000, style.border());
-        this.drawTextInRect(style.bodyFont(), context, "+ Add Account", PAD, by, btnR, by + bh,
-                GUIStyle.withAlpha(hovered ? style.textBright() : style.ruby(), this.contentAlpha));
-        context.fill(INNER_L, y + ADD_BTN_ROW_H - 1, innerR, y + ADD_BTN_ROW_H, style.borderSubtle());
-        return y + ADD_BTN_ROW_H;
+    private int rowHeight(boolean last) {
+        return last ? ROW_H + LAST_EXTRA : ROW_H;
     }
 
-    private int drawTypePicker(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my) {
-        y = this.drawAddButton(context, style, innerR, y, mx, my);
-        String[] labels = {"Cracked", "Microsoft", "Session"};
-        for (int i = 0; i < labels.length; i++) {
-            boolean hovered = mx >= INNER_L && my >= y && mx < innerR && my < y + TYPE_ROW_H;
-            if (hovered) {
-                ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + TYPE_ROW_H,
-                        GUIStyle.withAlpha(style.bgHover(), this.contentAlpha), i == labels.length - 1);
-            }
-            int textY = y + (TYPE_ROW_H - style.bodyFont().fontHeight) / 2;
-            style.bodyFont().draw(context, labels[i], PAD, textY,
-                    GUIStyle.withAlpha(hovered ? style.textBright() : style.text(), this.contentAlpha));
-            if (i < labels.length - 1) {
-                context.fill(INNER_L, y + TYPE_ROW_H - 1, innerR, y + TYPE_ROW_H, style.borderSubtle());
-            }
-            y += TYPE_ROW_H;
+    private int drawAddRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                           int mouseX, int mouseY, boolean last, float seconds) {
+        int rowH = this.rowHeight(last);
+        boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + rowH;
+        boolean open = this.addMode != AddMode.NONE;
+        this.addMix = Motion.follow(this.addMix, hovered || open ? 1f : 0f, seconds, Motion.HOVER);
+        if (this.addMix > 0.01f) {
+            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + rowH,
+                    GUIStyle.withAlpha(style.bgHover(), this.contentAlpha * this.addMix), last);
         }
-        return y;
+
+        int iconY = y + (ROW_H - Lucide.UI) / 2;
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        int iconColor = Motion.mix(style.textMuted(), style.ruby(), this.addMix);
+        int textColor = Motion.mix(style.text(), style.textBright(), this.addMix);
+        Press.icon(context, "plus", PAD, iconY, GUIStyle.withAlpha(iconColor, this.contentAlpha), "acct-add");
+        Press.label(style.bodyFont(), context, "Add account", PAD + Lucide.UI + 8, textY,
+                GUIStyle.withAlpha(textColor, this.contentAlpha), "acct-add");
+        this.separator(context, style, innerR, y, rowH, last);
+        return y + rowH;
     }
 
-    private int drawSingleInput(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my,
-                                String placeholder, String value, boolean primary) {
-        return this.drawInputRow(context, style, innerR, y, mx, my, placeholder, value, primary, false);
+    private int drawTypeRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                            int mouseX, int mouseY, int index, boolean last, float seconds) {
+        int rowH = this.rowHeight(last);
+        boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + rowH;
+        this.typeMix[index] = Motion.follow(this.typeMix[index], hovered ? 1f : 0f, seconds, Motion.HOVER);
+        if (this.typeMix[index] > 0.01f) {
+            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + rowH,
+                    GUIStyle.withAlpha(style.bgHover(), this.contentAlpha * this.typeMix[index]), last);
+        }
+
+        int iconY = y + (ROW_H - Lucide.UI) / 2;
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        String id = "acct-type:" + index;
+        int color = Motion.mix(style.text(), style.textBright(), this.typeMix[index]);
+        Press.icon(context, TYPE_ICONS[index], PAD, iconY, GUIStyle.withAlpha(color, this.contentAlpha), id);
+        Press.label(style.bodyFont(), context, TYPE_LABELS[index], PAD + Lucide.UI + 8, textY,
+                GUIStyle.withAlpha(color, this.contentAlpha), id);
+        this.separator(context, style, innerR, y, rowH, last);
+        return y + rowH;
     }
 
-    private int drawDualInput(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my) {
-        int rowY = y + 8;
-        int inputH = 24;
-        int contentR = innerR - PAD;
-        int btnX = contentR - CREATE_BTN_W;
+    private int drawInputRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                             int mouseX, int mouseY, String placeholder, String value,
+                             boolean focused, String actionId, boolean last) {
+        int rowH = this.rowHeight(last);
+        context.fill(INNER_L, y, innerR, y + ROW_H, GUIStyle.withAlpha(style.bgBase(), this.contentAlpha));
 
-        ModuleTypeWindow.drawRoundedBadge(context, PAD, rowY, btnX - INPUT_GAP, rowY + inputH,
-                style.bgBase(), style.border());
-        this.drawInputText(context, style, PAD + 8, rowY, inputH, "Label...", this.inputPrimary, this.focusPrimary);
-
-        int row2 = rowY + inputH + 6;
-        ModuleTypeWindow.drawRoundedBadge(context, PAD, row2, btnX - INPUT_GAP, row2 + inputH,
-                style.bgBase(), style.border());
-        this.drawInputText(context, style, PAD + 8, row2, inputH, "Access token...", this.inputSecondary, !this.focusPrimary);
-
-        boolean addHovered = mx >= btnX && mx < contentR && my >= rowY && my < row2 + inputH;
-        ModuleTypeWindow.fillSmoothRoundedRect(context, btnX, rowY, contentR, row2 + inputH, GUIStyle.RADIUS_BADGE,
-                GUIStyle.withAlpha(addHovered ? style.rubyHover() : style.ruby(), this.contentAlpha));
-        this.drawTextInRect(style.bodyFont(), context, "Add", btnX, rowY, contentR, row2 + inputH, 0xFFE8E4E5);
-
-        context.fill(INNER_L, y + SESSION_INPUT_ROW_H - 1, innerR, y + SESSION_INPUT_ROW_H, style.borderSubtle());
-        return y + SESSION_INPUT_ROW_H;
-    }
-
-    private int drawInputRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my,
-                             String placeholder, String value, boolean primary, boolean unused) {
-        int rowY = y + 8;
-        int inputH = 24;
-        int contentR = innerR - PAD;
-        int btnX = contentR - CREATE_BTN_W;
-        int inputR = btnX - INPUT_GAP;
-
-        ModuleTypeWindow.drawRoundedBadge(context, PAD, rowY, inputR, rowY + inputH, style.bgBase(), style.border());
-        this.drawInputText(context, style, PAD + 8, rowY, inputH, placeholder, value, primary);
-
-        boolean addHovered = mx >= btnX && mx < contentR && my >= rowY && my < rowY + inputH;
-        ModuleTypeWindow.fillSmoothRoundedRect(context, btnX, rowY, contentR, rowY + inputH, GUIStyle.RADIUS_BADGE,
-                GUIStyle.withAlpha(addHovered ? style.rubyHover() : style.ruby(), this.contentAlpha));
-        this.drawTextInRect(style.bodyFont(), context, "Add", btnX, rowY, contentR, rowY + inputH, 0xFFE8E4E5);
-
-        context.fill(INNER_L, y + INPUT_ROW_H - 1, innerR, y + INPUT_ROW_H, style.borderSubtle());
-        return y + INPUT_ROW_H;
-    }
-
-    private void drawInputText(GuiGraphicsExtractor context, GUIStyle style, int x, int rowY, int inputH,
-                               String placeholder, String value, boolean focused) {
         String display = value.isEmpty() ? placeholder : value;
         int col = value.isEmpty() ? style.textMuted() : style.text();
-        int textY = rowY + (inputH - style.bodyFont().fontHeight) / 2;
-        style.bodyFont().draw(context, display, x, textY, GUIStyle.withAlpha(col, this.contentAlpha));
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        int textR = innerR - PAD;
+        if (actionId != null) {
+            int actionW = style.bodyFont().getWidth("Add");
+            int actionX = innerR - PAD - actionW;
+            textR = actionX - 8;
+            boolean actionHovered = mouseX >= actionX - 6 && mouseX < innerR - 6
+                    && mouseY >= y && mouseY < y + rowH;
+            Press.label(style.bodyFont(), context, "Add", actionX, textY,
+                    GUIStyle.withAlpha(actionHovered ? style.rubyHover() : style.ruby(), this.contentAlpha), actionId);
+        }
+
+        style.bodyFont().draw(context, display, PAD, textY, GUIStyle.withAlpha(col, this.contentAlpha));
         if (focused && this.cursorBlink < 10) {
-            int cx = x + style.bodyFont().getWidth(value);
+            int cx = Math.min(PAD + style.bodyFont().getWidth(value), textR);
             context.fill(cx, textY, cx + 1, textY + style.bodyFont().fontHeight,
                     GUIStyle.withAlpha(style.text(), this.contentAlpha));
         }
+
+        this.separator(context, style, innerR, y, rowH, last);
+        return y + rowH;
     }
 
-    private int drawAccountRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int mx, int my,
-                               Account account, boolean last) {
-        boolean hovered = mx >= INNER_L && my >= y && mx < innerR && my < y + ROW_H;
-        if (hovered) {
-            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + ROW_H,
-                    GUIStyle.withAlpha(style.bgHover(), this.contentAlpha), last);
+    private int drawEmptyRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, boolean last) {
+        int rowH = this.rowHeight(last);
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        style.bodyFont().draw(context, "No accounts yet", PAD, textY,
+                GUIStyle.withAlpha(style.textMuted(), this.contentAlpha));
+        this.separator(context, style, innerR, y, rowH, last);
+        return y + rowH;
+    }
+
+    private int drawAccount(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                            int mouseX, int mouseY, Account account, int index, boolean last, float seconds) {
+        int rowH = this.rowHeight(last);
+        boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + rowH;
+        float mix = this.rowMix(index, hovered ? 1f : 0f, seconds);
+        if (mix > 0.01f) {
+            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + rowH,
+                    GUIStyle.withAlpha(style.bgHover(), this.contentAlpha * mix), last);
         }
 
         String username = account.getUsername();
-        this.drawPlayerHead(context, style, username, PAD, y + (ROW_H - HEAD_SIZE) / 2);
-
-        int textY = y + 10;
-        style.bodyFont().draw(context, username, PAD + HEAD_SIZE + 10, textY,
-                GUIStyle.withAlpha(style.text(), this.contentAlpha));
-        style.labelFont().draw(context, account.getType().label(), PAD + HEAD_SIZE + 10, textY + 14,
-                GUIStyle.withAlpha(style.textMuted(), this.contentAlpha));
-
         boolean active = AccountsManager.isActive(account);
-        int removeX = innerR - REMOVE_INSET;
-        int actionRight = removeX - ACTION_GAP;
-        int actionX = actionRight - ACTION_BTN_W;
-        int actionY = y + (ROW_H - 24) / 2;
-        if (active) {
-            String activeLabel = "Active";
-            int activeW = style.bodyFont().getWidth(activeLabel);
-            style.bodyFont().draw(context, activeLabel, actionRight - activeW,
-                    y + (ROW_H - style.bodyFont().fontHeight) / 2,
-                    GUIStyle.withAlpha(style.ruby(), this.contentAlpha));
+        int headY = y + (ROW_H - HEAD_SIZE) / 2;
+        this.drawPlayerHead(context, style, username, PAD, headY);
+
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        int nameX = PAD + HEAD_SIZE + 8;
+        int nameColor = active ? style.ruby() : style.text();
+        style.bodyFont().draw(context, username, nameX, textY, GUIStyle.withAlpha(nameColor, this.contentAlpha));
+
+        int iconX = innerR - PAD - Lucide.UI;
+        int iconY = y + (ROW_H - Lucide.UI) / 2;
+        String removeId = "acct-x:" + username;
+        boolean removeHovered = mouseX >= iconX - 6 && mouseX < innerR - 6
+                && mouseY >= y && mouseY < y + ROW_H;
+        Press.icon(context, "x", iconX, iconY,
+                GUIStyle.withAlpha(removeHovered ? 0xFFC25555 : style.textMuted(), this.contentAlpha), removeId);
+
+        if (!active) {
+            int loginX = iconX - 8 - Lucide.UI;
+            String loginId = "acct-login:" + username;
+            boolean loginHovered = mouseX >= loginX - 6 && mouseX < loginX + Lucide.UI + 6
+                    && mouseY >= y && mouseY < y + ROW_H;
+            Press.icon(context, "forward", loginX, iconY,
+                    GUIStyle.withAlpha(loginHovered ? style.ruby() : style.textMuted(), this.contentAlpha), loginId);
         } else {
-            boolean loginHovered = mx >= actionX && mx < actionX + ACTION_BTN_W
-                    && my >= actionY && my < actionY + 24;
-            ModuleTypeWindow.drawRoundedBadge(context, actionX, actionY, actionX + ACTION_BTN_W, actionY + 24,
-                    loginHovered ? style.rubyBg() : 0x00000000, style.border());
-            this.drawTextInRect(style.bodyFont(), context, "Login", actionX, actionY,
-                    actionX + ACTION_BTN_W, actionY + 24,
-                    GUIStyle.withAlpha(loginHovered ? style.textBright() : style.ruby(), this.contentAlpha));
+            int checkX = iconX - 8 - Lucide.UI;
+            Lucide.draw(context, "check", checkX, iconY, Lucide.UI,
+                    GUIStyle.withAlpha(style.ruby(), this.contentAlpha));
         }
 
-        boolean removeHovered = mx >= innerR - 28 && mx < innerR - 8
-                && my >= y + 8 && my < y + ROW_H - 8;
-        int removeY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
-        style.bodyFont().draw(context, "\u2715", removeX, removeY,
-                GUIStyle.withAlpha(removeHovered ? 0xFFC25555 : style.textMuted(), this.contentAlpha));
+        this.separator(context, style, innerR, y, rowH, last);
+        return y + rowH;
+    }
 
-        if (!last) {
-            context.fill(INNER_L, y + ROW_H - 1, innerR, y + ROW_H, style.borderSubtle());
+    private float rowMix(int index, float target, float seconds) {
+        if (this.rowMix == null || this.rowMix.length <= index) {
+            float[] next = new float[index + 1];
+            if (this.rowMix != null) System.arraycopy(this.rowMix, 0, next, 0, this.rowMix.length);
+            next[index] = target;
+            this.rowMix = next;
+            return target;
         }
-        return y + ROW_H;
+        this.rowMix[index] = Motion.follow(this.rowMix[index], target, seconds, Motion.HOVER);
+        return this.rowMix[index];
+    }
+
+    private void separator(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, int rowH, boolean last) {
+        if (last) return;
+        context.fill(INNER_L, y + rowH - 1, innerR, y + rowH,
+                GUIStyle.withAlpha(style.borderSubtle(), this.contentAlpha));
     }
 
     private void drawPlayerHead(GuiGraphicsExtractor context, GUIStyle style, String username, int x, int y) {
@@ -279,138 +298,157 @@ public class AccountsPanelContent extends Window {
         this.focusPrimary = true;
     }
 
+    private void beginMicrosoft() {
+        MicrosoftLogin.requestRefreshToken(token -> {
+            if (token == null) {
+                RubyClient.client.execute(() -> Toasts.show("x", "Microsoft login failed"));
+                return;
+            }
+            Util.ioPool().execute(() -> {
+                MicrosoftAccount account = new MicrosoftAccount(token);
+                boolean ok = account.fetchInfo();
+                RubyClient.client.execute(() -> {
+                    if (!ok) {
+                        Toasts.show("x", "Microsoft login failed");
+                        return;
+                    }
+                    AccountsManager.add(account);
+                    AccountsManager.save();
+                    Toasts.show("check", "Added " + account.getUsername());
+                });
+            });
+        });
+    }
+
     private void tryLogin(Account account) {
-        this.statusMessage = "Logging in...";
+        Toasts.show("forward", "Logging in");
         Util.ioPool().execute(() -> {
-            boolean ok = account.fetchInfo() && account.login();
-            Util.backgroundExecutor().execute(() -> {
-                if (ok) {
+            boolean prepared = account.fetchInfo();
+            RubyClient.client.execute(() -> {
+                if (prepared && account.login()) {
                     AccountsManager.markLastUsed(account);
-//                    AccountsManager.save();
-                    this.statusMessage = "Logged in as " + account.getUsername();
+                    AccountsManager.save();
+                    Toasts.show("check", "Logged in as " + account.getUsername());
                 } else {
-                    this.statusMessage = "Login failed";
+                    Toasts.show("x", "Login failed");
                 }
             });
         });
+    }
+
+    private void addSession() {
+        if (this.inputPrimary.isBlank() || this.inputSecondary.isBlank()) return;
+        String label = this.inputPrimary.trim();
+        String token = this.inputSecondary.trim();
+        Toasts.show("clipboard", "Checking session");
+        Util.ioPool().execute(() -> {
+            SessionAccount account = new SessionAccount(label, token);
+            boolean ok = account.fetchInfo();
+            RubyClient.client.execute(() -> {
+                if (!ok) {
+                    Toasts.show("x", "Invalid session");
+                    return;
+                }
+                AccountsManager.add(account);
+                AccountsManager.save();
+                Toasts.show("check", "Added " + account.getUsername());
+            });
+        });
+    }
+
+    private boolean hitAdd(int contentR, double x, double y) {
+        return x >= INNER_L && x < contentR && y >= 0 && y < ROW_H;
     }
 
     @Override
     public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
         if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
-        int w = this.getWidth();
-        int innerR = w - INNER_L;
+        int innerR = this.getWidth() - INNER_L;
         int y = 0;
         List<Account> accounts = AccountsManager.getAccounts();
-        int contentR = innerR - PAD;
+
+        if (this.hitAdd(innerR, click.x(), click.y())) {
+            Press.down("acct-add");
+            if (this.addMode == AddMode.NONE) this.addMode = AddMode.PICK;
+            else this.resetAddState();
+            return true;
+        }
+        y += ROW_H;
 
         switch (this.addMode) {
-            case NONE -> {
-                if (click.x() >= PAD && click.x() < contentR && click.y() >= y + 10 && click.y() < y + 34) {
-                    this.addMode = AddMode.PICK_TYPE;
-                    return true;
+            case PICK -> {
+                for (int i = 0; i < TYPE_LABELS.length; i++) {
+                    if (click.y() >= y && click.y() < y + ROW_H) {
+                        Press.down("acct-type:" + i);
+                        this.resetAddState();
+                        if (i == 0) this.addMode = AddMode.CRACKED;
+                        else if (i == 1) this.beginMicrosoft();
+                        else this.addMode = AddMode.SESSION;
+                        return true;
+                    }
+                    y += ROW_H;
                 }
-                y += ADD_BTN_ROW_H;
-            }
-            case PICK_TYPE -> {
-                y += ADD_BTN_ROW_H;
-                if (click.y() >= y && click.y() < y + TYPE_ROW_H) {
-                    this.resetAddState();
-                    this.addMode = AddMode.CRACKED;
-                    return true;
-                }
-                y += TYPE_ROW_H;
-                if (click.y() >= y && click.y() < y + TYPE_ROW_H) {
-                    this.statusMessage = "Check your browser...";
-                    MicrosoftLogin.requestRefreshToken(token -> Util.backgroundExecutor().execute(() -> {
-                        if (token == null) {
-                            this.statusMessage = "Microsoft login cancelled";
-                            return;
-                        }
-                        MicrosoftAccount account = new MicrosoftAccount(token);
-                        if (account.fetchInfo()) {
-                            AccountsManager.add(account);
-                            this.statusMessage = "Added " + account.getUsername();
-                            this.resetAddState();
-                        } else {
-                            this.statusMessage = "Microsoft login failed";
-                        }
-                        RubyClient.log(this.statusMessage);
-                    }));
-                    this.resetAddState();
-                    return true;
-                }
-                y += TYPE_ROW_H;
-                if (click.y() >= y && click.y() < y + TYPE_ROW_H) {
-                    this.resetAddState();
-                    this.addMode = AddMode.SESSION;
-                    return true;
-                }
-                y += TYPE_ROW_H;
             }
             case CRACKED -> {
-                int rowY = y + 8;
-                int btnX = contentR - CREATE_BTN_W;
-                if (click.x() >= btnX && click.x() < contentR && click.y() >= rowY && click.y() < rowY + 24) {
+                if (this.hitAction(innerR, y, click.x(), click.y())) {
+                    Press.down("acct-create");
                     if (!this.inputPrimary.isBlank()) {
-                        AccountsManager.add(new CrackedAccount(this.inputPrimary.trim()));
-                        this.statusMessage = "Added " + this.inputPrimary.trim();
+                        String name = this.inputPrimary.trim();
+                        AccountsManager.add(new CrackedAccount(name));
+                        AccountsManager.save();
+                        Toasts.show("check", "Added " + name);
                     }
                     this.resetAddState();
                     return true;
                 }
-                int inputR = btnX - INPUT_GAP;
-                if (click.x() >= PAD && click.x() < inputR && click.y() >= rowY && click.y() < rowY + 24) {
+                if (click.y() >= y && click.y() < y + ROW_H) {
                     this.focusPrimary = true;
                     return true;
                 }
-                y += INPUT_ROW_H;
+                y += ROW_H;
             }
             case SESSION -> {
-                int rowY = y + 8;
-                int btnX = contentR - CREATE_BTN_W;
-                if (click.x() >= btnX && click.x() < contentR && click.y() >= rowY && click.y() < rowY + SESSION_INPUT_ROW_H - 8) {
-                    if (!this.inputPrimary.isBlank() && !this.inputSecondary.isBlank()) {
-                        SessionAccount account = new SessionAccount(this.inputPrimary.trim(), this.inputSecondary.trim());
-                        if (account.fetchInfo()) {
-                            AccountsManager.add(account);
-                            this.statusMessage = "Added " + account.getUsername();
-                        } else {
-                            this.statusMessage = "Invalid session token";
-                        }
-                    }
+                if (click.y() >= y && click.y() < y + ROW_H) {
+                    this.focusPrimary = true;
+                    return true;
+                }
+                y += ROW_H;
+                if (this.hitAction(innerR, y, click.x(), click.y())) {
+                    Press.down("acct-create");
+                    this.addSession();
                     this.resetAddState();
                     return true;
                 }
-                int inputR = btnX - INPUT_GAP;
-                if (click.x() >= PAD && click.x() < inputR) {
-                    this.focusPrimary = click.y() < rowY + 30;
+                if (click.y() >= y && click.y() < y + ROW_H) {
+                    this.focusPrimary = false;
                     return true;
                 }
-                y += SESSION_INPUT_ROW_H;
+                y += ROW_H;
+            }
+            case NONE -> {
+                if (accounts.isEmpty()) y += ROW_H;
             }
         }
 
-        if (!this.statusMessage.isEmpty()) y += 20;
-        if (accounts.isEmpty() && this.addMode == AddMode.NONE) y += 32;
-
         for (Account account : accounts) {
             if (click.y() >= y && click.y() < y + ROW_H) {
-                int removeX = innerR - REMOVE_INSET;
-                int actionRight = removeX - ACTION_GAP;
-                int actionX = actionRight - ACTION_BTN_W;
-                int actionY = y + (ROW_H - 24) / 2;
-                if (click.x() >= innerR - 28) {
+                String username = account.getUsername();
+                int iconX = innerR - PAD - Lucide.UI;
+                if (click.x() >= iconX - 6) {
+                    Press.down("acct-x:" + username);
                     AccountsManager.remove(account);
-                    this.statusMessage = "Removed account";
+                    AccountsManager.save();
+                    Toasts.show("x", "Removed " + username);
                     return true;
                 }
-                if (!AccountsManager.isActive(account)
-                        && click.x() >= actionX && click.x() < actionX + ACTION_BTN_W
-                        && click.y() >= actionY && click.y() < actionY + 24) {
-                    this.tryLogin(account);
-                    return true;
+                if (!AccountsManager.isActive(account)) {
+                    int loginX = iconX - 8 - Lucide.UI;
+                    if (click.x() >= loginX - 6 && click.x() < loginX + Lucide.UI + 6) {
+                        Press.down("acct-login:" + username);
+                        this.tryLogin(account);
+                        return true;
+                    }
                 }
                 return true;
             }
@@ -418,6 +456,12 @@ public class AccountsPanelContent extends Window {
         }
 
         return false;
+    }
+
+    private boolean hitAction(int innerR, int y, double x, double yClick) {
+        int actionW = GUIStyle.get().bodyFont().getWidth("Add");
+        int actionX = innerR - PAD - actionW;
+        return x >= actionX - 6 && x < innerR - 6 && yClick >= y && yClick < y + ROW_H;
     }
 
     @Override
@@ -437,18 +481,15 @@ public class AccountsPanelContent extends Window {
             return true;
         }
         if (input.key() == InputConstants.KEY_RETURN) {
+            Press.down("acct-create");
             if (this.addMode == AddMode.CRACKED && !this.inputPrimary.isBlank()) {
-                AccountsManager.add(new CrackedAccount(this.inputPrimary.trim()));
-                this.statusMessage = "Added " + this.inputPrimary.trim();
+                String name = this.inputPrimary.trim();
+                AccountsManager.add(new CrackedAccount(name));
+                AccountsManager.save();
+                Toasts.show("check", "Added " + name);
                 this.resetAddState();
-            } else if (this.addMode == AddMode.SESSION && !this.inputPrimary.isBlank() && !this.inputSecondary.isBlank()) {
-                SessionAccount account = new SessionAccount(this.inputPrimary.trim(), this.inputSecondary.trim());
-                if (account.fetchInfo()) {
-                    AccountsManager.add(account);
-                    this.statusMessage = "Added " + account.getUsername();
-                } else {
-                    this.statusMessage = "Invalid session token";
-                }
+            } else if (this.addMode == AddMode.SESSION) {
+                this.addSession();
                 this.resetAddState();
             }
             return true;

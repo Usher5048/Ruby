@@ -34,7 +34,10 @@ public class GamemodeNotifier extends Module {
                 if(this.excludeSelf.value() && isSelf) continue;
 
                 if(oldEntry.getGameMode() == newEntry.gameMode()) continue;
-                this.notifyUser(String.format("%s switched to %s", oldEntry.getProfile().name(), newEntry.gameMode().getSerializedName()));
+                this.toast(oldEntry.getProfile().name())
+                        .icon("user")
+                        .detail("Switched to " + newEntry.gameMode().getSerializedName())
+                        .show();
             }
         });
     }

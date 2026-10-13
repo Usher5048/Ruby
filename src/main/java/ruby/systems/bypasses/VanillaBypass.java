@@ -4,6 +4,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
+import ruby.systems.gui.Toasts;
 
 import java.util.ArrayList;
 import java.util.List;

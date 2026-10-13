@@ -1,6 +1,7 @@
 package ruby.systems.commands;
 
 import ruby.RubyClient;
+import ruby.systems.gui.Toasts;
 
 public class Help extends Command {
     protected Help() {

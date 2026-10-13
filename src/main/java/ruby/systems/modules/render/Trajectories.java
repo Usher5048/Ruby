@@ -82,7 +82,7 @@ public class Trajectories extends Module {
     public void render3D() {
         if (RubyClient.client.level == null || RubyClient.client.player == null) return;
 
-        float tickDelta = RubyClient.client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        float tickDelta = ruby.helpers.render.Renderer.partialTicks();
 
         for (Player player : RubyClient.client.level.players()) {
             if (!otherPlayers.value() && player != RubyClient.client.player) continue;

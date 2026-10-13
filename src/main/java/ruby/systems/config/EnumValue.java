@@ -24,8 +24,19 @@ public class EnumValue<T extends Enum<?>> extends Value<T> {
     }
 
     public void cycle() {
-        int idx = this.value().ordinal() + 1;
-        if (idx >= this.enumValues.length) idx = 0;
+        this.step(1);
+    }
+
+    public void cycleBack() {
+        this.step(-1);
+    }
+
+    private void step(int delta) {
+        int n = this.enumValues.length;
+        if (n == 0) return;
+        int idx = this.value().ordinal() + delta;
+        idx %= n;
+        if (idx < 0) idx += n;
         this.setValue(this.enumValues[idx]);
     }
 

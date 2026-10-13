@@ -3,6 +3,11 @@ package ruby.systems.gui.windows;
 import com.mojang.blaze3d.platform.InputConstants;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.gui.GUIStyle;
+import ruby.systems.gui.GuiTime;
+import ruby.systems.gui.Motion;
+import ruby.systems.gui.Press;
+import ruby.systems.gui.Toasts;
+import ruby.systems.gui.icons.Lucide;
 import ruby.systems.social.FriendsManager;
 import ruby.systems.social.PlayerHeadCache;
 
@@ -15,17 +20,16 @@ import net.minecraft.client.input.MouseButtonEvent;
 public class FriendsPanelContent extends Window {
     private static final int PAD = 14;
     private static final int INNER_L = 1;
-    private static final int ROW_H = 40;
-    private static final int ADD_BTN_ROW_H = 44;
-    private static final int ADD_ROW_H = 40;
-    private static final int HEAD_SIZE = 24;
-    private static final int CREATE_BTN_W = 52;
-    private static final int INPUT_GAP = 6;
+    private static final int ROW_H = 31;
+    private static final int LAST_EXTRA = 4;
+    private static final int HEAD_SIZE = 16;
 
     private boolean showAddInput = false;
     private String inputText = "";
     private int cursorBlink = 0;
     private float contentAlpha = 1f;
+    private float addMix;
+    private float[] rowMix;
 
     public void setContentAlpha(float contentAlpha) {
         this.contentAlpha = contentAlpha;
@@ -37,12 +41,16 @@ public class FriendsPanelContent extends Window {
         this.handleChildren = false;
     }
 
+    private int bodyRows(int friendCount) {
+        int rows = 1;
+        if (this.showAddInput) rows++;
+        else if (friendCount == 0) rows++;
+        return rows + friendCount;
+    }
+
     @Override
     public int getHeight() {
-        List<String> friends = FriendsManager.getFriends();
-        int h = this.showAddInput ? ADD_ROW_H : ADD_BTN_ROW_H;
-        h += friends.size() * ROW_H;
-        if (friends.isEmpty() && !this.showAddInput) h += 32;
+        int h = this.bodyRows(FriendsManager.getFriends().size()) * ROW_H + LAST_EXTRA;
         this.height = h;
         return h;
     }
@@ -55,102 +63,148 @@ public class FriendsPanelContent extends Window {
 
     @Override
     public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
-        this.drawContent(context, mouseX, mouseY);
+        this.drawContent(context, mouseX, mouseY, GuiTime.toSeconds(dt));
     }
 
-    private void drawContent(GuiGraphicsExtractor context, int mouseX, int mouseY) {
+    private void drawContent(GuiGraphicsExtractor context, int mouseX, int mouseY, float seconds) {
         GUIStyle style = GUIStyle.get();
-        int w = this.getWidth();
-        int innerR = w - INNER_L;
-        int y = 0;
+        int innerR = this.getWidth() - INNER_L;
         List<String> friends = FriendsManager.getFriends();
+        int rows = this.bodyRows(friends.size());
+        int y = 0;
+        int row = 0;
+
+        y = this.drawAddRow(context, style, innerR, y, mouseX, mouseY, row == rows - 1, seconds);
+        row++;
 
         if (this.showAddInput) {
-            y = this.drawAddInput(context, style, w, innerR, y, mouseX, mouseY);
-        } else {
-            y = this.drawAddButton(context, style, w, innerR, y, mouseX, mouseY);
-        }
-
-        if (friends.isEmpty() && !this.showAddInput) {
-            int emptyTop = y;
-            int emptyBottom = y + 32;
-            ModuleTypeWindow.fillBottomRoundedRect(context, INNER_L, emptyTop, innerR, emptyBottom, GUIStyle.RADIUS_ROW,
-                    GUIStyle.withAlpha(style.bgPanel(), this.contentAlpha));
-            int ty = y + 8;
-            style.bodyFont().draw(context, "No friends added", PAD, ty,
-                    GUIStyle.withAlpha(style.textMuted(), this.contentAlpha));
-            y += 32;
+            y = this.drawInputRow(context, style, innerR, y, mouseX, mouseY, row == rows - 1, seconds);
+            row++;
+        } else if (friends.isEmpty()) {
+            y = this.drawEmptyRow(context, style, innerR, y, row == rows - 1);
+            row++;
         }
 
         for (int i = 0; i < friends.size(); i++) {
-            String name = friends.get(i);
-            boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + ROW_H;
-            boolean last = i == friends.size() - 1;
-
-            if (hovered) {
-                int hover = GUIStyle.withAlpha(style.bgHover(), this.contentAlpha);
-                ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + ROW_H, hover, last);
-            }
-
-            this.drawPlayerHead(context, style, name, PAD, y + (ROW_H - HEAD_SIZE) / 2);
-            int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
-            style.bodyFont().draw(context, name, PAD + HEAD_SIZE + 10, textY,
-                    GUIStyle.withAlpha(style.text(), this.contentAlpha));
-
-            boolean removeHovered = mouseX >= innerR - 28 && mouseX < innerR - 8
-                    && mouseY >= y + 8 && mouseY < y + ROW_H - 8;
-            style.bodyFont().draw(context, "\u2715", innerR - 22, textY,
-                    GUIStyle.withAlpha(removeHovered ? 0xFFC25555 : style.textMuted(), this.contentAlpha));
-
-            if (!last) {
-                context.fill(INNER_L, y + ROW_H - 1, innerR, y + ROW_H, style.borderSubtle());
-            }
-
-            y += ROW_H;
+            y = this.drawFriend(context, style, innerR, y, mouseX, mouseY, friends.get(i), i,
+                    row == rows - 1, seconds);
+            row++;
         }
     }
 
-    private int drawAddButton(GuiGraphicsExtractor context, GUIStyle style, int w, int innerR, int y, int mx, int my) {
-        int btnR = innerR - PAD;
-        int by = y + 10;
-        int bh = 24;
-        boolean hovered = mx >= PAD && mx < btnR && my >= by && my < by + bh;
-        int color = hovered ? style.textBright() : style.ruby();
-        ModuleTypeWindow.drawRoundedBadge(context, PAD, by, btnR, by + bh,
-                hovered ? style.rubyBg() : 0x00000000, style.border());
-        this.drawTextInRect(style.bodyFont(), context, "+ Add Friend", PAD, by, btnR, by + bh,
-                GUIStyle.withAlpha(color, this.contentAlpha));
-        context.fill(INNER_L, y + ADD_BTN_ROW_H - 1, innerR, y + ADD_BTN_ROW_H, style.borderSubtle());
-        return y + ADD_BTN_ROW_H;
+    private int rowHeight(boolean last) {
+        return last ? ROW_H + LAST_EXTRA : ROW_H;
     }
 
-    private int drawAddInput(GuiGraphicsExtractor context, GUIStyle style, int w, int innerR, int y, int mx, int my) {
-        int rowY = y + 8;
-        int inputH = 24;
-        int contentR = innerR - PAD;
-        int btnX = contentR - CREATE_BTN_W;
-        int inputR = btnX - INPUT_GAP;
+    private int drawAddRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                           int mouseX, int mouseY, boolean last, float seconds) {
+        int rowH = this.rowHeight(last);
+        boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + rowH;
+        float target = hovered || this.showAddInput ? 1f : 0f;
+        this.addMix = Motion.follow(this.addMix, target, seconds, Motion.HOVER);
+        if (this.addMix > 0.01f) {
+            int bg = GUIStyle.withAlpha(style.bgHover(), this.contentAlpha * this.addMix);
+            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + rowH, bg, last);
+        }
 
-        ModuleTypeWindow.drawRoundedBadge(context, PAD, rowY, inputR, rowY + inputH, style.bgBase(), style.border());
+        int iconColor = Motion.mix(style.textMuted(), style.ruby(), this.addMix);
+        int textColor = Motion.mix(style.text(), style.textBright(), this.addMix);
+        int iconY = y + (ROW_H - Lucide.UI) / 2;
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        Press.icon(context, "plus", PAD, iconY, GUIStyle.withAlpha(iconColor, this.contentAlpha), "friends-new");
+        Press.label(style.bodyFont(), context, "Add friend", PAD + Lucide.UI + 8, textY,
+                GUIStyle.withAlpha(textColor, this.contentAlpha), "friends-new");
 
-        String display = this.inputText.isEmpty() ? "Username..." : this.inputText;
+        if (!last) {
+            context.fill(INNER_L, y + rowH - 1, innerR, y + rowH,
+                    GUIStyle.withAlpha(style.borderSubtle(), this.contentAlpha));
+        }
+        return y + rowH;
+    }
+
+    private int drawInputRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                             int mouseX, int mouseY, boolean last, float seconds) {
+        int rowH = this.rowHeight(last);
+        context.fill(INNER_L, y, innerR, y + ROW_H, GUIStyle.withAlpha(style.bgBase(), this.contentAlpha));
+
+        String display = this.inputText.isEmpty() ? "Username" : this.inputText;
         int col = this.inputText.isEmpty() ? style.textMuted() : style.text();
-        int textY = rowY + (inputH - style.bodyFont().fontHeight) / 2;
-        style.bodyFont().draw(context, display, PAD + 8, textY, GUIStyle.withAlpha(col, this.contentAlpha));
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        style.bodyFont().draw(context, display, PAD, textY, GUIStyle.withAlpha(col, this.contentAlpha));
 
         if (this.cursorBlink < 10) {
-            int cx = PAD + 8 + style.bodyFont().getWidth(this.inputText);
+            int cx = PAD + style.bodyFont().getWidth(this.inputText);
             context.fill(cx, textY, cx + 1, textY + style.bodyFont().fontHeight,
                     GUIStyle.withAlpha(style.text(), this.contentAlpha));
         }
 
-        boolean addHovered = mx >= btnX && mx < contentR && my >= rowY && my < rowY + inputH;
-        ModuleTypeWindow.fillSmoothRoundedRect(context, btnX, rowY, contentR, rowY + inputH, GUIStyle.RADIUS_BADGE,
-                GUIStyle.withAlpha(addHovered ? style.rubyHover() : style.ruby(), this.contentAlpha));
-        this.drawTextInRect(style.bodyFont(), context, "Add", btnX, rowY, contentR, rowY + inputH, 0xFFE8E4E5);
+        String action = "Add";
+        int actionW = style.bodyFont().getWidth(action);
+        int actionX = innerR - PAD - actionW;
+        boolean actionHovered = mouseX >= actionX - 6 && mouseX < innerR - 6
+                && mouseY >= y && mouseY < y + ROW_H;
+        Press.label(style.bodyFont(), context, action, actionX, textY,
+                GUIStyle.withAlpha(actionHovered ? style.rubyHover() : style.ruby(), this.contentAlpha), "friends-add");
 
-        context.fill(INNER_L, y + ADD_ROW_H - 1, innerR, y + ADD_ROW_H, style.borderSubtle());
-        return y + ADD_ROW_H;
+        if (!last) {
+            context.fill(INNER_L, y + rowH - 1, innerR, y + rowH,
+                    GUIStyle.withAlpha(style.borderSubtle(), this.contentAlpha));
+        }
+        return y + rowH;
+    }
+
+    private int drawEmptyRow(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y, boolean last) {
+        int rowH = this.rowHeight(last);
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        style.bodyFont().draw(context, "No friends yet", PAD, textY,
+                GUIStyle.withAlpha(style.textMuted(), this.contentAlpha));
+        if (!last) {
+            context.fill(INNER_L, y + rowH - 1, innerR, y + rowH,
+                    GUIStyle.withAlpha(style.borderSubtle(), this.contentAlpha));
+        }
+        return y + rowH;
+    }
+
+    private int drawFriend(GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
+                           int mouseX, int mouseY, String name, int index, boolean last, float seconds) {
+        int rowH = this.rowHeight(last);
+        boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + rowH;
+        float mix = this.rowMix(index, hovered ? 1f : 0f, seconds);
+        if (mix > 0.01f) {
+            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + rowH,
+                    GUIStyle.withAlpha(style.bgHover(), this.contentAlpha * mix), last);
+        }
+
+        int headY = y + (ROW_H - HEAD_SIZE) / 2;
+        this.drawPlayerHead(context, style, name, PAD, headY);
+        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
+        style.bodyFont().draw(context, name, PAD + HEAD_SIZE + 8, textY,
+                GUIStyle.withAlpha(style.text(), this.contentAlpha));
+
+        int iconX = innerR - PAD - Lucide.UI;
+        int iconY = y + (ROW_H - Lucide.UI) / 2;
+        boolean removeHovered = mouseX >= iconX - 6 && mouseX < innerR - 6
+                && mouseY >= y && mouseY < y + ROW_H;
+        Press.icon(context, "x", iconX, iconY,
+                GUIStyle.withAlpha(removeHovered ? 0xFFC25555 : style.textMuted(), this.contentAlpha), "friends-x:" + name);
+
+        if (!last) {
+            context.fill(INNER_L, y + rowH - 1, innerR, y + rowH,
+                    GUIStyle.withAlpha(style.borderSubtle(), this.contentAlpha));
+        }
+        return y + rowH;
+    }
+
+    private float rowMix(int index, float target, float seconds) {
+        if (this.rowMix == null || this.rowMix.length <= index) {
+            float[] next = new float[index + 1];
+            if (this.rowMix != null) System.arraycopy(this.rowMix, 0, next, 0, this.rowMix.length);
+            next[index] = target;
+            this.rowMix = next;
+            return target;
+        }
+        this.rowMix[index] = Motion.follow(this.rowMix[index], target, seconds, Motion.HOVER);
+        return this.rowMix[index];
     }
 
     private void drawPlayerHead(GuiGraphicsExtractor context, GUIStyle style, String username, int x, int y) {
@@ -162,51 +216,69 @@ public class FriendsPanelContent extends Window {
         }
     }
 
+    private void submitFriend() {
+        String name = this.inputText.trim();
+        if (FriendsManager.addFriend(this.inputText)) {
+            ConfigManager.saveState();
+            Toasts.show("plus", "Added " + name);
+        }
+        this.inputText = "";
+        this.showAddInput = false;
+    }
+
     @Override
     public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
         if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
-        int w = this.getWidth();
-        int innerR = w - INNER_L;
-        int y = 0;
+        int innerR = this.getWidth() - INNER_L;
         List<String> friends = FriendsManager.getFriends();
+        int rows = this.bodyRows(friends.size());
+        int y = 0;
+        int row = 0;
 
-        int contentR = innerR - PAD;
+        int addH = this.rowHeight(row == rows - 1);
+        if (click.y() >= y && click.y() < y + addH) {
+            Press.down("friends-new");
+            this.showAddInput = !this.showAddInput;
+            if (this.showAddInput) this.inputText = "";
+            return true;
+        }
+        y += addH;
+        row++;
 
         if (this.showAddInput) {
-            int rowY = y + 8;
-            int btnX = contentR - CREATE_BTN_W;
-            if (click.x() >= btnX && click.x() < contentR && click.y() >= rowY && click.y() < rowY + 24) {
-                if (FriendsManager.addFriend(this.inputText)) {
-                    ConfigManager.saveState();
+            int inputH = this.rowHeight(row == rows - 1);
+            if (click.y() >= y && click.y() < y + inputH) {
+                String action = "Add";
+                int actionX = innerR - PAD - GUIStyle.get().bodyFont().getWidth(action);
+                if (click.x() >= actionX - 6) {
+                    Press.down("friends-add");
+                    this.submitFriend();
                 }
-                this.inputText = "";
-                this.showAddInput = false;
                 return true;
             }
-            int inputR = btnX - INPUT_GAP;
-            if (click.x() >= PAD && click.x() < inputR && click.y() >= rowY && click.y() < rowY + 24) {
-                return true;
-            }
-            y += ADD_ROW_H;
-        } else {
-            if (click.x() >= PAD && click.x() < contentR && click.y() >= y + 10 && click.y() < y + 34) {
-                this.showAddInput = true;
-                this.inputText = "";
-                return true;
-            }
-            y += ADD_BTN_ROW_H;
+            y += inputH;
+            row++;
+        } else if (friends.isEmpty()) {
+            y += this.rowHeight(row == rows - 1);
+            row++;
         }
 
-        if (friends.isEmpty() && !this.showAddInput) y += 32;
-
         for (int i = 0; i < friends.size(); i++) {
-            if (click.y() >= y && click.y() < y + ROW_H) {
-                FriendsManager.removeFriend(i);
-                ConfigManager.saveState();
+            int rowH = this.rowHeight(row == rows - 1);
+            if (click.y() >= y && click.y() < y + rowH) {
+                int iconX = innerR - PAD - Lucide.UI;
+                if (click.x() >= iconX - 6) {
+                    String name = friends.get(i);
+                    Press.down("friends-x:" + name);
+                    FriendsManager.removeFriend(i);
+                    ConfigManager.saveState();
+                    Toasts.show("x", "Removed " + name);
+                }
                 return true;
             }
-            y += ROW_H;
+            y += rowH;
+            row++;
         }
 
         return false;
@@ -226,11 +298,7 @@ public class FriendsPanelContent extends Window {
             return true;
         }
         if (input.key() == InputConstants.KEY_RETURN) {
-            if (FriendsManager.addFriend(this.inputText)) {
-                ConfigManager.saveState();
-            }
-            this.inputText = "";
-            this.showAddInput = false;
+            this.submitFriend();
             return true;
         }
         return true;

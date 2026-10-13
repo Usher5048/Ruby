@@ -10,6 +10,10 @@ import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.renderpearl.api.pipeline.UniformType;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.renderer.state.level.CameraEntityRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.util.Mth;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -57,22 +61,102 @@ public class Renderer {
     private static Matrix4f projection;
     private static Vec3 screenCenter;
     private static Matrix4f position;
+    /** Camera position the world was extracted with. Not the live camera, which is a frame ahead of the HUD. */
+    private static Vec3 cameraPos;
+    private static float cachedYaw = Float.NaN;
+    private static float cachedPitch = Float.NaN;
+    private static float cachedPartial = Float.NaN;
+    private static Vec3 cachedPos;
+
+    /**
+     * The HUD is extracted before the world is drawn, so matrices captured during the world pass
+     * are still the previous frame. Read the camera snapshot that was just extracted instead.
+     */
+    public static void ensureCamera() {
+        CameraRenderState camera = RubyClient.client.gameRenderer.gameRenderState().levelRenderState.cameraRenderState;
+        if (camera == null || camera.pos == null || camera.viewRotationMatrix == null || camera.projectionMatrix == null) return;
+        if (Renderer.position != null
+                && camera.yRot == Renderer.cachedYaw
+                && camera.xRot == Renderer.cachedPitch
+                && camera.cameraEntityPartialTicks == Renderer.cachedPartial
+                && camera.pos.equals(Renderer.cachedPos)) {
+            return;
+        }
+
+        Renderer.cachedYaw = camera.yRot;
+        Renderer.cachedPitch = camera.xRot;
+        Renderer.cachedPartial = camera.cameraEntityPartialTicks;
+        Renderer.cachedPos = camera.pos;
+
+        Matrix4f view = new Matrix4f(camera.viewRotationMatrix);
+        Matrix4f proj = new Matrix4f(camera.projectionMatrix);
+        PoseStack bob = new PoseStack();
+        Renderer.bobHurt(camera, bob);
+        if (RubyClient.client.gameRenderer.gameRenderState().optionsRenderState.bobView) {
+            Renderer.bobView(camera, bob);
+        }
+        proj.mul(bob.last().pose());
+        Renderer.capture(proj, view, camera.pos);
+    }
+
+    public static Vec3 cameraPos() {
+        if (Renderer.cameraPos == null) Renderer.ensureCamera();
+        return Renderer.cameraPos != null
+                ? Renderer.cameraPos
+                : RubyClient.client.gameRenderer.mainCamera().position();
+    }
+
+    /** Partial tick the level extractor stored for this frame's entity positions. */
+    public static float partialTicks() {
+        return RubyClient.client.gameRenderer.gameRenderState().levelRenderState.worldPartialTicks;
+    }
+
+    private static void bobHurt(CameraRenderState camera, PoseStack stack) {
+        CameraEntityRenderState entity = camera.entityRenderState;
+        if (entity == null || !entity.isLiving) return;
+        if (entity.isDeadOrDying) {
+            float death = Math.min(entity.deathTime, 20f);
+            stack.rotateDegrees(Axis.ZP, 40f - 8000f / (death + 200f));
+        }
+        float hurt = entity.hurtTime;
+        if (hurt < 0f) return;
+        if (entity.hurtDuration != 0) hurt /= entity.hurtDuration;
+        hurt = Mth.sin(hurt * hurt * hurt * hurt * (float) Math.PI);
+        float dir = entity.hurtDir;
+        stack.rotateDegrees(Axis.YP, -dir);
+        float tilt = (float) (-hurt * 14.0 * RubyClient.client.gameRenderer.gameRenderState().optionsRenderState.damageTiltStrength);
+        stack.rotateDegrees(Axis.ZP, tilt);
+        stack.rotateDegrees(Axis.YP, dir);
+    }
+
+    private static void bobView(CameraRenderState camera, PoseStack stack) {
+        CameraEntityRenderState entity = camera.entityRenderState;
+        if (entity == null || !entity.isPlayer) return;
+        float distance = entity.backwardsInterpolatedWalkDistance;
+        float bob = entity.bob;
+        float angle = distance * (float) Math.PI;
+        stack.translate(Mth.sin(angle) * bob * 0.5f, -Math.abs(Mth.cos(angle) * bob), 0f);
+        stack.rotateDegrees(Axis.ZP, Mth.sin(angle) * bob * 3f);
+        stack.rotateDegrees(Axis.XP, Math.abs(Mth.cos(angle - 0.2f)) * bob * 5f);
+    }
+
     public static void updateMatrices(Matrix4f projection, Matrix4f position) {
+        Vec3 cam = Renderer.cameraPos != null
+                ? Renderer.cameraPos
+                : RubyClient.client.gameRenderer.mainCamera().position();
+        Renderer.capture(projection, position, cam);
+    }
+
+    private static void capture(Matrix4f projection, Matrix4f view, Vec3 cam) {
         Renderer.projection = projection;
-        Renderer.position = position;
+        Renderer.position = view;
+        Renderer.cameraPos = cam;
 
-        Matrix4f invProj = new Matrix4f(Renderer.projection).invert();
-        Matrix4f invView = new Matrix4f(Renderer.position).invert();
-
+        Matrix4f invProj = new Matrix4f(projection).invert();
+        Matrix4f invView = new Matrix4f(view).invert();
         Vector4f center = new Vector4f(0, 0, 0.5f, 1).mul(invProj).mul(invView);
         center.div(center.w);
-
-        Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
-        Renderer.screenCenter = new Vec3(
-                cam.x() + center.x,
-                cam.y() + center.y,
-                cam.z() + center.z
-        );
+        Renderer.screenCenter = new Vec3(cam.x() + center.x, cam.y() + center.y, cam.z() + center.z);
     }
 
     public static Matrix4f projection() {
@@ -101,7 +185,7 @@ public class Renderer {
 
         center = center.div(center.w);
 
-        Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
+        Vec3 cam = Renderer.cameraPos();
         return new Vec3(
                 cam.x() + center.x,
                 cam.y() + center.y,
@@ -110,7 +194,8 @@ public class Renderer {
     }
 
     public static Vec2 worldToScreen(Vec3 pos) {
-        Vec3 cam = RubyClient.client.gameRenderer.mainCamera().position();
+        Renderer.ensureCamera();
+        Vec3 cam = Renderer.cameraPos();
         Vector4f vec = new Vector4f(
                 (float) (pos.x() - cam.x()),
                 (float) (pos.y() - cam.y()),

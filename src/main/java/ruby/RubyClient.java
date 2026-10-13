@@ -11,7 +11,6 @@ import net.minecraft.SharedConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +26,10 @@ import ruby.systems.events.Events;
 import ruby.systems.events.Render2DEvent;
 import ruby.systems.events.TickEvents;
 import ruby.systems.gui.ClickGUI;
+import ruby.systems.gui.Toasts;
 import ruby.systems.gui.LoadingOverlay;
 import ruby.systems.modules.Modules;
+import ruby.systems.modules.render.Freecam;
 
 import java.io.InputStream;
 
@@ -74,28 +75,6 @@ public class RubyClient implements ModInitializer {
 	public static void log(String message) {
 		RubyClient.LOGGER.info(message);
 	}
-	public static void notifyUser(String message) {
-		RubyClient.notifyUser(message, false);
-	}
-	public static void notifyUser(Component message) {
-		RubyClient.notifyUser(message, false);
-	}
-	public static void notifyUser(String message, boolean actionBar) {
-		RubyClient.notifyUser(Component.nullToEmpty(message), actionBar);
-	}
-
-	public static void notifyUser(Component message, boolean actionBar) {
-		if(RubyClient.client.player == null) return;
-		Component msg = Component.empty()
-				.append(!actionBar ? Component.literal("[").withColor(0x666666) : Component.empty())
-				.append(!actionBar ? Component.literal(RubyClient.MOD_NAME).withColor(0xCC3366) : Component.empty())
-				.append(!actionBar ? Component.literal("] ").withColor(0x666666) : Component.empty())
-				.append(message);
-
-		if(actionBar) RubyClient.client.player.sendOverlayMessage(msg);
-		else RubyClient.client.player.sendSystemMessage(msg);
-	}
-
 	public static Identifier identifier(String value) {
 		return Identifier.fromNamespaceAndPath(RubyClient.MOD_ID, value);
 	}
@@ -107,6 +86,7 @@ public class RubyClient implements ModInitializer {
 		if(configVer != ConfigManager.VERSION_ERROR) overlay.log("Loaded client configs (v" + configVer + ")");
 		else overlay.log("Failed to load client configs, using default!", 0xFF3333);
 
+		AccountsManager.load();
 		AccountsManager.loginLast();
 		overlay.log("Loaded " + AccountsManager.getAccounts().size() + " accounts");
 		overlay.log("Loaded profile: '" + ProfileManager.activeProfile() + "'");
@@ -117,7 +97,10 @@ public class RubyClient implements ModInitializer {
 		Bypasses.get().init();
 		Events.TICK.register(TickEvents.BEGIN, event -> {
 			Bypasses.get().tick();
-			if(RubyClient.openGUIKey.isDown()) RubyClient.client.setScreenAndShow(new ClickGUI());
+			if(RubyClient.openGUIKey.consumeClick()) {
+				if(RubyClient.client.gui.screen() instanceof ClickGUI clickGui) clickGui.requestClose();
+				else if(RubyClient.client.gui.screen() == null) RubyClient.openClickGui();
+			}
 			if(RubyClient.openCommandKey.isDown()) RubyClient.client.setScreenAndShow(new ChatScreen(RubyClient.chatPrefix.value(), false));
 		});
 
@@ -130,6 +113,20 @@ public class RubyClient implements ModInitializer {
 		);
 
 		overlay.log("Registered 2D rendering event");
+	}
+
+	/**
+	 * {@code setScreenAndShow} presents a frame with the world skipped, which
+	 * flashes black under the dim. {@code setScreen} waits for the next real frame.
+	 */
+	public static void notifyUser(String message) {
+		Toasts.toast(message).show();
+	}
+
+	public static void openClickGui() {
+		Freecam freecam = Modules.getByClass(Freecam.class);
+		if (freecam != null && freecam.enabled()) freecam.onScreenOpen();
+		RubyClient.client.gui.setScreen(new ClickGUI());
 	}
 
 	@Override

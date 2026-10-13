@@ -5,6 +5,10 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import ruby.systems.config.ProfileManager;
 import ruby.systems.gui.ClickGuiSelection;
 import ruby.systems.gui.GUIStyle;
+import ruby.systems.gui.GuiTime;
+import ruby.systems.gui.Motion;
+import ruby.systems.gui.Press;
+import ruby.systems.gui.icons.Lucide;
 import ruby.systems.modules.ModuleType;
 import ruby.systems.social.FriendsManager;
 
@@ -16,18 +20,24 @@ public class CategorySidebarWindow extends Window {
     public static final int WIDTH = ClickGuiLayoutWindow.SIDEBAR_WIDTH;
     private static final int PAD = 14;
     private static final int INNER_L = 1;
-    private static final int HEADER_H = 41;
+    public static final int HEADER_H = 41;
     private static final int ROW_H = 31;
+    private static final int THEME_EXTRA = 3;
     private static final int MISC_LABEL_H = 19;
     private static final int PANEL_RADIUS = GUIStyle.RADIUS_PANEL;
-    private static final int ARROW_W = 5;
-    private static final int ARROW_H = 5;
 
     private final List<ModuleType> categories;
+    private final ClickGuiSelection[] categorySels;
+    private final ClickGuiSelection friendsSel = new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.FRIENDS);
+    private final ClickGuiSelection profilesSel = new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.PROFILES);
+    private final ClickGuiSelection themeSel = new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.THEME);
+    private String profileRaw;
+    private String profileLabel = "";
     private ClickGuiSelection selection;
     private boolean searchActive;
     private final Consumer<ClickGuiSelection> onSelect;
     private final Runnable onHeaderDrag;
+    private float[] rowMix = new float[0];
 
     public CategorySidebarWindow(
             int x, int y,
@@ -38,6 +48,10 @@ public class CategorySidebarWindow extends Window {
     ) {
         super(x, y, WIDTH, 400);
         this.categories = categories;
+        this.categorySels = new ClickGuiSelection[categories.size()];
+        for (int i = 0; i < categories.size(); i++) {
+            this.categorySels[i] = new ClickGuiSelection.ModuleCategory(categories.get(i));
+        }
         this.selection = initial;
         this.onSelect = onSelect;
         this.onHeaderDrag = onHeaderDrag;
@@ -59,7 +73,7 @@ public class CategorySidebarWindow extends Window {
 
     @Override
     public int getHeight() {
-        int h = HEADER_H + 6 + this.categories.size() * ROW_H + 8 + MISC_LABEL_H + 3 * ROW_H;
+        int h = HEADER_H + this.categories.size() * ROW_H + 1 + MISC_LABEL_H + 3 * ROW_H + THEME_EXTRA;
         this.height = h;
         return h;
     }
@@ -80,60 +94,75 @@ public class CategorySidebarWindow extends Window {
         int logoY = (HEADER_H - style.logoFont().fontHeight) / 2;
         style.logoFont().draw(context, "Ruby", PAD, logoY, style.ruby());
 
-        String profile = FriendsManager.capitalizeProfileName(ProfileManager.activeProfile());
+        String rawProfile = ProfileManager.activeProfile();
+        if (rawProfile == null) rawProfile = "";
+        if (!rawProfile.equals(this.profileRaw)) {
+            this.profileRaw = rawProfile;
+            this.profileLabel = FriendsManager.capitalizeProfileName(rawProfile);
+        }
+        String profile = this.profileLabel;
         int profileW = style.profileFont().getWidth(profile);
         int profileY = (HEADER_H - style.profileFont().fontHeight) / 2;
         style.profileFont().draw(context, profile, w - PAD - profileW, profileY, style.textMuted());
 
-        int y = HEADER_H + 6;
+        int y = HEADER_H;
 
-        for (ModuleType type : this.categories) {
-            ClickGuiSelection catSel = new ClickGuiSelection.ModuleCategory(type);
-            y = this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, type.toString(), catSel, false);
+        int row = 0;
+        for (int i = 0; i < this.categories.size(); i++) {
+            ModuleType type = this.categories.get(i);
+            y = this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, type.toString(), this.categorySels[i], false, ROW_H, row++, dt);
         }
 
-        y += 4;
         context.fill(INNER_L, y, innerR, y + 1, style.borderSubtle());
-        y += 4;
+        y += 1;
 
-        style.labelFont().draw(context, "MISC", PAD, y + 4, style.textMuted());
+        style.labelFont().draw(context, "Client", PAD, y + 4, style.textMuted());
         y += MISC_LABEL_H;
 
-        y = this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, "Friends",
-                new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.FRIENDS), false);
-        y = this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, "Profiles",
-                new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.PROFILES), false);
-        this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, "Theme",
-                new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.THEME), true);
+        y = this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, "Friends", this.friendsSel, false, ROW_H, row++, dt);
+        y = this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, "Profiles", this.profilesSel, false, ROW_H, row++, dt);
+        this.drawCategoryRow(context, style, innerR, y, mouseX, mouseY, "Settings", this.themeSel, true, ROW_H + THEME_EXTRA, row, dt);
 
         context.disableScissor();
     }
 
     private int drawCategoryRow(
             GuiGraphicsExtractor context, GUIStyle style, int innerR, int y,
-            int mouseX, int mouseY, String label, ClickGuiSelection sel, boolean lastRow
+            int mouseX, int mouseY, String label, ClickGuiSelection sel, boolean lastRow, int rowH,
+            int index, float dt
     ) {
         boolean active = !this.searchActive && this.selection.equals(sel);
-        boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + ROW_H;
+        boolean hovered = mouseX >= INNER_L && mouseY >= y && mouseX < innerR && mouseY < y + rowH;
+        float target = active ? 1f : hovered ? 0.85f : 0f;
+        float mix = this.rowMix(index, target, dt);
 
-        if (active || hovered) {
-            int bg = style.rubyBg();
-            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + ROW_H, bg, lastRow);
-            if (hovered && !active) {
-                ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + ROW_H, 0x08FFFFFF, lastRow);
-            }
+        if (mix > 0.01f) {
+            int bg = Motion.mix(0, style.rubyBg(), mix);
+            ModuleTypeWindow.fillRowBackground(context, INNER_L, y, innerR, y + rowH, bg, lastRow);
         }
 
-        int textY = y + (ROW_H - style.bodyFont().fontHeight) / 2;
-        int textColor = active ? style.ruby() : (hovered ? style.textBright() : style.catInactive());
-        style.bodyFont().draw(context, label, PAD, textY, textColor);
+        int textY = y + (rowH - style.bodyFont().fontHeight) / 2;
+        int textColor = Motion.mix(style.catInactive(), style.ruby(), mix);
 
-        int arrowColor = active ? style.ruby() : style.arrowInactive();
-        int arrowX = innerR - PAD - ARROW_W;
-        int arrowY = y + (ROW_H - ARROW_H) / 2;
-        ModuleTypeWindow.drawChevron(context, arrowX, arrowY, arrowColor, true);
+        int arrowColor = Motion.mix(style.arrowInactive(), style.ruby(), mix);
+        int arrowX = innerR - PAD - Lucide.UI;
+        int arrowY = y + (rowH - Lucide.UI) / 2;
+        Press.icon(context, "chevron-right", arrowX, arrowY, arrowColor, "nav:" + label);
+        Press.label(style.bodyFont(), context, label, PAD, textY, textColor, "nav:" + label);
 
-        return y + ROW_H;
+        return y + rowH;
+    }
+
+    private float rowMix(int index, float target, float dt) {
+        if (this.rowMix == null || this.rowMix.length <= index) {
+            float[] next = new float[index + 1];
+            if (this.rowMix != null) System.arraycopy(this.rowMix, 0, next, 0, this.rowMix.length);
+            next[index] = target;
+            this.rowMix = next;
+            return target;
+        }
+        this.rowMix[index] = Motion.follow(this.rowMix[index], target, GuiTime.toSeconds(dt), Motion.HOVER);
+        return this.rowMix[index];
     }
 
     @Override
@@ -145,28 +174,32 @@ public class CategorySidebarWindow extends Window {
             return true;
         }
 
-        int y = HEADER_H + 6;
-        for (ModuleType type : this.categories) {
+        int y = HEADER_H;
+        for (int i = 0; i < this.categories.size(); i++) {
             if (click.y() >= y && click.y() < y + ROW_H) {
-                this.select(new ClickGuiSelection.ModuleCategory(type));
+                Press.down("nav:" + this.categories.get(i).toString());
+                this.select(this.categorySels[i]);
                 return true;
             }
             y += ROW_H;
         }
 
-        y += 8 + MISC_LABEL_H;
+        y += 1 + MISC_LABEL_H;
         if (click.y() >= y && click.y() < y + ROW_H) {
-            this.select(new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.FRIENDS));
+            Press.down("nav:Friends");
+            this.select(this.friendsSel);
             return true;
         }
         y += ROW_H;
         if (click.y() >= y && click.y() < y + ROW_H) {
-            this.select(new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.PROFILES));
+            Press.down("nav:Profiles");
+            this.select(this.profilesSel);
             return true;
         }
         y += ROW_H;
-        if (click.y() >= y && click.y() < y + ROW_H) {
-            this.select(new ClickGuiSelection.Special(ClickGuiSelection.SpecialView.THEME));
+        if (click.y() >= y && click.y() < y + ROW_H + THEME_EXTRA) {
+            Press.down("nav:Settings");
+            this.select(this.themeSel);
             return true;
         }
 

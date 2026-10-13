@@ -165,7 +165,7 @@ public class LogoutSpots extends Module {
     public void render2D(Render2DEvent event) {
         GUIStyle style = GUIStyle.get();
         int panelBg = withPanelAlpha(nameBackgroundColor.value());
-        int panelBorder = GUIStyle.withAlpha(style.borderSubtle(), ((panelBg >> 24) & 0xFF) / 255f);
+        int panelBorder = GUIStyle.withAlpha(style.borderPanel(), ((panelBg >> 24) & 0xFF) / 255f);
 
         for (Entry entry : players) {
             entry.render2D(event.getContext(), style, panelBg, panelBorder);
@@ -223,7 +223,6 @@ public class LogoutSpots extends Module {
                     nameColor.value(),
                     panelBg,
                     panelBorder,
-                    true,
                     net.minecraft.world.item.ItemStack.EMPTY
             );
         }

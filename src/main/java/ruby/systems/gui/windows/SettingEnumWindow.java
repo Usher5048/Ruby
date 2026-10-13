@@ -5,44 +5,49 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
 import ruby.systems.config.EnumValue;
 import ruby.systems.gui.GUIStyle;
+import ruby.systems.gui.Motion;
 
 public class SettingEnumWindow extends SettingWindow {
 
-    private static final int INDENT = 14;
-
     public SettingEnumWindow(int x, int y, int width, EnumValue<?> value) {
-        super(x, y, width, 26, value);
+        super(x, y, width, ROW, value);
         this.handleChildren = false;
     }
 
     @Override
     public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
+        if (this.getHeight() <= 0) return;
         GUIStyle style = GUIStyle.get();
-        int h = this.getHeight();
         int w = this.getWidth();
+        this.clip(context);
+        this.paintHover(context, mouseX, mouseY, dt);
 
-        int textY = (h - style.bodyFont().fontHeight) / 2;
-        this.drawText(style.bodyFont(), context, this.value.name(), INDENT, textY, 0xFF6A6567);
-
+        this.beginItem(context);
+        w = this.designWidth();
         String display = this.value.value().toString();
-        int valW = style.monospaceFont().getWidth(display);
-        int badgeW = valW + 16;
-        int badgeH = style.monospaceFont().fontHeight + 4;
-        int badgeX = w - INDENT - badgeW;
-        int badgeY = (h - badgeH) / 2;
-
-        ModuleTypeWindow.fillSmoothRoundedRect(context, badgeX, badgeY,
-                badgeX + badgeW, badgeY + badgeH, GUIStyle.RADIUS_BADGE, style.bgHover());
-        this.drawBorder(context, badgeX, badgeY, badgeX + badgeW, badgeY + badgeH, style.border(), 1);
-
-        this.drawText(style.monospaceFont(), context, display,
-                badgeX + 8, badgeY + 2, style.ruby());
+        int textW = style.labelFont().getWidth(display);
+        int valueX = w - PAD - textW;
+        int textY = (this.scaled(ROW) - style.labelFont().fontHeight) / 2;
+        String name = this.fit(style.labelFont(), this.value.name(), valueX - 8 - PAD);
+        int label = Motion.mix(style.textMuted(), style.text(), this.hoverMix());
+        style.labelFont().draw(context, name, PAD, textY, label);
+        style.labelFont().draw(context, display, valueX, textY, style.text());
+        this.endItem(context);
+        this.unclip(context);
     }
 
     @Override
     public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
-        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) return false;
-        ((EnumValue<?>) this.value).cycle();
-        return true;
+        if (click.y() < 0 || click.y() >= this.getHeight()) return false;
+        EnumValue<?> value = (EnumValue<?>) this.value;
+        if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
+            value.cycle();
+            return true;
+        }
+        if (click.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
+            value.cycleBack();
+            return true;
+        }
+        return false;
     }
 }

@@ -3,6 +3,9 @@ package ruby.systems.gui.windows;
 import com.mojang.blaze3d.platform.InputConstants;
 import ruby.systems.config.*;
 import ruby.systems.gui.GUIStyle;
+import ruby.systems.gui.GuiTime;
+import ruby.systems.gui.Motion;
+import ruby.systems.gui.icons.Lucide;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +34,8 @@ public class SettingListWindow extends SettingWindow {
     private float expandProgress = 0f;
     private String filterText = "";
     private int scrollOffset = 0;
+    private boolean scrollbarDrag = false;
+    private float dragGrab = 0f;
     private boolean searchFocused = false;
     private float cursorBlink = 0f;
 
@@ -38,9 +43,9 @@ public class SettingListWindow extends SettingWindow {
     private List<Entry> filteredEntries;
     private final boolean hasRegistry;
 
-    private static final int HEADER_H = 26;
-    private static final int SEARCH_H = 24;
-    private static final int ROW_H = 18;
+    private static final int HEADER_H = ROW;
+    private static final int SEARCH_H = 28;
+    private static final int ROW_H = 26;
     private static final int MAX_ROWS = 6;
 
     private record Entry(String name, Object value) {}
@@ -119,102 +124,133 @@ public class SettingListWindow extends SettingWindow {
         return filteredEntries == null ? 0 : Math.min(MAX_ROWS, filteredEntries.size());
     }
 
+    private int headerPx() {
+        return this.scaled(HEADER_H);
+    }
+
+    private int searchPx() {
+        return this.scaled(SEARCH_H);
+    }
+
+    private int rowPx() {
+        return this.scaled(ROW_H);
+    }
+
     private int expandedHeight() {
         int rows = visibleRows();
-        int listH = rows > 0 ? rows * ROW_H : 20;
-        return HEADER_H + SEARCH_H + listH + 4;
+        int listH = rows > 0 ? rows * this.rowPx() : this.scaled(20);
+        return this.headerPx() + this.searchPx() + listH + this.scaled(4);
     }
 
     @Override
-    public int getHeight() {
-        if (!hasRegistry || (!expanded && expandProgress <= 0.01f)) return HEADER_H;
-        ensureLoaded();
-        int full = expandedHeight();
-        float e = easeInOutCubic(expandProgress);
-        return HEADER_H + (int) ((full - HEADER_H) * e);
+    public int layoutStamp() {
+        int stamp = super.layoutStamp();
+        stamp = stamp * 31 + (this.expanded ? 1 : 0);
+        stamp = stamp * 31 + Float.floatToIntBits(this.expandProgress);
+        stamp = stamp * 31 + (this.filteredEntries == null ? 0 : this.filteredEntries.size());
+        return stamp;
     }
 
-    private static float easeInOutCubic(float t) {
-        return t < 0.5f ? 4f * t * t * t : 1f - (float) Math.pow(-2 * t + 2, 3) / 2f;
+    @Override
+    public int restingHeight() {
+        if (!this.value.visible()) return 0;
+        if (!this.hasRegistry || (!this.expanded && this.expandProgress <= 0f)) return this.headerPx();
+        this.ensureLoaded();
+        int full = this.expandedHeight();
+        int header = this.headerPx();
+        float eased = Motion.standard(this.expandProgress);
+        return header + Math.round((full - header) * eased);
     }
 
     /* ---- render ---- */
 
     @Override
     public void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
+        int clip = this.getHeight();
+        if (clip <= 0) return;
         GUIStyle style = GUIStyle.get();
-        int w = this.getWidth();
+        int w = this.designWidth();
 
-        // Animate expand/collapse
-        float target = expanded ? 1f : 0f;
-        expandProgress += (target - expandProgress) * 0.22f;
-        if (Math.abs(expandProgress - target) < 0.005f) expandProgress = target;
+        this.clip(context);
+        this.paintHover(context, mouseX, mouseY, dt);
+        this.beginItem(context);
 
-        cursorBlink += 0.07f;
-        if (cursorBlink > 2f) cursorBlink = 0f;
+        float dir = this.expanded ? 1f : -1f;
+        this.expandProgress = Math.clamp(
+                this.expandProgress + dir * ruby.systems.gui.ClientSettings.expandStep(dt), 0f, 1f);
+        this.cursorBlink += 0.07f;
+        if (this.cursorBlink > 2f) this.cursorBlink = 0f;
 
-        renderHeader(context, style, w, mouseX, mouseY);
+        this.renderHeader(context, style, w, (int) this.design(mouseX), (int) this.design(mouseY), dt);
 
-        if (expandProgress > 0.01f && hasRegistry) {
-            ensureLoaded();
-            renderSearch(context, style, w);
-            renderList(context, style, w, mouseX, mouseY);
+        if (this.expandProgress > 0.01f && this.hasRegistry && clip > this.headerPx()) {
+            this.ensureLoaded();
+            this.renderSearch(context, style, w);
+            this.renderList(context, style, w, (int) this.design(mouseX), (int) this.design(mouseY));
         }
+        this.endItem(context);
+        this.unclip(context);
     }
 
-    private void renderHeader(GuiGraphicsExtractor ctx, GUIStyle style, int w, int mx, int my) {
-        boolean hovered = mx >= 0 && my >= 0 && mx < w && my < HEADER_H;
-        if (hovered) ctx.fill(0, 0, w, HEADER_H, 0x0DFFFFFF);
-
-        // Label
-        int ty = (HEADER_H - (int) this.getTextHeight(style.bodyFont())) / 2;
-        this.drawText(style.bodyFont(), ctx, this.value.name(), 14, ty, 0xFF6A6567);
-
-        // Count badge
+    private void renderHeader(GuiGraphicsExtractor ctx, GUIStyle style, int w, int mx, int my, float dt) {
+        int chevron = Lucide.UI;
         int count = ((ListValue<?>) this.value).value().size();
-        String badge = count + (count == 1 ? " item" : " items");
-        int bw = (int) this.getTextWidth(style.monospaceFont(), badge) + 12;
-        int bh = (int) this.getTextHeight(style.monospaceFont()) + 4;
-        int bx = w - 14 - bw;
-        int by = (HEADER_H - bh) / 2;
+        String badge = count == 1 ? "1" : Integer.toString(count);
+        int badgeW = style.labelFont().getWidth(badge) + 10;
+        int badgeH = style.labelFont().fontHeight + 4;
+        int chevronX = w - PAD - chevron;
+        int badgeX = chevronX - 8 - badgeW;
+        int header = this.headerPx();
+        int ty = (header - style.labelFont().fontHeight) / 2;
+        String name = this.fit(style.labelFont(), this.value.name(), badgeX - 8 - PAD);
+        int label = Motion.mix(style.textMuted(), style.text(), this.hoverMix());
+        style.labelFont().draw(ctx, name, PAD, ty, label);
 
-        ModuleTypeWindow.fillSmoothRoundedRect(ctx, bx, by, bx + bw, by + bh, GUIStyle.RADIUS_BADGE, 0x1AFFFFFF);
-        this.drawText(style.monospaceFont(), ctx, badge, bx + 6, by + 2, style.ruby());
+        int by = (header - badgeH) / 2;
+        ModuleTypeWindow.drawRoundedBadge(ctx, badgeX, by, badgeX + badgeW, by + badgeH,
+                style.bgHover(), style.borderPanel());
+        style.labelFont().draw(ctx, badge, badgeX + 5, by + (badgeH - style.labelFont().fontHeight) / 2, style.text());
+
+        float rotation = this.expandProgress * 90f;
+        int color = mx >= chevronX - 4 && my >= 0 && my < header ? style.text() : style.textMuted();
+        Lucide.drawCentered(ctx, "chevron-right", chevronX + chevron / 2, header / 2, chevron, color, rotation);
     }
 
     private void renderSearch(GuiGraphicsExtractor ctx, GUIStyle style, int w) {
-        int y = HEADER_H + 2;
-        int h = SEARCH_H - 4;
-        int l = 14, r = w - 14;
+        int y = this.headerPx() + 2;
+        int h = this.searchPx() - 6;
+        int l = PAD;
+        int r = w - PAD;
 
-        // Focus glow
-        if (searchFocused) {
-            ModuleTypeWindow.fillSmoothRoundedRect(ctx, l - 1, y - 1, r + 1, y + h + 1, GUIStyle.RADIUS_ROW,
-                    GUIStyle.withAlpha(style.ruby(), 0.2f));
+        if (this.searchFocused) {
+            ModuleTypeWindow.fillSmoothRoundedRect(ctx, l - 1, y - 1, r + 1, y + h + 1, GUIStyle.RADIUS_BADGE,
+                    GUIStyle.withAlpha(style.ruby(), 0.35f));
         }
-        ModuleTypeWindow.fillSmoothRoundedRect(ctx, l, y, r, y + h, GUIStyle.RADIUS_BADGE, style.bgBase());
+        ModuleTypeWindow.fillSmoothRoundedRect(ctx, l, y, r, y + h, GUIStyle.RADIUS_BADGE, style.bgPanel());
 
-        // Search text or placeholder
-        String text = filterText.isEmpty() && !searchFocused ? "Search..." : filterText;
-        int col = filterText.isEmpty() && !searchFocused ? 0xFF555555 : 0xFFCCCCCC;
-        int textY = y + (h - (int) this.getTextHeight(style.monospaceFont())) / 2;
-        this.drawText(style.monospaceFont(), ctx, text, l + 6, textY, col);
+        int icon = 12;
+        int iconY = y + (h - icon) / 2;
+        Lucide.draw(ctx, "search", l + 6, iconY, icon, style.textMuted());
 
-        // Blinking cursor
-        if (searchFocused && cursorBlink < 1f) {
-            int cx = l + 6 + (int) this.getTextWidth(style.monospaceFont(), filterText);
-            ctx.fill(cx, textY, cx + 1,
-                    textY + (int) this.getTextHeight(style.monospaceFont()), 0xFFCCCCCC);
+        String text = this.filterText.isEmpty() && !this.searchFocused ? "Search" : this.filterText;
+        int col = this.filterText.isEmpty() && !this.searchFocused ? style.textMuted() : style.text();
+        int textX = l + 6 + icon + 6;
+        int textY = y + (h - style.bodyFont().fontHeight) / 2;
+        style.bodyFont().draw(ctx, text, textX, textY, col);
+
+        if (this.searchFocused && this.cursorBlink < 1f) {
+            int cx = textX + style.bodyFont().getWidth(this.filterText);
+            ctx.fill(cx, textY, cx + 1, textY + style.bodyFont().fontHeight, style.text());
         }
     }
 
     private void renderList(GuiGraphicsExtractor ctx, GUIStyle style, int w, int mx, int my) {
-        int startY = HEADER_H + SEARCH_H;
+        int startY = this.headerPx() + this.searchPx();
 
         if (filteredEntries == null || filteredEntries.isEmpty()) {
-            String msg = filterText.isEmpty() ? "No items — type to search" : "No results";
-            int ty = startY + (20 - (int) this.getTextHeight(style.monospaceFont())) / 2;
-            this.drawText(style.monospaceFont(), ctx, msg, 36, ty, 0xFF555555);
+            String msg = filterText.isEmpty() ? "Type to search" : "No results";
+            int ty = startY + (20 - style.bodyFont().fontHeight) / 2;
+            style.bodyFont().draw(ctx, msg, PAD, ty, style.textMuted());
             return;
         }
 
@@ -224,64 +260,73 @@ public class SettingListWindow extends SettingWindow {
             if (idx >= filteredEntries.size()) break;
 
             Entry entry = filteredEntries.get(idx);
-            int ry = startY + i * ROW_H;
+            int ry = startY + i * this.rowPx();
             boolean sel = isSelected(entry);
 
-            // Row hover highlight
-            if (mx >= 14 && mx < w - 14 && my >= ry && my < ry + ROW_H) {
-                ctx.fill(14, ry, w - 14, ry + ROW_H, style.bgHover());
-            }
-
-            // Checkbox (10x10)
-            int cbx = 16, cby = ry + (ROW_H - 10) / 2;
+            int box = 14;
+            int cbx = PAD;
+            int cby = ry + (this.rowPx() - box) / 2;
             if (sel) {
-                ModuleTypeWindow.fillSmoothRoundedRect(ctx, cbx, cby,
-                        cbx + 10, cby + 10, 3, style.ruby());
-                // Inner check mark
-                ctx.fill(cbx + 3, cby + 3, cbx + 7, cby + 7, 0xFFFFFFFF);
+                ModuleTypeWindow.fillSmoothRoundedRect(ctx, cbx, cby, cbx + box, cby + box, GUIStyle.RADIUS_BADGE, style.ruby());
+                Lucide.draw(ctx, "check", cbx + 2, cby + 2, 10, 0xFFFFFFFF);
             } else {
-                ModuleTypeWindow.fillSmoothRoundedRect(ctx, cbx, cby,
-                        cbx + 10, cby + 10, 3, style.trackOff());
+                ModuleTypeWindow.drawRoundedBadge(ctx, cbx, cby, cbx + box, cby + box, style.bgPanel(), style.borderPanel());
             }
 
-            // Item name (truncated to fit)
-            String name = entry.name;
-            int maxW = w - 14 - 32;
-            if (this.getTextWidth(style.monospaceFont(), name) > maxW) {
-                while (name.length() > 1
-                        && this.getTextWidth(style.monospaceFont(), name + "…") > maxW) {
-                    name = name.substring(0, name.length() - 1);
-                }
-                name += "…";
-            }
-
-            int ny = ry + (ROW_H - (int) this.getTextHeight(style.monospaceFont())) / 2;
-            this.drawText(style.monospaceFont(), ctx, name, 32, ny,
-                    sel ? style.textBright() : style.textMuted());
+            int nameX = cbx + box + 8;
+            int right = PAD + (filteredEntries.size() > MAX_ROWS ? 8 : 0);
+            String name = this.fit(style.bodyFont(), entry.name, w - right - nameX);
+            int ny = ry + (this.rowPx() - style.bodyFont().fontHeight) / 2;
+            style.bodyFont().draw(ctx, name, cbx + box + 8, ny, sel ? style.text() : style.textMuted());
         }
 
-        // Thin scrollbar when list overflows
-        if (filteredEntries.size() > MAX_ROWS) {
-            int total = filteredEntries.size();
-            int trackH = vis * ROW_H;
-            int barH = Math.max(8, trackH * vis / total);
-            int scrollRange = trackH - barH;
-            float frac = (float) scrollOffset / (total - MAX_ROWS);
-            int barY = startY + (int) (frac * scrollRange);
-
-            ModuleTypeWindow.fillSmoothRoundedRect(ctx, w - 16, barY,
-                    w - 14, barY + barH, 1, 0x33FFFFFF);
+        Bar bar = this.bar();
+        if (bar != null) {
+            ModuleTypeWindow.fillSmoothRoundedRect(ctx, bar.x1, bar.thumbY,
+                    bar.x2, bar.thumbY + bar.thumbH, 1, style.scrollbar());
         }
+    }
+
+    private record Bar(int x1, int x2, int trackTop, int trackH, int thumbY, int thumbH, int max) {}
+
+    private Bar bar() {
+        if (this.filteredEntries == null || this.filteredEntries.size() <= MAX_ROWS) return null;
+        int vis = this.visibleRows();
+        int total = this.filteredEntries.size();
+        int trackH = vis * this.rowPx();
+        int thumbH = Math.max(8, trackH * vis / total);
+        int max = total - MAX_ROWS;
+        float frac = max <= 0 ? 0f : (float) this.scrollOffset / max;
+        int thumbY = this.headerPx() + this.searchPx() + Math.round((trackH - thumbH) * frac);
+        int x2 = this.designWidth() - PAD;
+        return new Bar(x2 - 3, x2, this.headerPx() + this.searchPx(), trackH, thumbY, thumbH, max);
+    }
+
+    private boolean hitBar(double localX, double localY, Bar bar) {
+        return localX >= bar.x1 - 8 && localX <= this.designWidth()
+                && localY >= bar.trackTop && localY < bar.trackTop + bar.trackH;
+    }
+
+    private void dragBar(double localY) {
+        Bar bar = this.bar();
+        if (bar == null) {
+            this.scrollbarDrag = false;
+            return;
+        }
+        float travel = bar.trackH - bar.thumbH;
+        float frac = travel <= 0f ? 0f : ((float) localY - this.dragGrab - bar.trackTop) / travel;
+        this.scrollOffset = Math.round(Math.clamp(frac, 0f, 1f) * bar.max);
     }
 
     /* ---- input ---- */
 
     @Override
     public boolean onMouseDown(MouseButtonEvent click, boolean doubled) {
-        int my = (int) click.y();
+        if (click.y() < 0 || click.y() >= this.getHeight()) return false;
+        int my = (int) this.design(click.y());
+        double mx = this.design(click.x());
 
-        // Header click → toggle expand
-        if (my < HEADER_H && click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
+        if (my < this.headerPx() && click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             if (!hasRegistry) return false;
             expanded = !expanded;
             if (expanded) {
@@ -299,17 +344,28 @@ public class SettingListWindow extends SettingWindow {
 
         if (!expanded || expandProgress < 0.5f) return false;
 
+        Bar bar = this.bar();
+        if (bar != null && click.button() == InputConstants.MOUSE_BUTTON_LEFT && this.hitBar(mx, my, bar)) {
+            this.scrollbarDrag = true;
+            if (my >= bar.thumbY && my < bar.thumbY + bar.thumbH) this.dragGrab = my - bar.thumbY;
+            else {
+                this.dragGrab = bar.thumbH / 2f;
+                this.dragBar(my);
+            }
+            return true;
+        }
+
         // Search bar click → focus
-        if (my >= HEADER_H && my < HEADER_H + SEARCH_H) {
+        if (my >= this.headerPx() && my < this.headerPx() + this.searchPx()) {
             searchFocused = true;
             cursorBlink = 0f;
             return true;
         }
 
         // List row click → toggle item
-        int startY = HEADER_H + SEARCH_H;
+        int startY = this.headerPx() + this.searchPx();
         if (my >= startY && click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
-            int row = (my - startY) / ROW_H;
+            int row = (my - startY) / this.rowPx();
             int idx = scrollOffset + row;
             if (filteredEntries != null && idx >= 0 && idx < filteredEntries.size()) {
                 toggleValue(filteredEntries.get(idx));
@@ -317,15 +373,32 @@ public class SettingListWindow extends SettingWindow {
             }
         }
 
-        return true; // consume click when expanded
+        return my < this.getHeight();
+    }
+
+    @Override
+    public boolean onMouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
+        if (!this.scrollbarDrag) return false;
+        this.dragBar(this.design(click.y()));
+        return true;
+    }
+
+    @Override
+    public boolean onMouseUp(MouseButtonEvent click) {
+        if (!this.scrollbarDrag) return false;
+        this.scrollbarDrag = false;
+        return true;
     }
 
     @Override
     public boolean onMouseScrolled(double mouseX, double mouseY,
                                    double horizontal, double vertical) {
-        if (!expanded || filteredEntries == null) return false;
-        int max = Math.max(0, filteredEntries.size() - MAX_ROWS);
-        scrollOffset = Math.clamp(scrollOffset - (int) vertical, 0, max);
+        if (!this.expanded || this.filteredEntries == null || Math.abs(vertical) < 1e-4) return false;
+        int max = Math.max(0, this.filteredEntries.size() - MAX_ROWS);
+        if (max == 0) return false;
+        int notches = (int) Math.round(vertical);
+        if (notches == 0) notches = vertical > 0d ? 1 : -1;
+        this.scrollOffset = Math.clamp(this.scrollOffset - notches, 0, max);
         return true;
     }
 

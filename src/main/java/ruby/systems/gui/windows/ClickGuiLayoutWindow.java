@@ -5,6 +5,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import ruby.RubyClient;
 import ruby.systems.config.ConfigManager;
 import ruby.systems.gui.ClickGUI;
 import ruby.systems.gui.ClickGuiSelection;
@@ -53,7 +54,9 @@ public class ClickGuiLayoutWindow extends Window {
         this.sidebar = new CategorySidebarWindow(
                 0, 0, categories, initial,
                 this::onSidebarSelect,
-                () -> this.setDragging(true)
+                () -> {
+                    if (!ruby.systems.gui.ClientSettings.get().perspective()) this.setDragging(true);
+                }
         );
 
         this.addWindow(this.sidebar);
@@ -99,6 +102,10 @@ public class ClickGuiLayoutWindow extends Window {
         this.searchQuery += c;
         this.applySearch();
         return true;
+    }
+
+    public void closeSearch() {
+        if (!this.searchQuery.isEmpty()) this.clearSearch(true);
     }
 
     public boolean handleSearchKey(KeyEvent input) {
@@ -147,14 +154,36 @@ public class ClickGuiLayoutWindow extends Window {
     }
 
     @Override
+    public boolean mouseReleased(MouseButtonEvent click) {
+        boolean handled = super.mouseReleased(click);
+        this.modulePanel.releaseScrollbar();
+        this.modulePanel.releaseHeightDrag();
+        return handled;
+    }
+
+    @Override
     public boolean onMouseUp(MouseButtonEvent click) {
         if (this.isDragging()) this.persistPosition();
         return false;
     }
 
     @Override
+    public boolean onMouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
+        if (this.modulePanel.isHeightDragging()) {
+            this.modulePanel.dragHeight(click.y() - this.modulePanel.getY());
+            return true;
+        }
+        if (!this.modulePanel.isScrollbarDragging()) return false;
+        this.modulePanel.dragScrollbar(click.y() - this.modulePanel.getY());
+        return true;
+    }
+
+    @Override
     public int getHeight() {
-        int h = Math.max(this.sidebar.getHeight(), this.modulePanel.getHeight());
+        int sidebarH = this.sidebar.getHeight();
+        int screenLimit = RubyClient.client.getWindow().getHeight() - this.getY() - this.modulePanel.getY();
+        this.modulePanel.setPanelHeightFloor(sidebarH, screenLimit);
+        int h = Math.max(sidebarH, this.modulePanel.getHeight());
         this.height = h;
         return h;
     }
