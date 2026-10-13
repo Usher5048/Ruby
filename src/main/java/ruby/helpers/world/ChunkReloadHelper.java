@@ -23,11 +23,6 @@ public final class ChunkReloadHelper {
 
     private static void reload(Minecraft client) {
         if (client.level == null) return;
-        client.levelRenderer.invalidateCompiledGeometry(
-                client.level,
-                client.options,
-                client.gameRenderer.mainCamera(),
-                client.getBlockColors()
-        );
+        client.levelExtractor.allChanged();
     }
 }

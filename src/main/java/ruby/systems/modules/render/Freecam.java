@@ -7,7 +7,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
 import ruby.helpers.input.InputUtils;
-import ruby.helpers.world.ChunkReloadHelper;
 import ruby.mixin.KeyBindingAccessor;
 import ruby.systems.config.BooleanValue;
 import ruby.systems.config.DoubleValue;
@@ -100,18 +99,10 @@ public class Freecam extends Module {
         isSneaking = InputUtils.isKeyPressed(RubyClient.client.options.keyShift);
         syncKeysFromInput();
         unpressKeys();
-
-        if (reloadChunks.value()) {
-            ChunkReloadHelper.schedule();
-        }
     }
 
     @Override
     public void onDisable() {
-        if (reloadChunks.value()) {
-            ChunkReloadHelper.schedule();
-        }
-
         if (staticView.value()) {
             RubyClient.client.options.fovEffectScale().set(savedFovScale);
             RubyClient.client.options.bobView().set(savedBobView);
@@ -136,7 +127,7 @@ public class Freecam extends Module {
         Vec3 rightVec = Vec3.directionFromRotation(0, yaw + 90);
 
         double velX = 0, velY = 0, velZ = 0;
-        double s = InputUtils.isKeyPressed(RubyClient.client.options.keySprint) ? 1.0 / 20 : 0.5 / 20;
+        double s = InputUtils.isKeyPressed(RubyClient.client.options.keySprint) ? 1.0 : 0.5;
 
         boolean movingForward = false;
         if (forward) {

@@ -16,13 +16,13 @@ import ruby.systems.modules.render.Freecam;
 
 @Mixin(Minecraft.class)
 public class MinecraftClientMixin {
-    @Inject(at = @At("HEAD"), method = "runTick", cancellable = true)
+    @Inject(at = @At("HEAD"), method = "tick", cancellable = true)
     private void tickBegin(CallbackInfo info) {
         if(Events.TICK.fire(TickEvents.BEGIN, Events.GenericEvent.get()))
             info.cancel();
     }
 
-    @Inject(at = @At("TAIL"), method = "runTick", cancellable = true)
+    @Inject(at = @At("TAIL"), method = "tick", cancellable = true)
     private void tickEnd(CallbackInfo info) {
         if(Events.TICK.fire(TickEvents.END, Events.GenericEvent.get()))
             info.cancel();

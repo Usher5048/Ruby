@@ -60,7 +60,6 @@ public class Hitboxes extends Module {
     private boolean cancelNextSwing = false;
     private Input lastInput = null;
     private float prevPitch = Float.NaN;
-    private boolean subTicking = false;
     private float prevYaw = Float.NaN;
 
     public Hitboxes() {
@@ -108,10 +107,8 @@ public class Hitboxes extends Module {
         if(RubyClient.client.gameMode == null) return;
         if(RubyClient.client.getConnection() == null) return;
 
-        if(!this.subTicking) {
-            this.lastInput = null;
-            this.prevYaw = Float.NaN; this.prevPitch = Float.NaN;
-        }
+        this.lastInput = null;
+        this.prevYaw = Float.NaN; this.prevPitch = Float.NaN;
 
         if(this.eventQueue.isEmpty()) return;
 
@@ -126,22 +123,20 @@ public class Hitboxes extends Module {
         double z = Mth.clamp(eye.z(), box.minZ, box.maxZ);
         if(RubyClient.client.player.getEyePosition().distanceToSqr(x, y, z) > 9) return;
 
-        if(!this.subTicking) {
-            this.lastInput = RubyClient.client.player.input.keyPresses;
-            RubyClient.client.player.input.keyPresses = new Input(
-                    false, false, false, false,
-                    RubyClient.client.player.input.keyPresses.jump(),
-                    RubyClient.client.player.input.keyPresses.shift(),
-                    false
-            );
+        this.lastInput = RubyClient.client.player.input.keyPresses;
+        RubyClient.client.player.input.keyPresses = new Input(
+                false, false, false, false,
+                RubyClient.client.player.input.keyPresses.jump(),
+                RubyClient.client.player.input.keyPresses.shift(),
+                false
+        );
 
-            this.prevYaw = RubyClient.client.player.getYRot();
-            this.prevPitch = RubyClient.client.player.getXRot();
+        this.prevYaw = RubyClient.client.player.getYRot();
+        this.prevPitch = RubyClient.client.player.getXRot();
 
-            float[] angles = Rotations.rotationTo(EntityAnchorArgument.Anchor.FEET, entity.position());
-            RubyClient.client.player.setYRot(angles[0]);
-            RubyClient.client.player.setXRot(angles[1]);
-        }
+        float[] angles = Rotations.rotationTo(EntityAnchorArgument.Anchor.FEET, entity.position());
+        RubyClient.client.player.setYRot(angles[0]);
+        RubyClient.client.player.setXRot(angles[1]);
 
         this.ignoreNextInteract = true;
         if(!event.wasSecondary()) {
@@ -166,6 +161,7 @@ public class Hitboxes extends Module {
         if(!Float.isNaN(this.prevYaw) && !Float.isNaN(this.prevPitch)) {
             RubyClient.client.player.setYRot(this.prevYaw);
             RubyClient.client.player.setXRot(this.prevPitch);
+            RubyClient.client.player.setOldRot();
             this.prevYaw = Float.NaN; this.prevPitch = Float.NaN;
         }
 
@@ -181,7 +177,6 @@ public class Hitboxes extends Module {
         this.ignoreNextInteract = false;
         this.cancelNextSwing = false;
         this.eventQueue.clear();
-        this.subTicking = false;
         this.lastInput = null;
     }
 
@@ -189,27 +184,27 @@ public class Hitboxes extends Module {
     public void render3D() {
 //        if(RubyClient.client.player == null) return;
 //
-//        Vec3d serverPos = Bypasses.get().position();
-//        Vec3d serverVel = Bypasses.get().velocity();
+//        Vec3 serverPos = Bypasses.get().position();
+//        Vec3 serverVel = Bypasses.get().velocity();
 //        boolean serverGround = Bypasses.get().onGround();
 //
 //        float pitch = Bypasses.get().pitch();
 //        float yaw = Bypasses.get().yaw();
 //        float f = pitch * ((float)Math.PI / 180F);
 //        float g = -yaw * ((float)Math.PI / 180F);
-//        float h = MathHelper.cos(g);
-//        float i = MathHelper.sin(g);
-//        float j = MathHelper.cos(f);
-//        float k = MathHelper.sin(f);
-//        Vec3d serverLook = new Vec3d(i * j, -k, h * j);
+//        float h = Mth.cos(g);
+//        float i = Mth.sin(g);
+//        float j = Mth.cos(f);
+//        float k = Mth.sin(f);
+//        Vec3 serverLook = new Vec3(i * j, -k, h * j);
 //
-//        float width = RubyClient.client.player.getWidth();
-//        float height = RubyClient.client.player.getHeight();
+//        float width = RubyClient.client.player.getBbWidth();
+//        float height = RubyClient.client.player.getBbHeight();
 //        float eyeHeight = RubyClient.client.player.getEyeHeight(RubyClient.client.player.getPose());
 //
-//        Vec3d renderEye = serverPos.add(0, eyeHeight, 0);
-//        Vec3d renderPos = serverPos.add(0, height / 2, 0);
-//        Vec3d renderSize = new Vec3d(width, height, width);
+//        Vec3 renderEye = serverPos.add(0, eyeHeight, 0);
+//        Vec3 renderPos = serverPos.add(0, height / 2, 0);
+//        Vec3 renderSize = new Vec3(width, height, width);
 //
 //        Renderer.color(0x330000FF);
 //        Renderer.setMode(Renderer.Mode.FILL_ALWAYS_ON_TOP);
@@ -217,7 +212,7 @@ public class Hitboxes extends Module {
 //
 //        if(serverGround) {
 //            Renderer.color(0x3300FF00);
-//            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
+//            Renderer.cuboid(serverPos, new Vec3(0.2, 0.2, 0.2));
 //        }
 //
 //        Renderer.color(0x0000FF);
@@ -230,7 +225,7 @@ public class Hitboxes extends Module {
 //
 //        if(serverGround) {
 //            Renderer.color(0x00FF00);
-//            Renderer.cuboid(serverPos, new Vec3d(0.2, 0.2, 0.2));
+//            Renderer.cuboid(serverPos, new Vec3(0.2, 0.2, 0.2));
 //        }
 
         if(RubyClient.client.level == null) return;

@@ -12,12 +12,12 @@ import ruby.systems.modules.ModuleType;
 
 public class ElytraTweaks extends Module {
 
-    public final BooleanValue speedControl = this.config.create(new BooleanValue.Builder("speed-control")
+    public final BooleanValue speedControl = this.config.create(new BooleanValue.Builder("Speed Control")
             .description("Allows the use of W and S to control forwards velocity")
             .defaultValue(true)
             .build());
 
-    public final BooleanValue heightControl = this.config.create(new BooleanValue.Builder("height-control")
+    public final BooleanValue heightControl = this.config.create(new BooleanValue.Builder("Height Control")
             .description("Allows the use of jumping and sneaking to control vertical velocity")
             .defaultValue(false)
             .build());

@@ -20,8 +20,6 @@ public abstract class BlockMixin {
     ) {
         Xray xray = Modules.getByClass(Xray.class);
         if (xray == null || !xray.enabled()) return;
-        if (!xray.isBlocked(state.getBlock(), null)) {
-            cir.setReturnValue(true);
-        }
+        cir.setReturnValue(!xray.isBlocked(state.getBlock(), null));
     }
 }
