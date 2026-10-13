@@ -151,14 +151,15 @@ public class Tracers extends Module {
 
             if(pos == null) return;
 
-            if(this.target.value() == Target.Head) pos.add(0, eyeHeight, 0);
-            else if(this.target.value() == Target.Body) pos.add(0, height / 2, 0);
+            Vec3 target = pos;
+            if(this.target.value() == Target.Head) target = pos.add(0, eyeHeight, 0);
+            else if(this.target.value() == Target.Body) target = pos.add(0, height / 2, 0);
 
             Entity e = RubyClient.client.level.getEntity(waypoint.id().left().orElse(UUID.randomUUID()));
             if(e != null) return; // if we have a copy of the entity the normal tracer has already been drawn
 
             int color = this.playersColor.value(); // locator bar only shows players on normal servers
-            RenderShapes.lineToCenter(pos.x(), pos.y(), pos.z(), color);
+            RenderShapes.lineToCenter(target.x(), target.y(), target.z(), color);
 
             if(this.stem.value()) {
                 Renderer.setMode(Renderer.Mode.STROKE_ALWAYS_ON_TOP);

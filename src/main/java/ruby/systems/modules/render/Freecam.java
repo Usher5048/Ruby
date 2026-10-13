@@ -136,7 +136,7 @@ public class Freecam extends Module {
         Vec3 rightVec = Vec3.directionFromRotation(0, yaw + 90);
 
         double velX = 0, velY = 0, velZ = 0;
-        double s = InputUtils.isKeyPressed(RubyClient.client.options.keySprint) ? 1.0 : 0.5;
+        double s = InputUtils.isKeyPressed(RubyClient.client.options.keySprint) ? 1.0 / 20 : 0.5 / 20;
 
         boolean movingForward = false;
         if (forward) {
