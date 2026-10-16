@@ -21,7 +21,6 @@ import ruby.systems.accounts.types.CrackedAccount;
 import ruby.systems.accounts.types.MicrosoftAccount;
 import ruby.systems.accounts.types.SessionAccount;
 
-import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -96,17 +95,20 @@ public abstract class Account {
         MinecraftClientSessionAccessor mc = (MinecraftClientSessionAccessor) RubyClient.client;
         SignatureValidator.from(authService.getServicesKeySet(), ServicesKeyType.PROFILE_KEY);
 
-        Path skinCacheDirectory = RubyClient.client.gameDirectory.toPath();
-
         mc.ruby$setApiServices(Services.create(authService, RubyClient.client.gameDirectory));
         mc.ruby$setSkinProvider(new SkinManager(
-                skinCacheDirectory,
+                // actual path, tired of it pissing all over my run directory
+                RubyClient.client.gameDirectory.toPath()
+                        .resolve("assets")
+                        .resolve("skins"),
+
                 RubyClient.client.services(),
                 new SkinTextureDownloader(
                         RubyClient.client.getProxy(),
                         RubyClient.client.getTextureManager(),
                         RubyClient.client
                 ),
+
                 Util.backgroundExecutor()
         ));
     }

@@ -56,3 +56,8 @@ replay_*.log
 # old mappings
 
 src/main/premappedJava/
+
+# this shouldnt be in the repo
+
+dev.sh
+dev/

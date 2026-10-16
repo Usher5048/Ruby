@@ -102,8 +102,14 @@ public class Hud extends Module {
         String direction = RubyClient.client.player.getDirection().getSerializedName();
         String axisDir = RubyClient.client.player.getDirection().getAxis().getSerializedName().toUpperCase();
         boolean positive = RubyClient.client.player.getDirection().getAxisDirection() == Direction.AxisDirection.POSITIVE;
-        if(this.showFacing.value())
-            left.add(String.format("Facing: %s; %c%s", direction, positive ? '+' : '-', axisDir));
+        if(this.showFacing.value()) {
+            left.add(String.format(
+                    "Facing: %s; %c%s (%.2f / %.2f)",
+                    direction, positive ? '+' : '-', axisDir,
+                    ((RubyClient.client.player.getYRot() + 180) % 360 + 360) % 360 - 180,
+                    RubyClient.client.player.getXRot()
+            ));
+        }
 
         if(this.showSpeed.value()) {
             Vec3 velocity = RubyClient.client.player.position().subtract(

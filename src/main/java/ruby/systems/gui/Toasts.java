@@ -13,7 +13,6 @@ import java.util.function.BooleanSupplier;
 /** Top-right notices in the click GUI's type and motion. */
 public final class Toasts {
     private static final float ENTER = Motion.ENTER;
-    private static final float HOLD = 2.2f;
     private static final float EXIT = Motion.EXIT;
     private static final int MARGIN = 12;
     private static final int GAP = 6;
@@ -92,7 +91,7 @@ public final class Toasts {
         FontRenderer body = style.bodyFont();
         FontRenderer label = style.labelFont();
         int textX = 12 + Lucide.UI + 8;
-        int maxText = Math.min(MAX_TEXT, Math.max(40, screenW - MARGIN * 2 - textX - 12));
+        int maxText = Math.clamp(screenW - MARGIN * 2 - textX - 12, 40, MAX_TEXT);
         String title = Toasts.fit(body, toast.title, maxText);
         String detail = detailed ? Toasts.fit(label, toast.detail, maxText) : null;
         int textW = body.getWidth(title);
@@ -135,9 +134,9 @@ public final class Toasts {
 
     private static void push(Entry entry) {
         synchronized (TOASTS) {
-            TOASTS.add(0, entry);
+            TOASTS.addFirst(entry);
             int cap = Math.min(MAX, ClientSettings.get().maxToasts());
-            while (TOASTS.size() > cap) TOASTS.remove(TOASTS.size() - 1);
+            while (TOASTS.size() > cap) TOASTS.removeLast();
         }
     }
 

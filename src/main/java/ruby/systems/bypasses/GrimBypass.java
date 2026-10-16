@@ -155,44 +155,19 @@ public class GrimBypass extends Bypass {
         );
     }
 
-    private ServerboundUseItemPacket queued = null;
     private Packet<?> badPacketsJ(Packet<?> packet) {
-        if(RubyClient.client.player == null) return packet;
+        if(!(packet instanceof ServerboundUseItemPacket interact)) return packet;
 
-        if(packet instanceof ServerboundMovePlayerPacket move && this.queued != null) {
-            if(!move.hasRotation()) return packet;
-            this.connection.send(new ServerboundUseItemPacket(
-                    this.queued.hand(),
-                    this.queued.sequence(),
-                    move.getYRot(0),
-                    move.getXRot(0)
-            ));
+        // AimModulo360 is a piece of shit
+        float yaw = interact.yRot() % 360;
+        if(yaw < 0) yaw += 360;
+        yaw += 360;
 
-            this.queued = null;
-            return packet;
-        }
-
-        if(packet instanceof ServerboundUseItemPacket interact) {
-            if(!this.sentMovementThisTick()) {
-                this.queued = interact;
-                return null;
-            }
-
-            return new ServerboundUseItemPacket(
-                    interact.hand(),
-                    interact.sequence(),
-                    this.yaw(),
-                    this.pitch()
-            );
-        }
-
-        // TODO: This still flags it, but delaying sequence is worse, fix
-        if(this.isSequenced(packet) && this.queued != null) {
-            this.connection.send(this.queued);
-            this.queued = null;
-        }
-
-        return packet;
+        return new ServerboundUseItemPacket(
+                interact.hand(),
+                interact.sequence(),
+                yaw, interact.xRot()
+        );
     }
 
     private Packet<?> badPacketsL(Packet<?> packet) {
@@ -306,7 +281,6 @@ public class GrimBypass extends Bypass {
         this.lastSlot = -1;
         this.sentAttack = false;
         this.sentSwingSinceLastAttack = true;
-        this.queued = null;
     }
 
     @Override

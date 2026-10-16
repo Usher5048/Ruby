@@ -131,10 +131,15 @@ public class Hitboxes extends Module {
                 false
         );
 
-        this.prevYaw = RubyClient.client.player.getYRot();
+        float[] angles = Rotations.rotationTo(EntityAnchorArgument.Anchor.FEET, entity.position());
+
+        this.prevYaw = RubyClient.client.player.getYRot() % 360;
         this.prevPitch = RubyClient.client.player.getXRot();
 
-        float[] angles = Rotations.rotationTo(EntityAnchorArgument.Anchor.FEET, entity.position());
+        // AC mostly thinks its more human to overshoot the snap back
+        this.prevYaw += (this.prevYaw - angles[0]) * 0.03f;
+        this.prevPitch += (this.prevPitch - angles[1]) * 0.03f;
+
         RubyClient.client.player.setYRot(angles[0]);
         RubyClient.client.player.setXRot(angles[1]);
 

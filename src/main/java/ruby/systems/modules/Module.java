@@ -1,19 +1,20 @@
 package ruby.systems.modules;
 
+import net.minecraft.network.chat.Component;
 import ruby.RubyClient;
 import ruby.systems.config.Configuration;
 import ruby.systems.events.Render2DEvent;
 import ruby.systems.gui.Toasts;
 
-public abstract class Module {
+public class Module {
     private final String name;
     private final String description;
     private final ModuleType type;
+    private final int hudColor;
 
     protected String origin;
     protected boolean enabled = false;
     protected boolean showToasts = true;
-    private final int hudColor;
 
     public final Configuration config;
     public Keybind keybind;
@@ -76,6 +77,29 @@ public abstract class Module {
 
     public void notifyUser(String message) {
         this.toast(message).show();
+    }
+    public void notifyUser(Component message, boolean inChat) {
+        if(!inChat) {
+            this.toast(message.getString()).show();
+            return;
+        }
+
+        RubyClient.notifyUser(Component.empty()
+                .append(Component.literal("[").withColor(0x666666))
+                .append(Component.literal(this.name()).withColor(0x999999))
+                .append(Component.literal("] ").withColor(0x666666))
+                .append(message), true);
+    }
+
+    public boolean isDefault() {
+        if(!this.keybind.isUnbound()) return false;
+        if(!this.showsToasts()) return false;
+        if(this.enabled()) return false;
+
+        for(String key : this.config.getAll())
+            if(!this.config.get(key).isDefault()) return false;
+
+        return true;
     }
 
     @Override

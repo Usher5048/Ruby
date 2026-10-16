@@ -11,6 +11,7 @@ import net.minecraft.SharedConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,7 +102,9 @@ public class RubyClient implements ModInitializer {
 				if(RubyClient.client.gui.screen() instanceof ClickGUI clickGui) clickGui.requestClose();
 				else if(RubyClient.client.gui.screen() == null) RubyClient.openClickGui();
 			}
-			if(RubyClient.openCommandKey.isDown()) RubyClient.client.setScreenAndShow(new ChatScreen(RubyClient.chatPrefix.value(), false));
+
+			if(RubyClient.openCommandKey.isDown())
+				RubyClient.client.gui.setScreen(new ChatScreen(RubyClient.chatPrefix.value(), false));
 		});
 
 		overlay.log("Attached keybind listener to GUI");
@@ -115,12 +118,20 @@ public class RubyClient implements ModInitializer {
 		overlay.log("Registered 2D rendering event");
 	}
 
-	/**
-	 * {@code setScreenAndShow} presents a frame with the world skipped, which
-	 * flashes black under the dim. {@code setScreen} waits for the next real frame.
-	 */
 	public static void notifyUser(String message) {
 		Toasts.toast(message).show();
+	}
+	public static void notifyUser(Component m, boolean inChat) {
+		if(!inChat) Toasts.toast(m.getString()).show();
+		else if(RubyClient.client.player != null) {
+			Component chatDisplay = Component.empty()
+					.append(Component.literal("[").withColor(0x666666))
+					.append(Component.literal(RubyClient.MOD_NAME).withColor(0xCC3366))
+					.append(Component.literal("] ").withColor(0x666666))
+					.append(m);
+
+			RubyClient.client.player.sendSystemMessage(chatDisplay);
+		} else RubyClient.log("Attempt to notify missing player: `" + m.getString() + "`");
 	}
 
 	public static void openClickGui() {
