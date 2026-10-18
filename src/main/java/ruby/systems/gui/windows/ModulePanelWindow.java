@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.cursor.CursorType;
 import org.lwjgl.sdl.SDLMouse;
 import ruby.RubyClient;
+import ruby.systems.config.ConfigManager;
 import ruby.systems.gui.ClickGuiSearch;
 import ruby.systems.gui.ClickGuiSelection;
 import ruby.systems.gui.GUIStyle;
@@ -125,7 +126,7 @@ public class ModulePanelWindow extends Window {
     public void setPanelHeightFloor(int floor, int screenLimit) {
         this.floorPanelHeight = Math.max(HEADER_H, floor);
         this.screenHeightLimit = Math.max(this.floorPanelHeight, screenLimit);
-        int saved = ruby.systems.config.ConfigManager.panelHeight();
+        int saved = ConfigManager.panelHeight();
         if (saved != this.appliedSavedHeight) {
             this.appliedSavedHeight = saved;
             if (saved >= 0) this.chosenMaxHeight = saved;
@@ -164,7 +165,7 @@ public class ModulePanelWindow extends Window {
         this.chosenMaxHeight = next;
         this.maxPanelHeight = next;
         this.appliedSavedHeight = next;
-        ruby.systems.config.ConfigManager.setPanelHeight(next);
+        ConfigManager.setPanelHeight(next);
     }
 
     public ClickGuiSelection selection() {

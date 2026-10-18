@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Click GUI preferences that are not a single module. */
+// TODO: Put this bullshit with the rest of the client configs in RubyClient.config, maybe per profile?
 public final class ClientSettings {
     private static final int HOLD_MILLIS = 2200;
 
@@ -134,73 +135,6 @@ public final class ClientSettings {
         this.push();
     }
 
-    public void writeNamed(ByteArrayOutputStream stream) {
-        this.entry(stream, "toasts", this.toasts ? "1" : "0");
-        this.entry(stream, "moduleToasts", this.moduleToasts ? "1" : "0");
-        this.entry(stream, "toastLeft", this.toastLeft ? "1" : "0");
-        this.entry(stream, "animations", this.animations ? "1" : "0");
-        this.entry(stream, "hints", this.hints ? "1" : "0");
-        this.entry(stream, "keybinds", this.keybinds ? "1" : "0");
-        this.entry(stream, "holdMillis", Integer.toString(this.holdMillis));
-        this.entry(stream, "maxToasts", Integer.toString(this.maxToasts()));
-        this.entry(stream, "dim", Integer.toString(ThemeManager.get().dimPercent()));
-        this.entry(stream, "prefix", RubyClient.chatPrefix.value());
-        this.entry(stream, "panelHeight", Integer.toString(ConfigManager.panelHeight()));
-        this.entry(stream, "dropdownScale", Double.toString(this.dropdownScale()));
-        this.entry(stream, "perspective", this.perspective ? "1" : "0");
-    }
-
-    public void readNamed(ByteArrayInputStream stream) {
-        while (stream.available() >= 4) {
-            String key = ConfigManager.readUtf8(stream);
-            if (stream.available() < 2) return;
-            String value = ConfigManager.readUtf8(stream);
-            switch (key) {
-                case "toasts" -> this.toasts = "1".equals(value);
-                case "moduleToasts" -> this.moduleToasts = "1".equals(value);
-                case "toastLeft" -> this.toastLeft = "1".equals(value);
-                case "animations" -> this.animations = "1".equals(value);
-                case "hints" -> this.hints = "1".equals(value);
-                case "keybinds" -> this.keybinds = "1".equals(value);
-                case "holdMillis" -> this.holdMillis = ClientSettings.parseInt(value, HOLD_MILLIS);
-                case "maxToasts" -> this.maxToasts = ClientSettings.parseInt(value, 30);
-                case "dim" -> ThemeManager.get().setDimQuiet(ClientSettings.parseInt(value, ThemeManager.get().dimPercent()));
-                case "prefix" -> {
-                    if (value != null && !value.isBlank()) RubyClient.chatPrefix.setValue(value);
-                }
-                case "panelHeight" -> ConfigManager.setPanelHeight(ClientSettings.parseInt(value, -1));
-                case "dropdownScale" -> this.dropdownScale = ClientSettings.parseDouble(value, 1);
-                case "perspective" -> this.perspective = "1".equals(value);
-                default -> {}
-            }
-        }
-        this.push();
-        if (this.prefixValue != null) {
-            this.prefixValue.setQuiet(CommandPrefix.from(RubyClient.chatPrefix.value()));
-        }
-    }
-
-    private void entry(ByteArrayOutputStream stream, String key, String value) {
-        ConfigManager.writeUtf8(stream, key);
-        ConfigManager.writeUtf8(stream, value == null ? "" : value);
-    }
-
-    private static double parseDouble(String value, double fallback) {
-        try {
-            return Double.parseDouble(value);
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
-    }
-
-    private static int parseInt(String value, int fallback) {
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
-    }
-
     public void write(ByteArrayOutputStream stream) {
         int flags = 0;
         if (this.toasts) flags |= 1;
@@ -211,7 +145,8 @@ public final class ClientSettings {
         if (this.toastLeft) flags |= 32;
         ConfigManager.writeInt(stream, flags);
         ConfigManager.writeShort(stream, this.holdMillis);
-        stream.write(Math.clamp(ThemeManager.get().dimPercent(), 0, 100));
+        // Why are we writing this twice (ThemeManager.writeToProfile)
+//        stream.write(Math.clamp(ThemeManager.get().dimPercent(), 0, 100));
         stream.write(this.maxToasts());
         stream.write(Math.round(this.dropdownScale() * 100f));
         stream.write(this.perspective ? 1 : 0);
@@ -227,14 +162,14 @@ public final class ClientSettings {
         this.keybinds = (flags & 16) != 0;
         this.toastLeft = (flags & 32) != 0;
         this.holdMillis = ConfigManager.readShort(stream);
-        int dim = stream.read();
+//        int dim = stream.read();
         this.maxToasts = stream.read();
         if (stream.available() >= 1) {
             int percent = stream.read();
             if (percent > 0) this.dropdownScale = percent / 100.0;
         }
         if (stream.available() >= 1) this.perspective = stream.read() != 0;
-        ThemeManager.get().setDimQuiet(dim);
+//        ThemeManager.get().setDimQuiet(dim);
         this.push();
     }
 

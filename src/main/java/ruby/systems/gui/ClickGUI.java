@@ -12,7 +12,6 @@ import ruby.systems.gui.windows.Window;
 import ruby.systems.gui.windows.WindowedScreen;
 
 public class ClickGUI extends WindowedScreen {
-    public static final String PANEL_ID = "ClickGUI";
     private static ClickGuiLayoutWindow sharedLayout;
 
     /** Eased visibility. 0 is hidden, 1 is fully open. */
@@ -248,10 +247,8 @@ public class ClickGUI extends WindowedScreen {
     public void onClose() {
         if(this.closing) return;
 
-        if(ClickGUI.sharedLayout != null) {
+        if(ClickGUI.sharedLayout != null)
             ClickGUI.sharedLayout.modulePanel().releaseHeightDrag();
-            ClickGUI.sharedLayout.persistPosition();
-        }
 
         this.closing = true;
         this.play(0f);

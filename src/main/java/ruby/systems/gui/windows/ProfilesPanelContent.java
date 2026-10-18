@@ -56,7 +56,6 @@ public class ProfilesPanelContent extends Window {
     public void refreshClipboard() {
         try {
             String clip = RubyClient.client.keyboardHandler.getClipboard();
-            if (clip == null) clip = "";
             clip = clip.trim();
             this.clipboardRaw = clip;
             this.clipboardName = ProfileManager.peekName(clip);
@@ -474,7 +473,7 @@ public class ProfilesPanelContent extends Window {
         }
         if (input.key() == InputConstants.KEY_V && this.isControlDown()) {
             String clip = RubyClient.client.keyboardHandler.getClipboard();
-            if (clip != null && !clip.isBlank()) this.appendInput(clip.trim());
+            if (!clip.isBlank()) this.appendInput(clip.trim());
             return true;
         }
         if (input.key() == InputConstants.KEY_RETURN) {

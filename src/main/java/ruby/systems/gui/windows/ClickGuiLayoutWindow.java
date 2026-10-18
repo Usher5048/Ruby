@@ -6,9 +6,8 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import ruby.RubyClient;
-import ruby.systems.config.ConfigManager;
-import ruby.systems.gui.ClickGUI;
 import ruby.systems.gui.ClickGuiSelection;
+import ruby.systems.gui.ClientSettings;
 import ruby.systems.modules.ModuleType;
 import ruby.systems.modules.Modules;
 
@@ -32,10 +31,10 @@ public class ClickGuiLayoutWindow extends Window {
         super(0, 0, SIDEBAR_WIDTH + PANEL_GAP + MODULE_PANEL_WIDTH, 400);
         this.draggableBounds = new int[] {0, 0, 0, 0};
 
-        this.setPosition(256, 256);
-
-        int[] pos = ConfigManager.getPanelPosition(ClickGUI.PANEL_ID);
-        if(pos != null) this.setPosition(pos[0], pos[1]);
+        this.setPosition(
+                (int) (RubyClient.client.getWindow().getScreenWidth() * 0.25),
+                (int) (RubyClient.client.getWindow().getScreenHeight() * 0.25)
+        );
 
         List<ModuleType> categories = new ArrayList<>();
         for (ModuleType type : ModuleType.values()) {
@@ -55,7 +54,7 @@ public class ClickGuiLayoutWindow extends Window {
                 0, 0, categories, initial,
                 this::onSidebarSelect,
                 () -> {
-                    if (!ruby.systems.gui.ClientSettings.get().perspective()) this.setDragging(true);
+                    if (!ClientSettings.get().perspective()) this.setDragging(true);
                 }
         );
 
@@ -149,22 +148,12 @@ public class ClickGuiLayoutWindow extends Window {
         this.preSearchSelection = null;
     }
 
-    public void persistPosition() {
-        ConfigManager.setPanelPosition(ClickGUI.PANEL_ID, this.getX(), this.getY());
-    }
-
     @Override
     public boolean mouseReleased(MouseButtonEvent click) {
         boolean handled = super.mouseReleased(click);
         this.modulePanel.releaseScrollbar();
         this.modulePanel.releaseHeightDrag();
         return handled;
-    }
-
-    @Override
-    public boolean onMouseUp(MouseButtonEvent click) {
-        if (this.isDragging()) this.persistPosition();
-        return false;
     }
 
     @Override

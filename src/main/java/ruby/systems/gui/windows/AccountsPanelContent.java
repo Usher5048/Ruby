@@ -13,6 +13,7 @@ import ruby.systems.accounts.MicrosoftLogin;
 import ruby.systems.accounts.types.CrackedAccount;
 import ruby.systems.accounts.types.MicrosoftAccount;
 import ruby.systems.accounts.types.SessionAccount;
+import ruby.systems.config.ConfigManager;
 import ruby.systems.gui.GUIStyle;
 import ruby.systems.gui.GuiTime;
 import ruby.systems.gui.Motion;
@@ -313,7 +314,7 @@ public class AccountsPanelContent extends Window {
                         return;
                     }
                     AccountsManager.add(account);
-                    AccountsManager.save();
+                    ConfigManager.saveState();
                     Toasts.show("check", "Added " + account.getUsername());
                 });
             });
@@ -327,7 +328,7 @@ public class AccountsPanelContent extends Window {
             RubyClient.client.execute(() -> {
                 if (prepared && account.login()) {
                     AccountsManager.markLastUsed(account);
-                    AccountsManager.save();
+                    ConfigManager.saveState();
                     Toasts.show("check", "Logged in as " + account.getUsername());
                 } else {
                     Toasts.show("x", "Login failed");
@@ -350,7 +351,7 @@ public class AccountsPanelContent extends Window {
                     return;
                 }
                 AccountsManager.add(account);
-                AccountsManager.save();
+                ConfigManager.saveState();
                 Toasts.show("check", "Added " + account.getUsername());
             });
         });
@@ -396,7 +397,7 @@ public class AccountsPanelContent extends Window {
                     if (!this.inputPrimary.isBlank()) {
                         String name = this.inputPrimary.trim();
                         AccountsManager.add(new CrackedAccount(name));
-                        AccountsManager.save();
+                        ConfigManager.saveState();
                         Toasts.show("check", "Added " + name);
                     }
                     this.resetAddState();
@@ -438,7 +439,7 @@ public class AccountsPanelContent extends Window {
                 if (click.x() >= iconX - 6) {
                     Press.down("acct-x:" + username);
                     AccountsManager.remove(account);
-                    AccountsManager.save();
+                    ConfigManager.saveState();
                     Toasts.show("x", "Removed " + username);
                     return true;
                 }
@@ -485,7 +486,7 @@ public class AccountsPanelContent extends Window {
             if (this.addMode == AddMode.CRACKED && !this.inputPrimary.isBlank()) {
                 String name = this.inputPrimary.trim();
                 AccountsManager.add(new CrackedAccount(name));
-                AccountsManager.save();
+                ConfigManager.saveState();
                 Toasts.show("check", "Added " + name);
                 this.resetAddState();
             } else if (this.addMode == AddMode.SESSION) {

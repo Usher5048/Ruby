@@ -1,12 +1,9 @@
 package ruby.systems.gui;
 
-import com.google.gson.annotations.SerializedName;
-import ruby.RubyClient;
 import ruby.systems.config.ConfigManager;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import ruby.systems.config.ColorValue;
@@ -145,7 +142,6 @@ public final class ThemeManager {
         ConfigManager.writeInt(stream, this.trackOff);
         ConfigManager.writeInt(stream, this.overlayDim);
         ConfigManager.writeInt(stream, this.scrollbarColor());
-        ClientSettings.get().write(stream);
     }
 
     public void readFromProfile(ByteArrayInputStream stream) {
@@ -168,7 +164,6 @@ public final class ThemeManager {
         this.trackOff = ConfigManager.readInt(stream);
         this.overlayDim = ConfigManager.readInt(stream);
         if (stream.available() >= 4) this.scrollbar = ConfigManager.readInt(stream);
-        ClientSettings.get().read(stream);
         this.syncPalette();
     }
 
@@ -201,68 +196,6 @@ public final class ThemeManager {
         this.trackOff = 0xFF1A1617;
         this.overlayDim = 0x88000000;
         this.scrollbar = 0xFF4A4648;
-    }
-
-    public void finishProfileRead() {
-        this.syncPalette();
-        this.pendingApply = true;
-    }
-
-    public void writeNamed(ByteArrayOutputStream stream) {
-        this.writeColor(stream, "ruby", this.ruby);
-        this.writeColor(stream, "rubyHover", this.rubyHover);
-        this.writeColor(stream, "rubyBg", this.rubyBg);
-        this.writeColor(stream, "rubyActive", this.rubyActive);
-        this.writeColor(stream, "bgPanel", this.bgPanel);
-        this.writeColor(stream, "bgBase", this.bgBase);
-        this.writeColor(stream, "bgHover", this.bgHover);
-        this.writeColor(stream, "bgElevated", this.bgElevated);
-        this.writeColor(stream, "text", this.text);
-        this.writeColor(stream, "textBright", this.textBright);
-        this.writeColor(stream, "textMuted", this.textMuted);
-        this.writeColor(stream, "catInactive", this.catInactive);
-        this.writeColor(stream, "arrowInactive", this.arrowInactive);
-        this.writeColor(stream, "borderPanel", this.panelBorder());
-        this.writeColor(stream, "borderSubtle", this.borderSubtle);
-        this.writeColor(stream, "border", this.border);
-        this.writeColor(stream, "trackOff", this.trackOff);
-        this.writeColor(stream, "overlayDim", this.overlayDim);
-        this.writeColor(stream, "scrollbar", this.scrollbarColor());
-    }
-
-    public void readNamed(ByteArrayInputStream stream) {
-        while (stream.available() >= 6) {
-            String name = ConfigManager.readUtf8(stream);
-            if (stream.available() < 4) return;
-            int value = ConfigManager.readInt(stream);
-            switch (name) {
-                case "ruby" -> this.ruby = value;
-                case "rubyHover" -> this.rubyHover = value;
-                case "rubyBg" -> this.rubyBg = value;
-                case "rubyActive" -> this.rubyActive = value;
-                case "bgPanel" -> this.bgPanel = value;
-                case "bgBase" -> this.bgBase = value;
-                case "bgHover" -> this.bgHover = value;
-                case "bgElevated" -> this.bgElevated = value;
-                case "text" -> this.text = value;
-                case "textBright" -> this.textBright = value;
-                case "textMuted" -> this.textMuted = value;
-                case "catInactive" -> this.catInactive = value;
-                case "arrowInactive" -> this.arrowInactive = value;
-                case "borderPanel" -> this.borderPanel = value;
-                case "borderSubtle" -> this.borderSubtle = value;
-                case "border" -> this.border = value;
-                case "trackOff" -> this.trackOff = value;
-                case "overlayDim" -> this.overlayDim = value;
-                case "scrollbar" -> this.scrollbar = value;
-                default -> {}
-            }
-        }
-    }
-
-    private void writeColor(ByteArrayOutputStream stream, String name, int value) {
-        ConfigManager.writeUtf8(stream, name);
-        ConfigManager.writeInt(stream, value);
     }
 
     /**
@@ -387,10 +320,6 @@ public final class ThemeManager {
         return this.scrollbar;
     }
 
-    private File themeFile() {
-        return new File(RubyClient.client.gameDirectory, "config/ruby/theme.json");
-    }
-
     public void setColor(ThemeColor color, int value) {
         color.setter().accept(value);
         this.apply();
@@ -403,28 +332,6 @@ public final class ThemeManager {
     }
 
     public record ThemeGroup(String name, List<ThemeColor> colors) {}
-
-    private static class ThemeData {
-        @SerializedName("ruby") Integer ruby;
-        @SerializedName("rubyHover") Integer rubyHover;
-        @SerializedName("rubyBg") Integer rubyBg;
-        @SerializedName("rubyActive") Integer rubyActive;
-        @SerializedName("bgPanel") Integer bgPanel;
-        @SerializedName("bgBase") Integer bgBase;
-        @SerializedName("bgHover") Integer bgHover;
-        @SerializedName("bgElevated") Integer bgElevated;
-        @SerializedName("text") Integer text;
-        @SerializedName("textBright") Integer textBright;
-        @SerializedName("textMuted") Integer textMuted;
-        @SerializedName("catInactive") Integer catInactive;
-        @SerializedName("arrowInactive") Integer arrowInactive;
-        @SerializedName("borderPanel") Integer borderPanel;
-        @SerializedName("borderSubtle") Integer borderSubtle;
-        @SerializedName("border") Integer border;
-        @SerializedName("trackOff") Integer trackOff;
-        @SerializedName("overlayDim") Integer overlayDim;
-        @SerializedName("scrollbar") Integer scrollbar;
-    }
 
     private static final class Holder {
         private static final ThemeManager INSTANCE = new ThemeManager();
