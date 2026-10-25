@@ -8,20 +8,10 @@ import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.phys.Vec3;
 import ruby.RubyClient;
+import ruby.systems.events.packet.PacketEvent;
 
 public class Bypass {
-    protected static class WrappedConnection {
-        private Connection connection;
-
-        protected void send(Packet<?> packet) {
-            this.connection.send(packet, null);
-        }
-        protected void resend(Packet<?> packet) {
-            this.connection.send(packet);
-        }
-    }
-
-    protected final WrappedConnection connection = new WrappedConnection();
+    protected PacketEvent.WrappedConnection connection = null;
 
     private boolean movementTick = false;
     private boolean serverOnGround = false;
@@ -93,8 +83,9 @@ public class Bypass {
     }
 
     public void resetConnection(Connection connection) {
-        this.connection.connection = connection;
+        this.connection = new PacketEvent.WrappedConnection(connection);
     }
+
     public void updateServer(Packet<?> packet) {
         if(packet.type().flow() == PacketFlow.SERVERBOUND)
             this.lastPacketTeleport = false;

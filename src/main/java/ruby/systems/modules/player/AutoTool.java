@@ -6,6 +6,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -110,9 +111,8 @@ public class AutoTool extends Module {
                 .defaultValue(10)
                 .build());
 
-        Events.ENTITY.register(EntityEvents.BEFORE_INTERACT, event -> {
+        Events.ENTITY.register(EntityEvents.BEFORE_ATTACK, event -> {
             if (!this.enabled() || !this.autoWeapon.value()) return;
-            if(event.wasSecondary()) return; // not attacking
             if (!(event.entity() instanceof LivingEntity target)) return;
             if (isWeaponBusy()) return;
             this.selectWeaponOnAttack(target);
@@ -216,7 +216,7 @@ public class AutoTool extends Module {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return false;
 
-        Vec3 look = player.calculateViewVector(player.getXRot(), player.getVisualRotationYInDegrees());
+        Vec3 look = Entity.calculateViewVector(player.getXRot(), player.getVisualRotationYInDegrees());
         Vec3 distVec = mc.player.position().subtract(player.position()).normalize();
         return look.dot(distVec) > 0;
     }

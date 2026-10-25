@@ -31,16 +31,16 @@ import ruby.systems.modules.player.SpeedMine;
 @Mixin(MultiPlayerGameMode.class)
 public abstract class ClientPlayerInteractionManagerMixin {
     @WrapMethod(method = "attack")
-    private void ruby$onBeforeAttack(Player player, Entity target, Operation<Void> original) {
-        EntityEvent event = new EntityEvent(false, target, null, InteractionHand.MAIN_HAND);
-        if(Events.ENTITY.fire(EntityEvents.BEFORE_INTERACT, event)) return;
+    private void ruby$onBeforeAttack(Player player, Entity entity, Operation<Void> original) {
+        EntityEvent event = new EntityEvent(player.isCrouching(), entity, null, InteractionHand.MAIN_HAND);
+        if(Events.ENTITY.fire(EntityEvents.BEFORE_ATTACK, event)) return;
         original.call(player, event.entity());
     }
 
-    @Inject(method = "attack", at = @At("TAIL"), cancellable = true)
-    private void ruby$onAfterAttack(Player player, Entity target, CallbackInfo info) {
-        Events.ENTITY.fire(EntityEvents.AFTER_INTERACT, new EntityEvent(
-                false, target,
+    @Inject(method = "attack", at = @At("TAIL"))
+    private void ruby$onAfterAttack(Player player, Entity entity, CallbackInfo info) {
+        Events.ENTITY.fire(EntityEvents.AFTER_ATTACK, new EntityEvent(
+                player.isCrouching(), entity,
                 null, InteractionHand.MAIN_HAND
         ));
     }
@@ -53,12 +53,12 @@ public abstract class ClientPlayerInteractionManagerMixin {
             InteractionHand hand,
             Operation<InteractionResult> original
     ) {
-        EntityEvent event = new EntityEvent(true, entity, hitResult, hand);
+        EntityEvent event = new EntityEvent(player.isCrouching(), entity, hitResult, hand);
         if(Events.ENTITY.fire(EntityEvents.BEFORE_INTERACT, event)) return InteractionResult.PASS;
         return original.call(player, event.entity(), hitResult, event.hand());
     }
 
-    @Inject(method = "interact", at = @At("TAIL"), cancellable = true)
+    @Inject(method = "interact", at = @At("TAIL"))
     private void ruby$onAfterInteract(
             Player player,
             Entity entity,
@@ -67,7 +67,7 @@ public abstract class ClientPlayerInteractionManagerMixin {
             CallbackInfoReturnable<InteractionResult> info
     ) {
         Events.ENTITY.fire(EntityEvents.AFTER_INTERACT, new EntityEvent(
-                true, entity,
+                player.isCrouching(), entity,
                 hitResult, hand
         ));
     }

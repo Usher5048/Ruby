@@ -12,7 +12,10 @@ public class Test extends Module {
 
         Events.PACKET.register(PacketEvents.RECEIVE, event -> {
             if(!this.enabled()) return;
+        });
 
+        Events.PACKET.register(PacketEvents.SEND, event -> {
+            if(!this.enabled()) return;
         });
     }
 

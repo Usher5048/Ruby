@@ -6,23 +6,23 @@ import net.minecraft.world.phys.EntityHitResult;
 import ruby.systems.events.Event;
 
 public final class EntityEvent extends Event {
-    private final boolean wasSecondary;
+    private final boolean isSneaking;
     private EntityHitResult hitResult;
     private Entity entity;
     private InteractionHand hand;
 
     public EntityEvent(
-            boolean wasSecondary, Entity entity,
+            boolean isSneaking, Entity entity,
             EntityHitResult hitResult, InteractionHand hand
     ) {
-        this.wasSecondary = wasSecondary;
+        this.isSneaking = isSneaking;
         this.entity = entity;
         this.hitResult = hitResult;
         this.hand = hand;
     }
 
-    public boolean wasSecondary() {
-        return this.wasSecondary;
+    public boolean isSneaking() {
+        return this.isSneaking;
     }
     public Entity entity() {
         return this.entity;

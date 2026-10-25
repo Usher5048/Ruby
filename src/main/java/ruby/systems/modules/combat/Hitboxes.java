@@ -1,5 +1,6 @@
 package ruby.systems.modules.combat;
 
+import net.minecraft.world.phys.EntityHitResult;
 import ruby.RubyClient;
 import ruby.helpers.Rotations;
 import ruby.helpers.render.Renderer;
@@ -25,7 +26,6 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class Hitboxes extends Module {
@@ -56,6 +56,7 @@ public class Hitboxes extends Module {
             .build());
 
     private final Queue<EntityEvent> eventQueue = new ArrayDeque<>();
+    private final Queue<Boolean> attacking = new ArrayDeque<>();
     private boolean ignoreNextInteract = false;
     private boolean cancelNextSwing = false;
     private Input lastInput = null;
@@ -74,18 +75,37 @@ public class Hitboxes extends Module {
             this.cancelNextSwing = false;
         });
 
-        Events.ENTITY.register(EntityEvents.BEFORE_INTERACT, event -> {
+        Events.ENTITY.register(EntityEvents.BEFORE_ATTACK, event -> {
             if(!this.enabled()) return;
+            if(!this.targets.value().contains(event.entity().getType())) return;
+
             if(this.ignoreNextInteract) {
                 this.ignoreNextInteract = false;
                 return;
             }
 
-            if(!event.wasSecondary())
-                this.cancelNextSwing = true;
+            this.cancelNextSwing = true;
 
             event.setCancelled(true);
             this.eventQueue.add(event);
+            this.attacking.add(true);
+        });
+
+        Events.ENTITY.register(EntityEvents.BEFORE_INTERACT, event -> {
+            if(!this.enabled()) return;
+            if(!this.targets.value().contains(event.entity().getType())) return;
+
+            if(this.ignoreNextInteract) {
+                this.ignoreNextInteract = false;
+                return;
+            }
+
+            // TODO: Technically detectable, offhand packet won't properly get cancelled for certain things,
+            //  for instance, right clicking a villager
+            event.setCancelled(true);
+
+            this.eventQueue.add(event);
+            this.attacking.add(false);
         });
     }
 
@@ -111,8 +131,11 @@ public class Hitboxes extends Module {
         this.prevYaw = Float.NaN; this.prevPitch = Float.NaN;
 
         if(this.eventQueue.isEmpty()) return;
+        if(this.attacking.isEmpty()) return;
 
         EntityEvent event = this.eventQueue.poll();
+        boolean attacking = Boolean.TRUE.equals(this.attacking.poll());
+
         Entity entity = event.entity();
         if(entity == null) return;
 
@@ -144,19 +167,32 @@ public class Hitboxes extends Module {
         RubyClient.client.player.setXRot(angles[1]);
 
         this.ignoreNextInteract = true;
-        if(!event.wasSecondary()) {
+        if(attacking) {
             RubyClient.client.gameMode.attack(RubyClient.client.player, entity);
             RubyClient.client.getConnection().send(ServerboundPunchPacket.INSTANCE);
-        } else {
-            RubyClient.client.gameMode.interact(
-                    RubyClient.client.player,
-                    entity,
-                    event.hitResult() != null
-                            ? event.hitResult()
-                            : new EntityHitResult(entity, entity.getEyePosition()),
-                    event.hand()
-            );
+            return;
         }
+
+        EntityHitResult result = new EntityHitResult(entity, entity.getEyePosition());
+        RubyClient.client.gameMode.interact(
+                RubyClient.client.player,
+                entity,
+                result,
+                event.hand()
+        );
+
+        // Interactions send an offhand packet if the mainhand did nothing
+        EntityHitResult old = event.hitResult(); event = this.eventQueue.peek();
+        if(event == null || event.entity() != entity || event.hitResult() != old) return;
+        this.eventQueue.poll(); this.attacking.poll();
+
+        this.ignoreNextInteract = true;
+        RubyClient.client.gameMode.interact(
+                RubyClient.client.player,
+                entity,
+                result,
+                event.hand()
+        );
     }
 
     @Override

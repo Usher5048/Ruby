@@ -61,7 +61,7 @@ public class WTap extends Module {
                 .description("Only trigger while moving forward, not while strafing.")
                 .defaultValue(true).build());
 
-        Events.ENTITY.register(EntityEvents.AFTER_INTERACT, this::onAttack);
+        Events.ENTITY.register(EntityEvents.AFTER_ATTACK, this::onAttack);
     }
 
     public boolean blocksMovement() {
@@ -103,7 +103,6 @@ public class WTap extends Module {
     }
 
     private void onAttack(EntityEvent event) {
-        if(event.wasSecondary()) return;
         if (!enabled() || state != State.IDLE) return;
         if (!shouldOperate(event.entity())) return;
         if (!shouldStopSprinting(event.entity())) return;
