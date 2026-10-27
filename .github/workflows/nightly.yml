@@ -103,7 +103,7 @@ jobs:
             | --- | --- |
             | **Tag** | `${{ env.RELEASE_TAG }}` |
             | **Built** | ${{ env.BUILT_AT }} |
-            | **Trigger** | ${{ github.event_name == 'schedule' && 'Scheduled (06:00 UTC daily)' || 'Manual workflow dispatch' }} |
+            | **Trigger** | ${{ github.event_name == 'schedule' && 'Scheduled (00:00 UTC daily)' || 'Manual workflow dispatch' }} |
             | **Workflow run** | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
             
             [All nightly releases](${{ github.server_url }}/${{ github.repository }}/releases?q=nightly&expanded=true)
