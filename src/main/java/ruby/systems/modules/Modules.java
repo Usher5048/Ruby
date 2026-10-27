@@ -69,6 +69,7 @@ public class Modules {
         Modules.modules.add(new Parkour());
         Modules.modules.add(new SafeWalk());
         Modules.modules.add(new Sneak());
+        Modules.modules.add(new SpearBoost());
         Modules.modules.add(new Speed());
         Modules.modules.add(new Spider());
         Modules.modules.add(new Sprint());
