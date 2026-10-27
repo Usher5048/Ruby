@@ -2,6 +2,7 @@ package ruby.systems.modules;
 
 import ruby.RubyClient;
 import ruby.systems.events.Events;
+import ruby.systems.gui.ClientSettings;
 import ruby.systems.gui.Toasts;
 import ruby.systems.events.Render2DEvent;
 import ruby.systems.events.TickEvents;
@@ -150,7 +151,7 @@ public class Modules {
 
         Modules.activeModules.add(module);
 
-        if(module.showsToasts() && ruby.systems.gui.ClientSettings.get().moduleToasts())
+        if(module.showsToasts() && ClientSettings.get().moduleToasts())
             Toasts.toast(module.name()).icon("check").detail("Enabled").show();
 
         module.enabled = true;
@@ -163,7 +164,7 @@ public class Modules {
 
         Modules.activeModules.remove(module);
 
-        if(module.showsToasts() && ruby.systems.gui.ClientSettings.get().moduleToasts())
+        if(module.showsToasts() && ClientSettings.get().moduleToasts())
             Toasts.toast(module.name()).icon("x").detail("Disabled").show();
 
         module.enabled = false;
