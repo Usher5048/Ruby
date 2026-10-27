@@ -11,13 +11,21 @@ import java.util.Optional;
 
 public class HitResults {
     public static BlockHitResult createBlock(BlockPos pos, Direction dir) {
-        return createBlock(pos, dir, false);
+        return createBlock(pos, dir, new Vec3(
+                0.5 * Math.random() + 0.25,
+                0.5 * Math.random() + 0.25,
+                0.5 * Math.random() + 0.25
+        ));
     }
 
-    public static BlockHitResult createBlock(BlockPos pos, Direction dir, boolean insideBlock) {
-        double xOff = Math.random();
-        double yOff = Math.random();
-        double zOff = Math.random();
+    public static BlockHitResult createBlock(BlockPos pos, Direction dir, Vec3 offset) {
+        return createBlock(pos, dir, offset, false);
+    }
+
+    public static BlockHitResult createBlock(BlockPos pos, Direction dir, Vec3 offset, boolean insideBlock) {
+        double xOff = offset.x();
+        double yOff = offset.y();
+        double zOff = offset.z();
 
         if(insideBlock) {
             return new BlockHitResult(
